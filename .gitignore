@@ -22,3 +22,6 @@ a.out
 # gh-pages files
 docsgen/
 node_modules/
+
+# Git worktrees
+.worktrees/
