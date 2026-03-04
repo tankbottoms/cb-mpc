@@ -25,3 +25,26 @@ node_modules/
 
 # Git worktrees
 .worktrees/
+
+# Xcode / iOS
+*.xcuserstate
+xcuserdata/
+DerivedData/
+*.ipa
+*.dSYM.zip
+
+# OpenSSL sources (pre-built libs in openssl-ios/ are kept)
+openssl-3.2.0/
+openssl-3.2.0-build/
+openssl-3.2.0-simple/
+openssl-1.1.1w/
+openssl-*.tar.gz
+
+# Superseded
+ios-demo-app/
+
+# Misc
+*.log
+cmake_test_discovery_*.json
+.DS_Store
+.omc/
