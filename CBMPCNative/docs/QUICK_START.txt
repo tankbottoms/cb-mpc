@@ -1,0 +1,128 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                    CBMPCNative Multi-Device Setup                           ║
+║                         Quick Reference Card                                ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 1: DEVICE PREPARATION (on each iPhone)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Connect to Mac via USB cable
+2. Tap "Trust" when prompted on phone
+3. Go to Settings → Privacy & Security → Developer Mode
+4. Toggle Developer Mode ON (green)
+5. Tap Restart when prompted
+6. Wait for device to restart
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 2: RUN INSTALLATION SCRIPT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+$ cd CBMPCNative
+$ ./install-on-devices.sh
+
+The script will:
+  • Detect your 3 connected devices
+  • Ask which devices to install on
+  • Build for each device
+  • Install automatically
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 3: TRUST DEVELOPER CERTIFICATE (on each iPhone)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Settings → General → Device Management → Apple Development → Trust
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 4: LAUNCH APP
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Look for "CBMPCNative" icon on Home Screen and tap to launch
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+QUICK DIAGNOSTICS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# List all connected iOS devices:
+xcodebuild -showdestinations -scheme CBMPCNative -project CBMPCNative.xcodeproj | grep iOS
+
+# Detect devices with ios-deploy:
+ios-deploy --detect
+
+# View device console output:
+xcode-select -s /Applications/Xcode.app/Contents/Developer
+log stream --predicate 'eventMessage contains[c] "CBMPCNative"'
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+COMMON ISSUES & SOLUTIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Issue: "No iOS devices detected"
+Solution:
+  • Disconnect all devices
+  • Reconnect one at a time
+  • Tap "Trust" on each device
+  • Enable Developer Mode in Settings
+
+Issue: "Device is already locked with a passcode"
+Solution:
+  • Unlock the device
+  • Tap "Trust"
+  • Retry installation
+
+Issue: "Could not find a matching device for the type 'iOS'"
+Solution:
+  • Check Xcode is installed: xcode-select -p
+  • Should output: /Applications/Xcode.app/Contents/Developer
+  • If not, run: xcode-select --install
+
+Issue: App installed but won't launch
+Solution:
+  • Go to Settings → General → Device Management
+  • Select "Apple Development: [your email]"
+  • Tap "Trust"
+  • Wait 30 seconds
+  • Try launching app again
+
+Issue: "Build failed" error
+Solution:
+  • Clear build cache: rm -rf build/
+  • Restart Mac
+  • Run: ./install-on-devices.sh
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ADVANCED COMMANDS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Manual build for specific device:
+xcodebuild build \
+  -scheme CBMPCNative \
+  -project CBMPCNative.xcodeproj \
+  -destination "platform=iOS,name=DEVICE_NAME" \
+  -configuration Release
+
+# Manual install on specific device:
+xcodebuild install \
+  -scheme CBMPCNative \
+  -project CBMPCNative.xcodeproj \
+  -destination "platform=iOS,name=DEVICE_NAME" \
+  -configuration Release
+
+# Install using ios-deploy:
+ios-deploy --bundle CBMPCNative.app --id DEVICE_ID
+
+# Clear all build artifacts:
+rm -rf ~/Library/Developer/Xcode/DerivedData/CBMPCNative*
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FOR DETAILED HELP
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+See DEVICE_SETUP.md for:
+  • Detailed troubleshooting
+  • Manual installation steps
+  • Security information
+  • Device naming & detection
+  • Post-installation verification
+
+╚════════════════════════════════════════════════════════════════════════════╝

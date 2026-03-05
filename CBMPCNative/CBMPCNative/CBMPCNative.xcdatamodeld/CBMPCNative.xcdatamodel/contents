@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="23534" systemVersion="14.3" minimumToolsVersion="Xcode 9.0" sourceLanguage="Swift" usedWithCloudKit="YES">
+    <entity name="ManagedKeyEntity" representedClassName="ManagedKeyEntity" syncable="YES" codeGenLanguage="Swift">
+        <attribute name="createdAt" attributeType="Date" optional="YES" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="curveCode" attributeType="Integer 32" defaultValueString="714" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="derivationPath" attributeType="String" optional="YES" syncable="YES"/>
+        <attribute name="id" attributeType="UUID" optional="YES" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="isBackedUp" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="keyType" attributeType="String" defaultValueString="simple" syncable="YES"/>
+        <attribute name="lastUsedAt" attributeType="Date" optional="YES" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="name" attributeType="String" defaultValueString="" syncable="YES"/>
+        <attribute name="parentKeyId" attributeType="UUID" optional="YES" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="publicKey" attributeType="String" defaultValueString="" syncable="YES"/>
+        <attribute name="storageLocation" attributeType="String" defaultValueString="keychain" syncable="YES"/>
+        <relationship name="signingRecords" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="SigningRecordEntity" inverseName="managedKey" inverseEntity="SigningRecordEntity" syncable="YES"/>
+        <uniqueConstraint>
+            <constraint value="id"/>
+        </uniqueConstraint>
+    </entity>
+    <entity name="SigningRecordEntity" representedClassName="SigningRecordEntity" syncable="YES" codeGenLanguage="Swift">
+        <attribute name="id" attributeType="UUID" optional="YES" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="messageHash" attributeType="String" defaultValueString="" syncable="YES"/>
+        <attribute name="signature" attributeType="String" defaultValueString="" syncable="YES"/>
+        <attribute name="timestamp" attributeType="Date" optional="YES" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="verified" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES" syncable="YES"/>
+        <relationship name="managedKey" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="ManagedKeyEntity" inverseName="signingRecords" inverseEntity="ManagedKeyEntity" syncable="YES"/>
+        <uniqueConstraint>
+            <constraint value="id"/>
+        </uniqueConstraint>
+    </entity>
+</model>
