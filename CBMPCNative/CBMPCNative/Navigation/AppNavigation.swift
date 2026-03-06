@@ -2,7 +2,8 @@ import SwiftUI
 
 struct AppNavigation: View {
     @StateObject var keyStore: KeyStore = KeyStore()
-    @State private var selectedTab = 0
+    @State private var selectedTab = 2
+    @State private var tabBarHidden = false
 
     #if os(iOS)
     var body: some View {
@@ -10,33 +11,28 @@ struct AppNavigation: View {
             .environmentObject(keyStore)
     }
 
-    private let tabBarTotalHeight: CGFloat = 96
-
     @ViewBuilder
     func iPhoneNavigationView() -> some View {
-        GeometryReader { proxy in
-            ZStack(alignment: .bottom) {
-                Group {
-                    switch selectedTab {
-                    case 0:
-                        KeyDashboardView()
-                    case 1:
-                        SigningHistoryView()
-                    case 2:
-                        NavigationStack {
-                            CryptoDemoView()
-                        }
-                    default:
-                        SettingsView()
+        ZStack(alignment: .bottom) {
+            Group {
+                switch selectedTab {
+                case 0:
+                    KeyDashboardView()
+                case 1:
+                    SigningHistoryView()
+                case 2:
+                    NavigationStack {
+                        DemoHubView()
                     }
+                default:
+                    SettingsView()
                 }
-                .frame(width: proxy.size.width, height: proxy.size.height - tabBarTotalHeight)
-                .clipped()
-
-                FloatingTabBar(selection: $selectedTab)
-                    .padding(.bottom, 28)
             }
-            .frame(width: proxy.size.width, height: proxy.size.height)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .ignoresSafeArea(edges: .top)
+
+            FloatingTabBar(selection: $selectedTab, isHidden: $tabBarHidden)
+                .padding(.bottom, 4)
         }
         .ignoresSafeArea(.keyboard)
     }

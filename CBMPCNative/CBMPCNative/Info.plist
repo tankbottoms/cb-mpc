@@ -67,5 +67,7 @@
 	</array>
 	<key>UIUserInterfaceStyle</key>
 	<string>Automatic</string>
+	<key>UILaunchScreen</key>
+	<dict/>
 </dict>
 </plist>

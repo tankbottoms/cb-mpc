@@ -7,6 +7,8 @@ add_library(cbmpc_ios OBJECT
   cbmpc_ios_network.cpp
   cbmpc_ios_ecdsa2p.cpp
   cbmpc_ios_hd.cpp
+  cbmpc_ios_agree_random.cpp
+  cbmpc_ios_zk.cpp
 )
 
 target_include_directories(cbmpc_ios PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)

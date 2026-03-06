@@ -169,6 +169,56 @@ int  cbmpc_hd_ecdsa2p_refresh(cbmpc_job2p_t* job, cbmpc_hd_key_t* key,
 /* Free an HD keyset */
 void cbmpc_hd_key_free(cbmpc_hd_key_t key);
 
+/* ==================== AgreeRandom (2-Party Shared Randomness) ==================== */
+
+/* Generate shared random bytes using 2-party commit-reveal protocol
+ * job: 2-party job
+ * bitlen: number of random bits to generate (e.g., 128, 256)
+ * out: [output] shared random bytes (caller must free with cbmpc_free)
+ * Returns: 0 on success, non-zero on error
+ */
+int cbmpc_agree_random(cbmpc_job2p_t* job, int bitlen, cbmpc_cmem_t* out);
+
+/* ==================== ZK Proofs (UC-secure Discrete Log) ==================== */
+
+typedef struct { void* opaque; } cbmpc_zk_proof_t;
+
+/* Generate a random EC keypair for ZK proof testing
+ * curve_code: OpenSSL NID for curve
+ * pub_key: [output] compressed SEC1 public key (caller must free)
+ * priv_key: [output] private key scalar as big-endian bytes (caller must free)
+ * Returns: 0 on success
+ */
+int cbmpc_zk_gen_keypair(int curve_code, cbmpc_cmem_t* pub_key, cbmpc_cmem_t* priv_key);
+
+/* Prove knowledge of discrete log: Q = w * G (Fischlin UC-DL)
+ * curve_code: OpenSSL NID for curve
+ * pub_key_oct: compressed SEC1 public key Q
+ * priv_key_bn: private key scalar w as big-endian bytes
+ * session_id: unique session identifier
+ * aux: auxiliary input (e.g., 0)
+ * proof_out: [output] opaque proof handle (caller must free with cbmpc_zk_proof_free)
+ * proof_size: [output] proof size in bytes (optional, may be NULL)
+ * Returns: 0 on success
+ */
+int cbmpc_zk_dl_prove(int curve_code, cbmpc_cmem_t pub_key_oct, cbmpc_cmem_t priv_key_bn,
+                       cbmpc_cmem_t session_id, uint64_t aux,
+                       cbmpc_zk_proof_t* proof_out, int* proof_size);
+
+/* Verify a UC-DL proof
+ * curve_code: OpenSSL NID for curve
+ * pub_key_oct: compressed SEC1 public key Q
+ * session_id: must match the session_id used in prove
+ * aux: must match the aux used in prove
+ * proof: opaque proof handle from cbmpc_zk_dl_prove
+ * Returns: 0 if valid, non-zero if invalid
+ */
+int cbmpc_zk_dl_verify(int curve_code, cbmpc_cmem_t pub_key_oct,
+                        cbmpc_cmem_t session_id, uint64_t aux, cbmpc_zk_proof_t* proof);
+
+/* Free a ZK proof handle */
+void cbmpc_zk_proof_free(cbmpc_zk_proof_t* proof);
+
 /* ==================== Stateless Signature Verification ==================== */
 
 /* Verify ECDSA signature (no key material needed)

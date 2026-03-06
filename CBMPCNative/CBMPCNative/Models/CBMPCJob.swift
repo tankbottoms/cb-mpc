@@ -77,7 +77,7 @@ class CBMPCTransport {
     init(_ transport: CBMPCTransportInterface) throws {
         self.transportImpl = transport
         self.callbacksPtr = UnsafeMutablePointer<cbmpc_transport_t>.allocate(capacity: 1)
-        self.contextPtr = UnsafeMutableRawPointer(bitPattern: 0)! // Placeholder, will be set after initialization
+        self.contextPtr = UnsafeMutableRawPointer(bitPattern: 1)! // Temporary non-nil placeholder, replaced after init
 
         callbacksPtr.pointee.send_fn = { (ctx, receiver, msg) -> Int32 in
             guard let ctx = ctx else { return -1 }

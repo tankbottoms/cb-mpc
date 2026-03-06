@@ -28,60 +28,62 @@ struct SignMessageSheetView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 12) {
+            VStack(spacing: 10) {
                 // Message Input
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text("Message")
-                        .font(.system(.caption, design: .monospaced))
+                        .font(.system(size: 10, weight: .medium, design: .monospaced))
                         .foregroundColor(.secondary)
 
                     TextEditor(text: $message)
-                        .frame(height: 80)
-                        .font(.system(.caption, design: .monospaced))
-                        .padding(8)
+                        .frame(height: 70)
+                        .font(.system(size: 11, design: .monospaced))
+                        .padding(6)
                         .background(.gray.opacity(0.1))
                         .cornerRadius(4)
-                        .border(Color.gray, width: 1)
+                        .border(Color.gray.opacity(0.3), width: 0.5)
+
+                    // SHA-256 hash directly under message
+                    Text("SHA-256")
+                        .font(.system(size: 8, weight: .medium, design: .monospaced))
+                        .foregroundColor(.secondary)
+                        .padding(.top, 2)
+
+                    Text(messageHash)
+                        .font(.system(size: 9, design: .monospaced))
+                        .lineLimit(2)
+                        .truncationMode(.middle)
+                        .foregroundColor(.secondary)
                 }
 
                 // Nonce Field
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Text("Nonce")
-                            .font(.system(.caption, design: .monospaced))
+                            .font(.system(size: 10, weight: .medium, design: .monospaced))
                             .foregroundColor(.secondary)
                         Spacer()
                         Button(action: { nonce = UUID().uuidString }) {
-                            Text("Regenerate")
-                                .font(.caption2)
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                                .font(.system(size: 11))
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(.borderless)
                     }
 
                     Text(nonce)
-                        .font(.system(.caption2, design: .monospaced))
-                        .lineLimit(3)
+                        .font(.system(size: 9, design: .monospaced))
+                        .lineLimit(2)
                         .truncationMode(.middle)
-                        .padding(8)
+                        .padding(6)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         .background(.gray.opacity(0.1))
                         .cornerRadius(4)
                         .textSelection(.enabled)
-                }
 
-                // Hash Display
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("SHA-256 Hash")
-                        .font(.system(.caption, design: .monospaced))
-                        .foregroundColor(.secondary)
-
-                    Text(messageHash)
-                        .font(.system(.caption2, design: .monospaced))
+                    Text("A unique random value appended to the message before signing. Prevents replay attacks by ensuring each signature is bound to a single-use token. Generated using UUID v4 (122 bits of randomness).")
+                        .font(.system(size: 8))
+                        .foregroundColor(.secondary.opacity(0.7))
                         .lineLimit(3)
-                        .truncationMode(.middle)
-                        .padding(8)
-                        .background(.gray.opacity(0.1))
-                        .cornerRadius(4)
-                        .textSelection(.enabled)
                 }
 
                 // Signature Display (if signed)

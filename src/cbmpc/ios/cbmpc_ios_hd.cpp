@@ -61,7 +61,7 @@ int cbmpc_hd_ecdsa2p_derive(cbmpc_job2p_t* j, cbmpc_hd_key_t* key,
 
     // Perform derivation
     buf_t sid;  // Session ID (empty for single derivation)
-    std::vector<ecdsa2pc::key_t> derived_keys;
+    std::vector<ecdsa2pc::key_t> derived_keys(paths.size());
 
     error_t err = key_share_ecdsa_hdmpc_2p_t::derive_keys(*job, *hd_key, bip_path, paths, sid, derived_keys);
     if (err) {

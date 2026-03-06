@@ -42,28 +42,29 @@ struct KeyDetailView: View {
                         .font(.system(.caption, design: .monospaced))
                         .foregroundColor(.secondary)
 
-                    HStack(spacing: 8) {
-                        Text(key.publicKey)
-                            .font(.system(.caption2, design: .monospaced))
-                            .lineLimit(3)
-                            .textSelection(.enabled)
-                            .padding(8)
-                            .background(.gray.opacity(0.1))
-                            .cornerRadius(4)
+                    Text(key.publicKey)
+                        .font(.system(.caption2, design: .monospaced))
+                        .lineLimit(3)
+                        .textSelection(.enabled)
+                        .padding(8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(.gray.opacity(0.1))
+                        .cornerRadius(4)
 
-                        VStack(spacing: 4) {
-                            Button(action: { copyToClipboard(key.publicKey) }) {
-                                Image(systemName: "doc.on.doc")
-                                    .font(.caption)
-                            }
-                            .buttonStyle(.bordered)
-
-                            Button(action: { showQRSheet = true }) {
-                                Image(systemName: "qrcode")
-                                    .font(.caption)
-                            }
-                            .buttonStyle(.bordered)
+                    HStack(spacing: 6) {
+                        Button(action: { copyToClipboard(key.publicKey) }) {
+                            Text("Copy")
+                                .font(.system(size: 9, design: .monospaced))
                         }
+                        .controlSize(.mini)
+                        .buttonStyle(.bordered)
+
+                        Button(action: { showQRSheet = true }) {
+                            Text("QR Code")
+                                .font(.system(size: 9, design: .monospaced))
+                        }
+                        .controlSize(.mini)
+                        .buttonStyle(.bordered)
                     }
                 }
                 .padding(.bottom, 4)

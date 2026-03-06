@@ -169,8 +169,8 @@ cbmpc_cmem_t cbmpc_ecdsa2p_key_serialize(const cbmpc_ecdsa2p_key_t* key) {
   try {
     ecdsa2pc::key_t* k = static_cast<ecdsa2pc::key_t*>(key->opaque);
 
-    // Calculate serialization size first
-    converter_t size_calc(false);  // Calculate size mode
+    // Calculate serialization size first (write=true with null pointer = calc size mode)
+    converter_t size_calc(true);
     uint32_t role_val = static_cast<uint32_t>(k->role);
     size_calc.convert(role_val);
     size_calc.convert(k->curve);

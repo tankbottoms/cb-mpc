@@ -9,6 +9,7 @@
 #include <cbmpc/protocol/ecdsa_2p.h>
 #include <cbmpc/protocol/mpc_job_session.h>
 #include <cbmpc/ffi/cmem_adapter.h>
+#include <cbmpc/crypto/base_ecc.h>
 
 using namespace coinbase;
 using namespace coinbase::mpc;
@@ -159,15 +160,28 @@ int cbmpc_job2p_role(const cbmpc_job2p_t* job) {
 
 int cbmpc_ecdsa_verify(int curve_code, cbmpc_cmem_t pub_oct,
                         cbmpc_cmem_t hash, cbmpc_cmem_t der_sig) {
-  // TODO: Implement ECDSA signature verification using the library's ECC classes
-  // For now, this is a stub. Proper implementation requires:
-  // 1. Deserialize public key from pub_oct using ecc_point_t
-  // 2. Create signature object from der_sig
-  // 3. Use ecc_curve_interface_t::verify() to verify the signature
-  if (!pub_oct.data || !hash.data || !der_sig.data) {
-    return -1;  // Invalid parameters
+  using namespace coinbase::crypto;
+
+  if (!pub_oct.data || !hash.data || !der_sig.data) return -1;
+
+  try {
+    ecurve_t curve = ecurve_t::find(curve_code);
+    if (!curve) return -1;
+
+    ecc_point_t Q;
+    mem_t pub_mem{static_cast<const uint8_t*>(pub_oct.data), pub_oct.size};
+    if (Q.from_oct(curve, pub_mem)) return -1;
+
+    ecc_pub_key_t pub_key(Q);
+    mem_t hash_mem{static_cast<const uint8_t*>(hash.data), hash.size};
+    mem_t sig_mem{static_cast<const uint8_t*>(der_sig.data), der_sig.size};
+
+    if (pub_key.verify(hash_mem, sig_mem)) return -1;
+
+    return SUCCESS_CODE;
+  } catch (...) {
+    return -1;
   }
-  return -2;  // Not yet implemented
 }
 
 }  // extern "C"

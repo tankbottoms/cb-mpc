@@ -69,13 +69,20 @@ class CBMPCSigner {
             throw CBMPCError.signingFailed
         }
 
-        // Extract signatures
+        // Extract signatures -- in 2-party ECDSA, only one party receives
+        // the signature output; the other party gets sigs.data == nil
         var signatures: [Data] = []
-        let flatSigBuffer = sigs.data!.assumingMemoryBound(to: UInt8.self)
+
+        guard let flatSigPtr = sigs.data, let sigSizes = sigs.sizes else {
+            // This party didn't receive signatures (normal for party 2)
+            return signatures
+        }
+
+        let flatSigBuffer = flatSigPtr.assumingMemoryBound(to: UInt8.self)
         var sigOffset = 0
 
         for i in 0..<Int(sigs.count) {
-            let size = (sigs.sizes! + i).pointee
+            let size = (sigSizes + i).pointee
             let sigData = Data(bytes: flatSigBuffer + sigOffset, count: Int(size))
             signatures.append(sigData)
             sigOffset += Int(size)

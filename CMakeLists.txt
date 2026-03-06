@@ -92,10 +92,16 @@ add_subdirectory(src/cbmpc/zk)
 add_subdirectory(src/cbmpc/protocol)
 add_subdirectory(src/cbmpc/ffi)
 
+# Native C API layer (iOS + macOS)
+if(IS_IOS OR IS_IOS_SIMULATOR OR IS_MACOS)
+  add_subdirectory(src/cbmpc/ios)
+endif()
+
 add_library(
   cbmpc STATIC $<TARGET_OBJECTS:cbmpc_core> $<TARGET_OBJECTS:cbmpc_crypto>
                $<TARGET_OBJECTS:cbmpc_zk> $<TARGET_OBJECTS:cbmpc_protocol>
-               $<TARGET_OBJECTS:cbmpc_ffi>)
+               $<TARGET_OBJECTS:cbmpc_ffi>
+               $<$<OR:$<BOOL:${IS_IOS}>,$<BOOL:${IS_IOS_SIMULATOR}>,$<BOOL:${IS_MACOS}>>:$<TARGET_OBJECTS:cbmpc_ios>>)
 
 link_openssl(cbmpc)
 

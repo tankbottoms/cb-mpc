@@ -2,38 +2,62 @@ import SwiftUI
 
 struct FloatingTabBar: View {
     @Binding var selection: Int
+    @Binding var isHidden: Bool
 
     var body: some View {
-        HStack(spacing: 28) {
-            TabBarButton(
-                icon: "key.fill",
-                isSelected: selection == 0,
-                action: { selection = 0 }
-            )
+        GeometryReader { geo in
+            ZStack(alignment: .bottomTrailing) {
+                Color.clear
 
-            TabBarButton(
-                icon: "clock.fill",
-                isSelected: selection == 1,
-                action: { selection = 1 }
-            )
+                if isHidden {
+                    // Collapsed: key icon with shadow background peeking from right edge
+                    Button {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                            isHidden = false
+                        }
+                    } label: {
+                        HStack(spacing: 0) {
+                            Image(systemName: "key.fill")
+                                .font(.system(size: 16))
+                                .foregroundColor(.gray)
+                        }
+                        .frame(width: 42, height: 42)
+                        .background(Capsule().fill(.ultraThinMaterial))
+                        .shadow(radius: 8)
+                    }
+                    .offset(x: 14) // Partially off-screen
+                    .padding(.bottom, 4)
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
+                } else {
+                    // Expanded tab bar
+                    HStack(spacing: 20) {
+                        TabBarButton(icon: "key.fill", isSelected: selection == 0) { selection = 0 }
+                        TabBarButton(icon: "clock.fill", isSelected: selection == 1) { selection = 1 }
+                        TabBarButton(icon: "play.circle.fill", isSelected: selection == 2) { selection = 2 }
+                        TabBarButton(icon: "gearshape.fill", isSelected: selection == 3) { selection = 3 }
 
-            TabBarButton(
-                icon: "play.circle.fill",
-                isSelected: selection == 2,
-                action: { selection = 2 }
-            )
-
-            TabBarButton(
-                icon: "gearshape.fill",
-                isSelected: selection == 3,
-                action: { selection = 3 }
-            )
+                        Button {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                                isHidden = true
+                            }
+                        } label: {
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundColor(.gray.opacity(0.4))
+                        }
+                    }
+                    .frame(height: 42)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 5)
+                    .background(Capsule().fill(.ultraThinMaterial))
+                    .shadow(radius: 8)
+                    .frame(maxWidth: .infinity)
+                    .padding(.bottom, 4)
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
+                }
+            }
         }
-        .frame(height: 50)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .background(Capsule().fill(.ultraThinMaterial))
-        .shadow(radius: 12)
+        .frame(height: 56)
     }
 }
 
@@ -45,7 +69,7 @@ struct TabBarButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: icon)
-                .font(.system(size: 22))
+                .font(.system(size: 20))
                 .foregroundColor(isSelected ? .white : .gray)
         }
     }
@@ -53,15 +77,9 @@ struct TabBarButton: View {
 
 #Preview {
     ZStack(alignment: .bottom) {
-        VStack {
-            Text("Content Area")
-                .font(.headline)
-            Spacer()
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(.gray.opacity(0.1))
+        Color.gray.opacity(0.1)
+            .ignoresSafeArea()
 
-        FloatingTabBar(selection: .constant(0))
-            .padding(.bottom, 8)
+        FloatingTabBar(selection: .constant(2), isHidden: .constant(false))
     }
 }

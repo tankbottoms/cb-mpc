@@ -54,9 +54,42 @@
 		BB00000100000000000000D3 /* CBMPCLocalTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Models/CBMPCLocalTransport.swift; sourceTree = SOURCE_ROOT; };
 		BB00000100000000000000D4 /* CBMPCLocalTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00000100000000000000D3 /* CBMPCLocalTransport.swift */; };
 
+/* New demo view file references */
+		CC00000100000000000000F1 /* DemoShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Views/DemoShared.swift; sourceTree = SOURCE_ROOT; };
+		CC00000100000000000000F2 /* DemoHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Views/DemoHubView.swift; sourceTree = SOURCE_ROOT; };
+		CC00000100000000000000F3 /* HDDerivationDemoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Views/HDDerivationDemoView.swift; sourceTree = SOURCE_ROOT; };
+		CC00000100000000000000F4 /* BatchSigningDemoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Views/BatchSigningDemoView.swift; sourceTree = SOURCE_ROOT; };
+		CC00000100000000000000F5 /* KeyLifecycleDemoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Views/KeyLifecycleDemoView.swift; sourceTree = SOURCE_ROOT; };
+		CC00000100000000000000F6 /* ZKProofDemoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Views/ZKProofDemoView.swift; sourceTree = SOURCE_ROOT; };
+		CC00000100000000000000F7 /* NPartyDemoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Views/NPartyDemoView.swift; sourceTree = SOURCE_ROOT; };
+		CC00000100000000000000F8 /* AgreeRandomDemoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Views/AgreeRandomDemoView.swift; sourceTree = SOURCE_ROOT; };
+		CC00000100000000000000F9 /* AccessStructureDemoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Views/AccessStructureDemoView.swift; sourceTree = SOURCE_ROOT; };
+
+/* New demo view iOS build file entries */
+		CC00000200000000000000F1 /* DemoShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000100000000000000F1 /* DemoShared.swift */; };
+		CC00000200000000000000F2 /* DemoHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000100000000000000F2 /* DemoHubView.swift */; };
+		CC00000200000000000000F3 /* HDDerivationDemoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000100000000000000F3 /* HDDerivationDemoView.swift */; };
+		CC00000200000000000000F4 /* BatchSigningDemoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000100000000000000F4 /* BatchSigningDemoView.swift */; };
+		CC00000200000000000000F5 /* KeyLifecycleDemoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000100000000000000F5 /* KeyLifecycleDemoView.swift */; };
+		CC00000200000000000000F6 /* ZKProofDemoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000100000000000000F6 /* ZKProofDemoView.swift */; };
+		CC00000200000000000000F7 /* NPartyDemoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000100000000000000F7 /* NPartyDemoView.swift */; };
+		CC00000200000000000000F8 /* AgreeRandomDemoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000100000000000000F8 /* AgreeRandomDemoView.swift */; };
+		CC00000200000000000000F9 /* AccessStructureDemoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000100000000000000F9 /* AccessStructureDemoView.swift */; };
+
 /* macOS build file refs for new files */
 		BB00000100000000000000E1 /* CryptoDemoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00000100000000000000D1 /* CryptoDemoView.swift */; };
 		BB00000100000000000000E2 /* CBMPCLocalTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00000100000000000000D3 /* CBMPCLocalTransport.swift */; };
+
+/* New demo view macOS build file entries */
+		CC00000300000000000000F1 /* DemoShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000100000000000000F1 /* DemoShared.swift */; };
+		CC00000300000000000000F2 /* DemoHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000100000000000000F2 /* DemoHubView.swift */; };
+		CC00000300000000000000F3 /* HDDerivationDemoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000100000000000000F3 /* HDDerivationDemoView.swift */; };
+		CC00000300000000000000F4 /* BatchSigningDemoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000100000000000000F4 /* BatchSigningDemoView.swift */; };
+		CC00000300000000000000F5 /* KeyLifecycleDemoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000100000000000000F5 /* KeyLifecycleDemoView.swift */; };
+		CC00000300000000000000F6 /* ZKProofDemoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000100000000000000F6 /* ZKProofDemoView.swift */; };
+		CC00000300000000000000F7 /* NPartyDemoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000100000000000000F7 /* NPartyDemoView.swift */; };
+		CC00000300000000000000F8 /* AgreeRandomDemoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000100000000000000F8 /* AgreeRandomDemoView.swift */; };
+		CC00000300000000000000F9 /* AccessStructureDemoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000100000000000000F9 /* AccessStructureDemoView.swift */; };
 		A1E5F40B2D5E4A1B00C8F3E2 /* CBMPCNative.xcdatamodeld */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodeld; path = CBMPCNative/CBMPCNative.xcdatamodeld; sourceTree = SOURCE_ROOT; };
 		A1E5F40C2D5E4A1B00C8F3E2 /* CBMPCNative.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = A1E5F40B2D5E4A1B00C8F3E2 /* CBMPCNative.xcdatamodeld */; };
 
@@ -128,6 +161,15 @@
 				83DE522665F94B36B009141C /* SigningServerClient.swift in Sources */,
 				BB00000100000000000000D2 /* CryptoDemoView.swift in Sources */,
 				BB00000100000000000000D4 /* CBMPCLocalTransport.swift in Sources */,
+				CC00000200000000000000F1 /* DemoShared.swift in Sources */,
+				CC00000200000000000000F2 /* DemoHubView.swift in Sources */,
+				CC00000200000000000000F3 /* HDDerivationDemoView.swift in Sources */,
+				CC00000200000000000000F4 /* BatchSigningDemoView.swift in Sources */,
+				CC00000200000000000000F5 /* KeyLifecycleDemoView.swift in Sources */,
+				CC00000200000000000000F6 /* ZKProofDemoView.swift in Sources */,
+				CC00000200000000000000F7 /* NPartyDemoView.swift in Sources */,
+				CC00000200000000000000F8 /* AgreeRandomDemoView.swift in Sources */,
+				CC00000200000000000000F9 /* AccessStructureDemoView.swift in Sources */,
 				A1E5F40C2D5E4A1B00C8F3E2 /* CBMPCNative.xcdatamodeld in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -175,6 +217,15 @@
 				AA00000100000000000000C3 /* SigningServerClient.swift in Sources */,
 				BB00000100000000000000E1 /* CryptoDemoView.swift in Sources */,
 				BB00000100000000000000E2 /* CBMPCLocalTransport.swift in Sources */,
+				CC00000300000000000000F1 /* DemoShared.swift in Sources */,
+				CC00000300000000000000F2 /* DemoHubView.swift in Sources */,
+				CC00000300000000000000F3 /* HDDerivationDemoView.swift in Sources */,
+				CC00000300000000000000F4 /* BatchSigningDemoView.swift in Sources */,
+				CC00000300000000000000F5 /* KeyLifecycleDemoView.swift in Sources */,
+				CC00000300000000000000F6 /* ZKProofDemoView.swift in Sources */,
+				CC00000300000000000000F7 /* NPartyDemoView.swift in Sources */,
+				CC00000300000000000000F8 /* AgreeRandomDemoView.swift in Sources */,
+				CC00000300000000000000F9 /* AccessStructureDemoView.swift in Sources */,
 				AA00000100000000000000C4 /* CBMPCNative.xcdatamodeld in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
