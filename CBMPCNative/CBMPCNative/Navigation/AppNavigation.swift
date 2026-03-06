@@ -23,10 +23,9 @@ struct AppNavigation: View {
                     case 1:
                         SigningHistoryView()
                     case 2:
-                        Text("QR Scanner")
-                            .font(.system(.title3, design: .monospaced))
-                            .foregroundColor(.secondary)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        NavigationStack {
+                            CryptoDemoView()
+                        }
                     default:
                         SettingsView()
                     }

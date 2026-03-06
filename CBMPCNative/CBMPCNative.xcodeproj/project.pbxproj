@@ -49,8 +49,44 @@
 		F8D0C8BE602740A58CB804B9 /* QRCodeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F311AA8407E8496BAC8D600F /* QRCodeView.swift */; };
 		507BB6365E6B4D8080293394 /* SigningServerClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Networking/SigningServerClient.swift; sourceTree = SOURCE_ROOT; };
 		83DE522665F94B36B009141C /* SigningServerClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507BB6365E6B4D8080293394 /* SigningServerClient.swift */; };
+		BB00000100000000000000D1 /* CryptoDemoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Views/CryptoDemoView.swift; sourceTree = SOURCE_ROOT; };
+		BB00000100000000000000D2 /* CryptoDemoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00000100000000000000D1 /* CryptoDemoView.swift */; };
+		BB00000100000000000000D3 /* CBMPCLocalTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Models/CBMPCLocalTransport.swift; sourceTree = SOURCE_ROOT; };
+		BB00000100000000000000D4 /* CBMPCLocalTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00000100000000000000D3 /* CBMPCLocalTransport.swift */; };
+
+/* macOS build file refs for new files */
+		BB00000100000000000000E1 /* CryptoDemoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00000100000000000000D1 /* CryptoDemoView.swift */; };
+		BB00000100000000000000E2 /* CBMPCLocalTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00000100000000000000D3 /* CBMPCLocalTransport.swift */; };
 		A1E5F40B2D5E4A1B00C8F3E2 /* CBMPCNative.xcdatamodeld */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodeld; path = CBMPCNative/CBMPCNative.xcdatamodeld; sourceTree = SOURCE_ROOT; };
 		A1E5F40C2D5E4A1B00C8F3E2 /* CBMPCNative.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = A1E5F40B2D5E4A1B00C8F3E2 /* CBMPCNative.xcdatamodeld */; };
+
+/* macOS target build file references */
+		AA00000100000000000000A1 /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D3F1F2A828F43D7974ABC5C /* App.swift */; };
+		AA00000100000000000000A2 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EBAA282A9944E0B80A630DB /* Models.swift */; };
+		AA00000100000000000000A3 /* Persistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A512C4CF3B044288813F713 /* Persistence.swift */; };
+		AA00000100000000000000A4 /* Views.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB27DE0F9B61439490B343FA /* Views.swift */; };
+		AA00000100000000000000A5 /* CBMPCCryptoEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAC866ECD7114AA99D621C65 /* CBMPCCryptoEngine.swift */; };
+		AA00000100000000000000A6 /* CBMPCJob.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7D1FEF8D2204ED68C6C7A9E /* CBMPCJob.swift */; };
+		AA00000100000000000000A7 /* CBMPCKeyGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D7F32597C7945E4B290F0CB /* CBMPCKeyGenerator.swift */; };
+		AA00000100000000000000A8 /* CBMPCKeyShare.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02408D05F6BD4D9593286840 /* CBMPCKeyShare.swift */; };
+		AA00000100000000000000A9 /* CBMPCMockTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 113BD54F1BFC4FFB9DA5820A /* CBMPCMockTransport.swift */; };
+		AA00000100000000000000B0 /* CBMPCSigner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34ECF65314E74AC7A0BA95A4 /* CBMPCSigner.swift */; };
+		AA00000100000000000000B1 /* DemoData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2856A2E308B6401A97B1C01E /* DemoData.swift */; };
+		AA00000100000000000000B2 /* KeyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5D94AC4683F4C108F8D95A3 /* KeyStore.swift */; };
+		AA00000100000000000000B3 /* ManagedKeyModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40F0D6C0F8DD422BA52777FF /* ManagedKeyModel.swift */; };
+		AA00000100000000000000B4 /* AppNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D24F1C072CB4647A72B392C /* AppNavigation.swift */; };
+		AA00000100000000000000B5 /* CreateKeySheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C73628B8FCF45F083610781 /* CreateKeySheetView.swift */; };
+		AA00000100000000000000B6 /* KeyDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57EC03604E664516A1CF6D06 /* KeyDashboardView.swift */; };
+		AA00000100000000000000B7 /* KeyDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFA0905E844A4B8DA0E17770 /* KeyDetailView.swift */; };
+		AA00000100000000000000B8 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18B55595E1174FDB8737759B /* SettingsView.swift */; };
+		AA00000100000000000000B9 /* SigningHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 635F4577455B47B99B35E257 /* SigningHistoryView.swift */; };
+		AA00000100000000000000C0 /* SignMessageSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1B9925D88E7455EA1C7C060 /* SignMessageSheetView.swift */; };
+		AA00000100000000000000C1 /* FloatingTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3361688E861E4B35A6732E7E /* FloatingTabBar.swift */; };
+		AA00000100000000000000C2 /* QRCodeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F311AA8407E8496BAC8D600F /* QRCodeView.swift */; };
+		AA00000100000000000000C3 /* SigningServerClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507BB6365E6B4D8080293394 /* SigningServerClient.swift */; };
+		AA00000100000000000000C4 /* CBMPCNative.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = A1E5F40B2D5E4A1B00C8F3E2 /* CBMPCNative.xcdatamodeld */; };
+
+/* iOS target */
 		0A1E5F3E2D5E4A1B00C8F3E2 = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 0A1E5F4A2D5E4A1B00C8F3E2;
@@ -90,10 +126,61 @@
 				8E18FD897BEC4A2D89DEF555 /* FloatingTabBar.swift in Sources */,
 				F8D0C8BE602740A58CB804B9 /* QRCodeView.swift in Sources */,
 				83DE522665F94B36B009141C /* SigningServerClient.swift in Sources */,
+				BB00000100000000000000D2 /* CryptoDemoView.swift in Sources */,
+				BB00000100000000000000D4 /* CBMPCLocalTransport.swift in Sources */,
 				A1E5F40C2D5E4A1B00C8F3E2 /* CBMPCNative.xcdatamodeld in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+
+/* macOS target */
+		AA00000200000000000000FF = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA00000400000000000000FF;
+			buildPhases = (
+				AA00000300000000000000FF /* Sources */,
+			);
+			dependencies = (
+			);
+			name = CBMPCNative_macOS;
+			productName = CBMPCNative_macOS;
+			productType = "com.apple.product-type.application";
+		};
+		AA00000300000000000000FF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA00000100000000000000A1 /* App.swift in Sources */,
+				AA00000100000000000000A2 /* Models.swift in Sources */,
+				AA00000100000000000000A3 /* Persistence.swift in Sources */,
+				AA00000100000000000000A4 /* Views.swift in Sources */,
+				AA00000100000000000000A5 /* CBMPCCryptoEngine.swift in Sources */,
+				AA00000100000000000000A6 /* CBMPCJob.swift in Sources */,
+				AA00000100000000000000A7 /* CBMPCKeyGenerator.swift in Sources */,
+				AA00000100000000000000A8 /* CBMPCKeyShare.swift in Sources */,
+				AA00000100000000000000A9 /* CBMPCMockTransport.swift in Sources */,
+				AA00000100000000000000B0 /* CBMPCSigner.swift in Sources */,
+				AA00000100000000000000B1 /* DemoData.swift in Sources */,
+				AA00000100000000000000B2 /* KeyStore.swift in Sources */,
+				AA00000100000000000000B3 /* ManagedKeyModel.swift in Sources */,
+				AA00000100000000000000B4 /* AppNavigation.swift in Sources */,
+				AA00000100000000000000B5 /* CreateKeySheetView.swift in Sources */,
+				AA00000100000000000000B6 /* KeyDashboardView.swift in Sources */,
+				AA00000100000000000000B7 /* KeyDetailView.swift in Sources */,
+				AA00000100000000000000B8 /* SettingsView.swift in Sources */,
+				AA00000100000000000000B9 /* SigningHistoryView.swift in Sources */,
+				AA00000100000000000000C0 /* SignMessageSheetView.swift in Sources */,
+				AA00000100000000000000C1 /* FloatingTabBar.swift in Sources */,
+				AA00000100000000000000C2 /* QRCodeView.swift in Sources */,
+				AA00000100000000000000C3 /* SigningServerClient.swift in Sources */,
+				BB00000100000000000000E1 /* CryptoDemoView.swift in Sources */,
+				BB00000100000000000000E2 /* CBMPCLocalTransport.swift in Sources */,
+				AA00000100000000000000C4 /* CBMPCNative.xcdatamodeld in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+
+/* Project */
 		0A1E5F0B2D5E4A1B00C8F3E2 = {
 			isa = PBXProject;
 			attributes = {
@@ -111,8 +198,11 @@
 			projectRoot = "";
 			targets = (
 				0A1E5F3E2D5E4A1B00C8F3E2,
+				AA00000200000000000000FF,
 			);
 		};
+
+/* Project-level build configurations */
 		0A1E5F0E2D5E4A1B00C8F3E2 = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -125,21 +215,21 @@
 		0A1E5F0F2D5E4A1B00C8F3E2 = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				SDKROOT = iphoneos;
 				SWIFT_VERSION = 5.9;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
 			};
 			name = Debug;
 		};
 		0A1E5F102D5E4A1B00C8F3E2 = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				SDKROOT = iphoneos;
 				SWIFT_VERSION = 5.9;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
 			};
 			name = Release;
 		};
+
+/* iOS target build configurations */
 		0A1E5F4A2D5E4A1B00C8F3E2 = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -160,16 +250,23 @@
 					"$(SRCROOT)/..",
 				);
 				INFOPLIST_FILE = CBMPCNative/Info.plist;
-			HEADER_SEARCH_PATHS = (
+				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(SRCROOT)/../cbmpc.xcframework/Headers",
 				);
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
 				MARKETING_VERSION = 1.0;
-				OTHER_LDFLAGS = (
+				"OTHER_LDFLAGS[sdk=iphonesimulator*]" = (
 					"$(SRCROOT)/../cbmpc.xcframework/ios-arm64-simulator/libcbmpc.a",
 					"$(SRCROOT)/../openssl-ios/iossimulator-arm64/lib/libssl.a",
 					"$(SRCROOT)/../openssl-ios/iossimulator-arm64/lib/libcrypto.a",
+					"-lc++",
+				);
+				"OTHER_LDFLAGS[sdk=iphoneos*]" = (
+					"$(SRCROOT)/../cbmpc.xcframework/ios-arm64/libcbmpc.a",
+					"$(SRCROOT)/../openssl-ios/ios-arm64/lib/libssl.a",
+					"$(SRCROOT)/../openssl-ios/ios-arm64/lib/libcrypto.a",
 					"-lc++",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "xyz.atsignhandle.cb-mpc";
@@ -191,13 +288,20 @@
 					"$(SRCROOT)/..",
 				);
 				INFOPLIST_FILE = CBMPCNative/Info.plist;
-			HEADER_SEARCH_PATHS = (
+				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(SRCROOT)/../cbmpc.xcframework/Headers",
 				);
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
 				MARKETING_VERSION = 1.0;
-				OTHER_LDFLAGS = (
+				"OTHER_LDFLAGS[sdk=iphonesimulator*]" = (
+					"$(SRCROOT)/../cbmpc.xcframework/ios-arm64-simulator/libcbmpc.a",
+					"$(SRCROOT)/../openssl-ios/iossimulator-arm64/lib/libssl.a",
+					"$(SRCROOT)/../openssl-ios/iossimulator-arm64/lib/libcrypto.a",
+					"-lc++",
+				);
+				"OTHER_LDFLAGS[sdk=iphoneos*]" = (
 					"$(SRCROOT)/../cbmpc.xcframework/ios-arm64/libcbmpc.a",
 					"$(SRCROOT)/../openssl-ios/ios-arm64/lib/libssl.a",
 					"$(SRCROOT)/../openssl-ios/ios-arm64/lib/libcrypto.a",
@@ -208,6 +312,73 @@
 				SWIFT_OBJC_BRIDGING_HEADER = "CBMPCNative-Bridging-Header.h";
 				SWIFT_VERSION = 5.9;
 				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+
+/* macOS target build configurations */
+		AA00000400000000000000FF = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA00000500000000000000FF,
+				AA00000600000000000000FF,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AA00000500000000000000FF = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = arm64;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = YT6VJY3L35;
+				INFOPLIST_FILE = CBMPCNative/Info.plist;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/../cbmpc.xcframework/Headers",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				SDKROOT = macosx;
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"$(SRCROOT)/../cbmpc.xcframework/macos-arm64/libcbmpc.a",
+					"/usr/local/opt/openssl@3.2.0/lib/libssl.a",
+					"/usr/local/opt/openssl@3.2.0/lib/libcrypto.a",
+					"-lc++",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "xyz.atsignhandle.cb-mpc-macos";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OBJC_BRIDGING_HEADER = "CBMPCNative-Bridging-Header.h";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Debug;
+		};
+		AA00000600000000000000FF = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = arm64;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = YT6VJY3L35;
+				INFOPLIST_FILE = CBMPCNative/Info.plist;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/../cbmpc.xcframework/Headers",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				SDKROOT = macosx;
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"$(SRCROOT)/../cbmpc.xcframework/macos-arm64/libcbmpc.a",
+					"/usr/local/opt/openssl@3.2.0/lib/libssl.a",
+					"/usr/local/opt/openssl@3.2.0/lib/libcrypto.a",
+					"-lc++",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "xyz.atsignhandle.cb-mpc-macos";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OBJC_BRIDGING_HEADER = "CBMPCNative-Bridging-Header.h";
+				SWIFT_VERSION = 5.9;
 			};
 			name = Release;
 		};

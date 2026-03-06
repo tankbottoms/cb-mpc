@@ -89,6 +89,30 @@ class CBMPCCryptoEngine {
         }
     }
 
+    /// Verify an ECDSA signature (stateless, no key share needed)
+    static func verifySignature(curveCode: Int, publicKey: Data, messageHash: Data, derSignature: Data) -> Bool {
+        let result = publicKey.withUnsafeBytes { pubBuf in
+            messageHash.withUnsafeBytes { hashBuf in
+                derSignature.withUnsafeBytes { sigBuf in
+                    var pubMem = cbmpc_cmem_t()
+                    pubMem.data = UnsafeMutableRawPointer(mutating: pubBuf.baseAddress)
+                    pubMem.size = Int32(publicKey.count)
+
+                    var hashMem = cbmpc_cmem_t()
+                    hashMem.data = UnsafeMutableRawPointer(mutating: hashBuf.baseAddress)
+                    hashMem.size = Int32(messageHash.count)
+
+                    var sigMem = cbmpc_cmem_t()
+                    sigMem.data = UnsafeMutableRawPointer(mutating: sigBuf.baseAddress)
+                    sigMem.size = Int32(derSignature.count)
+
+                    return cbmpc_ecdsa_verify(Int32(curveCode), pubMem, hashMem, sigMem)
+                }
+            }
+        }
+        return result == 0
+    }
+
     /// Format a signature as hex string for display
     static func formatSignature(_ data: Data) -> String {
         data.map { String(format: "%02x", $0) }.joined()

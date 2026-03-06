@@ -18,7 +18,7 @@ struct FloatingTabBar: View {
             )
 
             TabBarButton(
-                icon: "qrcode.viewfinder",
+                icon: "play.circle.fill",
                 isSelected: selection == 2,
                 action: { selection = 2 }
             )

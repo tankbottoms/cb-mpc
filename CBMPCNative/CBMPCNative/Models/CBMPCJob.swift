@@ -147,6 +147,8 @@ enum CBMPCError: Error, Equatable {
     case signingFailed
     case keySerializationFailed
     case invalidKeyData
+    case refreshFailed
+    case verificationFailed
     case transportError(String)
 
     static func == (lhs: CBMPCError, rhs: CBMPCError) -> Bool {
@@ -155,7 +157,9 @@ enum CBMPCError: Error, Equatable {
              (.keyGenerationFailed, .keyGenerationFailed),
              (.signingFailed, .signingFailed),
              (.keySerializationFailed, .keySerializationFailed),
-             (.invalidKeyData, .invalidKeyData):
+             (.invalidKeyData, .invalidKeyData),
+             (.refreshFailed, .refreshFailed),
+             (.verificationFailed, .verificationFailed):
             return true
         case (.transportError(let a), .transportError(let b)):
             return a == b
