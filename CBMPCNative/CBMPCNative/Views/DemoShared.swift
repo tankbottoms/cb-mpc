@@ -101,6 +101,11 @@ class DemoRunner: ObservableObject {
             self.isRunning = false
             self.timer?.invalidate()
             self.timer = nil
+            // Align top timer with sum of step durations
+            let totalStepMs = self.steps.reduce(0.0) { $0 + $1.duration } * 1000
+            if totalStepMs > 0 {
+                self.elapsedMs = totalStepMs
+            }
         }
     }
 }

@@ -13,6 +13,10 @@ struct KeyDetailView: View {
     @State private var showExportSheet = false
     @State private var showQRSheet = false
 
+    private var hasKeyData: Bool {
+        UserDefaults.standard.data(forKey: "key_\(key.id.uuidString)") != nil
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
@@ -128,11 +132,21 @@ struct KeyDetailView: View {
 
                 // Operations
                 VStack(alignment: .leading, spacing: 8) {
-                    Button(action: { showSigningSheet = true }) {
-                        Label("Sign", systemImage: "checkmark.circle.fill")
-                            .frame(maxWidth: .infinity)
+                    if hasKeyData {
+                        Button(action: { showSigningSheet = true }) {
+                            Label("Sign", systemImage: "checkmark.circle.fill")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                    } else {
+                        Text("No key data - regenerate this key to enable signing")
+                            .font(.system(size: 9, design: .monospaced))
+                            .foregroundColor(.orange)
+                            .padding(6)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(.orange.opacity(0.1))
+                            .cornerRadius(4)
                     }
-                    .buttonStyle(.borderedProminent)
 
                     HStack(spacing: 6) {
                         Button(action: { showVerifySheet = true }) {
@@ -141,6 +155,7 @@ struct KeyDetailView: View {
                         }
                         .controlSize(.mini)
                         .buttonStyle(.bordered)
+                        .disabled(key.signingRecords.isEmpty)
 
                         if key.keyType == .hdMaster {
                             Button(action: {}) {
@@ -224,6 +239,9 @@ struct KeyDetailView: View {
         .sheet(isPresented: $showSigningSheet) {
             SignMessageSheetView(key: key)
                 .environmentObject(keyStore)
+        }
+        .sheet(isPresented: $showVerifySheet) {
+            VerifySignatureSheetView(key: key)
         }
         .sheet(isPresented: $showQRSheet) {
             NavigationStack {

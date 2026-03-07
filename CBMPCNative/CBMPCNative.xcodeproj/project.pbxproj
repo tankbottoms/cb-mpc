@@ -43,6 +43,9 @@
 		422F1023E43846A887B56047 /* SigningHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 635F4577455B47B99B35E257 /* SigningHistoryView.swift */; };
 		C1B9925D88E7455EA1C7C060 /* SignMessageSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Views/SignMessageSheetView.swift; sourceTree = SOURCE_ROOT; };
 		B6855072E302481EBAF3BF0D /* SignMessageSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1B9925D88E7455EA1C7C060 /* SignMessageSheetView.swift */; };
+		EE00000100000000000000A1 /* VerifySignatureSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Views/VerifySignatureSheetView.swift; sourceTree = SOURCE_ROOT; };
+		EE00000200000000000000A1 /* VerifySignatureSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000100000000000000A1 /* VerifySignatureSheetView.swift */; };
+		EE00000300000000000000A1 /* VerifySignatureSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00000100000000000000A1 /* VerifySignatureSheetView.swift */; };
 		3361688E861E4B35A6732E7E /* FloatingTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Views/FloatingTabBar.swift; sourceTree = SOURCE_ROOT; };
 		8E18FD897BEC4A2D89DEF555 /* FloatingTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3361688E861E4B35A6732E7E /* FloatingTabBar.swift */; };
 		F311AA8407E8496BAC8D600F /* QRCodeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Views/QRCodeView.swift; sourceTree = SOURCE_ROOT; };
@@ -180,6 +183,7 @@
 				9E7FBDE0CE5B4E7B82E33D64 /* SettingsView.swift in Sources */,
 				422F1023E43846A887B56047 /* SigningHistoryView.swift in Sources */,
 				B6855072E302481EBAF3BF0D /* SignMessageSheetView.swift in Sources */,
+				EE00000200000000000000A1 /* VerifySignatureSheetView.swift in Sources */,
 				8E18FD897BEC4A2D89DEF555 /* FloatingTabBar.swift in Sources */,
 				F8D0C8BE602740A58CB804B9 /* QRCodeView.swift in Sources */,
 				83DE522665F94B36B009141C /* SigningServerClient.swift in Sources */,
@@ -242,6 +246,7 @@
 				AA00000100000000000000B8 /* SettingsView.swift in Sources */,
 				AA00000100000000000000B9 /* SigningHistoryView.swift in Sources */,
 				AA00000100000000000000C0 /* SignMessageSheetView.swift in Sources */,
+				EE00000300000000000000A1 /* VerifySignatureSheetView.swift in Sources */,
 				AA00000100000000000000C1 /* FloatingTabBar.swift in Sources */,
 				AA00000100000000000000C2 /* QRCodeView.swift in Sources */,
 				AA00000100000000000000C3 /* SigningServerClient.swift in Sources */,
@@ -330,7 +335,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = YT6VJY3L35;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -343,7 +348,7 @@
 				);
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				SDKROOT = iphoneos;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 0.2.0;
 				"OTHER_LDFLAGS[sdk=iphonesimulator*]" = (
 					"$(SRCROOT)/../cbmpc.xcframework/ios-arm64-simulator/libcbmpc.a",
 					"$(SRCROOT)/../openssl-ios/iossimulator-arm64/lib/libssl.a",
@@ -368,7 +373,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = YT6VJY3L35;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -381,7 +386,7 @@
 				);
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				SDKROOT = iphoneos;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 0.2.0;
 				"OTHER_LDFLAGS[sdk=iphonesimulator*]" = (
 					"$(SRCROOT)/../cbmpc.xcframework/ios-arm64-simulator/libcbmpc.a",
 					"$(SRCROOT)/../openssl-ios/iossimulator-arm64/lib/libssl.a",
@@ -418,7 +423,7 @@
 			buildSettings = {
 				ARCHS = arm64;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = YT6VJY3L35;
 				INFOPLIST_FILE = CBMPCNative/Info.plist;
 				HEADER_SEARCH_PATHS = (
@@ -427,7 +432,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				SDKROOT = macosx;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 0.2.0;
 				OTHER_LDFLAGS = (
 					"$(SRCROOT)/../cbmpc.xcframework/macos-arm64/libcbmpc.a",
 					"/usr/local/opt/openssl@3.2.0/lib/libssl.a",
@@ -446,7 +451,7 @@
 			buildSettings = {
 				ARCHS = arm64;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = YT6VJY3L35;
 				INFOPLIST_FILE = CBMPCNative/Info.plist;
 				HEADER_SEARCH_PATHS = (
@@ -455,7 +460,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				SDKROOT = macosx;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 0.2.0;
 				OTHER_LDFLAGS = (
 					"$(SRCROOT)/../cbmpc.xcframework/macos-arm64/libcbmpc.a",
 					"/usr/local/opt/openssl@3.2.0/lib/libssl.a",

@@ -58,7 +58,12 @@ class KeyStore: NSObject, ObservableObject {
         }
     }
 
+    @Published var isSeedingDemoData = false
+
     func seedDemoData() {
+        guard !isSeedingDemoData else { return }
+        isSeedingDemoData = true
+
         let context = persistenceController.container.viewContext
 
         // Clear existing data
@@ -68,22 +73,42 @@ class KeyStore: NSObject, ObservableObject {
             for result in results {
                 context.delete(result)
             }
+            try context.save()
         } catch {
             print("Failed to clear data: \(error)")
+            isSeedingDemoData = false
             return
         }
 
-        // Add demo data
-        let demoKeys = DemoDataGenerator.generateDemoKeys()
-        for key in demoKeys {
-            saveKeyToEntity(key, in: context)
+        // Clear old key data from UserDefaults
+        for key in keys {
+            UserDefaults.standard.removeObject(forKey: "key_\(key.id.uuidString)")
         }
+        keys = []
 
-        do {
-            try context.save()
-            loadKeys()
-        } catch {
-            print("Failed to save demo data: \(error)")
+        // Generate real cryptographic keys on background thread
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            do {
+                let (demoKeys, keyDataMap) = try DemoDataGenerator.generateRealDemoKeys()
+
+                DispatchQueue.main.async {
+                    guard let self = self else { return }
+                    for key in demoKeys {
+                        if let keyData = keyDataMap[key.id] {
+                            UserDefaults.standard.set(keyData, forKey: "key_\(key.id.uuidString)")
+                        }
+                        self.saveKeyToEntity(key, in: context)
+                    }
+                    self.persistenceController.save()
+                    self.loadKeys()
+                    self.isSeedingDemoData = false
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    print("Failed to generate demo keys: \(error)")
+                    self?.isSeedingDemoData = false
+                }
+            }
         }
     }
 

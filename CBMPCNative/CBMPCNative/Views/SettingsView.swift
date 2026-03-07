@@ -36,8 +36,18 @@ struct SettingsView: View {
                     Button(action: {
                         keyStore.seedDemoData()
                     }) {
-                        Label("Reset Demo Data", systemImage: "arrow.counterclockwise")
+                        if keyStore.isSeedingDemoData {
+                            HStack(spacing: 8) {
+                                ProgressView()
+                                    .controlSize(.mini)
+                                Text("Generating keys...")
+                                    .font(.system(size: 12))
+                            }
+                        } else {
+                            Label("Reset Demo Data", systemImage: "arrow.counterclockwise")
+                        }
                     }
+                    .disabled(keyStore.isSeedingDemoData)
                 }
 
                 Section(header: Text("App Info")) {
@@ -45,7 +55,7 @@ struct SettingsView: View {
                         Text("Version")
                             .foregroundColor(.secondary)
                         Spacer()
-                        Text("1.0.0")
+                        Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0")
                             .font(.system(.caption, design: .monospaced))
                     }
 
@@ -53,7 +63,7 @@ struct SettingsView: View {
                         Text("Build")
                             .foregroundColor(.secondary)
                         Spacer()
-                        Text("1")
+                        Text(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "0")
                             .font(.system(.caption, design: .monospaced))
                     }
                 }

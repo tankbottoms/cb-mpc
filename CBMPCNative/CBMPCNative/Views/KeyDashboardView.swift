@@ -34,6 +34,13 @@ struct KeyDashboardView: View {
                             KeyListItemView(key: key)
                         }
                     }
+                    .onDelete { indexSet in
+                        for index in indexSet {
+                            let key = keyStore.keys[index]
+                            UserDefaults.standard.removeObject(forKey: "key_\(key.id.uuidString)")
+                            keyStore.deleteKey(key.id)
+                        }
+                    }
                 }
             }
             .navigationTitle("Keys")
