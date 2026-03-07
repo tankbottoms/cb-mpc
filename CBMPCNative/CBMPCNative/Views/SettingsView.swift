@@ -13,18 +13,25 @@ struct SettingsView: View {
                 Section(header: Text("Server Configuration")) {
                     TextField("Server URL", text: $serverUrl)
                         .font(.system(.caption, design: .monospaced))
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .submitLabel(.done)
 
                     Toggle("Use Mock Server", isOn: $useMockServer)
+                        .font(.system(size: 14))
                 }
 
                 Section(header: Text("Signing Server")) {
                     TextField("Signing Server URL", text: $signingServerURL, prompt: Text("https://server/submit"))
                         .font(.system(.caption, design: .monospaced))
                         .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .submitLabel(.done)
                 }
 
                 Section(header: Text("Sync & Backup")) {
                     Toggle("iCloud Keychain Sync", isOn: $useICloudSync)
+                        .font(.system(size: 14))
 
                     Button(action: {
                         keyStore.seedDemoData()
@@ -55,6 +62,14 @@ struct SettingsView: View {
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") {
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    }
+                }
+            }
         }
     }
 }

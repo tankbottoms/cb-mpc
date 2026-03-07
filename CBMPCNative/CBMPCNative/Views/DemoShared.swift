@@ -131,14 +131,20 @@ struct DemoHeader: View {
             Text(description)
                 .font(.system(size: 10))
                 .foregroundColor(.secondary)
-            if isRunning {
-                HStack {
-                    Spacer()
-                    ProgressView()
-                        .controlSize(.mini)
+            if isLive && (isRunning || elapsedMs > 0) {
+                HStack(spacing: 4) {
+                    if isRunning {
+                        ProgressView()
+                            .controlSize(.mini)
+                    } else {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 10))
+                            .foregroundColor(.green)
+                    }
                     Text(String(format: "%.0fms", elapsedMs))
                         .font(.system(size: 10, weight: .medium, design: .monospaced))
                         .foregroundColor(.orange)
+                    Spacer()
                 }
             }
         }

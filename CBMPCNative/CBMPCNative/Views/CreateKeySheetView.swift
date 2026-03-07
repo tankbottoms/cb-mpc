@@ -7,6 +7,7 @@ struct CreateKeySheetView: View {
     @State private var keyName = "My Key"
     @State private var keyType: KeyType = .simple
     @State private var isCreating = false
+    @State private var errorMessage: String?
 
     var body: some View {
         NavigationStack {
@@ -63,20 +64,51 @@ struct CreateKeySheetView: View {
                     Button("Cancel") { dismiss() }
                 }
             }
+            .alert("Error", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
+                Button("OK") { errorMessage = nil }
+            } message: {
+                Text(errorMessage ?? "")
+            }
         }
     }
 
     private func createKey() {
         isCreating = true
+        errorMessage = nil
 
-        // Generate key on main thread (KeyStore is MainActor)
-        do {
-            let newKey = try keyStore.generateCryptographicKey(name: keyName, keyType: keyType)
-            isCreating = false
-            dismiss()
-        } catch {
-            print("Key generation failed: \(error)")
-            isCreating = false
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                let engine = CBMPCCryptoEngine()
+                let curveCode = 714
+                let (publicKey, serializedKey) = try engine.generateKey(curveCode: curveCode)
+
+                DispatchQueue.main.async {
+                    let publicKeyHex = publicKey.map { String(format: "%02x", $0) }.joined()
+                    let managedKey = ManagedKey(
+                        id: UUID(),
+                        name: keyName,
+                        publicKey: publicKeyHex,
+                        keyType: keyType,
+                        curveCode: Int32(curveCode),
+                        derivationPath: (keyType == .hdMaster) ? "m" : nil,
+                        parentKeyId: nil,
+                        storageLocation: .secureEnclave,
+                        createdAt: Date(),
+                        lastUsedAt: nil,
+                        isBackedUp: false,
+                        signingRecords: []
+                    )
+                    UserDefaults.standard.set(serializedKey, forKey: "key_\(managedKey.id.uuidString)")
+                    keyStore.addKey(managedKey)
+                    isCreating = false
+                    dismiss()
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    errorMessage = "Key generation failed: \(error.localizedDescription)"
+                    isCreating = false
+                }
+            }
         }
     }
 }

@@ -90,6 +90,30 @@
 		CC00000300000000000000F7 /* NPartyDemoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000100000000000000F7 /* NPartyDemoView.swift */; };
 		CC00000300000000000000F8 /* AgreeRandomDemoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000100000000000000F8 /* AgreeRandomDemoView.swift */; };
 		CC00000300000000000000F9 /* AccessStructureDemoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000100000000000000F9 /* AccessStructureDemoView.swift */; };
+/* N-Party demo views and model file references */
+		DD00000100000000000000A1 /* ECDSAMPDemoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Views/ECDSAMPDemoView.swift; sourceTree = SOURCE_ROOT; };
+		DD00000100000000000000A2 /* EdDSADemoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Views/EdDSADemoView.swift; sourceTree = SOURCE_ROOT; };
+		DD00000100000000000000A3 /* CBMPCJobMP.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Models/CBMPCJobMP.swift; sourceTree = SOURCE_ROOT; };
+		DD00000100000000000000A4 /* CBMPCKeyShareMP.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Models/CBMPCKeyShareMP.swift; sourceTree = SOURCE_ROOT; };
+		DD00000100000000000000A5 /* CBMPCAccessStructure.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Models/CBMPCAccessStructure.swift; sourceTree = SOURCE_ROOT; };
+		DD00000100000000000000A6 /* LocalNPartyRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Models/LocalNPartyRunner.swift; sourceTree = SOURCE_ROOT; };
+
+/* N-Party iOS build file entries */
+		DD00000200000000000000A1 /* ECDSAMPDemoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000100000000000000A1 /* ECDSAMPDemoView.swift */; };
+		DD00000200000000000000A2 /* EdDSADemoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000100000000000000A2 /* EdDSADemoView.swift */; };
+		DD00000200000000000000A3 /* CBMPCJobMP.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000100000000000000A3 /* CBMPCJobMP.swift */; };
+		DD00000200000000000000A4 /* CBMPCKeyShareMP.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000100000000000000A4 /* CBMPCKeyShareMP.swift */; };
+		DD00000200000000000000A5 /* CBMPCAccessStructure.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000100000000000000A5 /* CBMPCAccessStructure.swift */; };
+		DD00000200000000000000A6 /* LocalNPartyRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000100000000000000A6 /* LocalNPartyRunner.swift */; };
+
+/* N-Party macOS build file entries */
+		DD00000300000000000000A1 /* ECDSAMPDemoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000100000000000000A1 /* ECDSAMPDemoView.swift */; };
+		DD00000300000000000000A2 /* EdDSADemoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000100000000000000A2 /* EdDSADemoView.swift */; };
+		DD00000300000000000000A3 /* CBMPCJobMP.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000100000000000000A3 /* CBMPCJobMP.swift */; };
+		DD00000300000000000000A4 /* CBMPCKeyShareMP.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000100000000000000A4 /* CBMPCKeyShareMP.swift */; };
+		DD00000300000000000000A5 /* CBMPCAccessStructure.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000100000000000000A5 /* CBMPCAccessStructure.swift */; };
+		DD00000300000000000000A6 /* LocalNPartyRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000100000000000000A6 /* LocalNPartyRunner.swift */; };
+
 		A1E5F40B2D5E4A1B00C8F3E2 /* CBMPCNative.xcdatamodeld */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodeld; path = CBMPCNative/CBMPCNative.xcdatamodeld; sourceTree = SOURCE_ROOT; };
 		A1E5F40C2D5E4A1B00C8F3E2 /* CBMPCNative.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = A1E5F40B2D5E4A1B00C8F3E2 /* CBMPCNative.xcdatamodeld */; };
 
@@ -170,6 +194,12 @@
 				CC00000200000000000000F7 /* NPartyDemoView.swift in Sources */,
 				CC00000200000000000000F8 /* AgreeRandomDemoView.swift in Sources */,
 				CC00000200000000000000F9 /* AccessStructureDemoView.swift in Sources */,
+				DD00000200000000000000A1 /* ECDSAMPDemoView.swift in Sources */,
+				DD00000200000000000000A2 /* EdDSADemoView.swift in Sources */,
+				DD00000200000000000000A3 /* CBMPCJobMP.swift in Sources */,
+				DD00000200000000000000A4 /* CBMPCKeyShareMP.swift in Sources */,
+				DD00000200000000000000A5 /* CBMPCAccessStructure.swift in Sources */,
+				DD00000200000000000000A6 /* LocalNPartyRunner.swift in Sources */,
 				A1E5F40C2D5E4A1B00C8F3E2 /* CBMPCNative.xcdatamodeld in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -226,6 +256,12 @@
 				CC00000300000000000000F7 /* NPartyDemoView.swift in Sources */,
 				CC00000300000000000000F8 /* AgreeRandomDemoView.swift in Sources */,
 				CC00000300000000000000F9 /* AccessStructureDemoView.swift in Sources */,
+				DD00000300000000000000A1 /* ECDSAMPDemoView.swift in Sources */,
+				DD00000300000000000000A2 /* EdDSADemoView.swift in Sources */,
+				DD00000300000000000000A3 /* CBMPCJobMP.swift in Sources */,
+				DD00000300000000000000A4 /* CBMPCKeyShareMP.swift in Sources */,
+				DD00000300000000000000A5 /* CBMPCAccessStructure.swift in Sources */,
+				DD00000300000000000000A6 /* LocalNPartyRunner.swift in Sources */,
 				AA00000100000000000000C4 /* CBMPCNative.xcdatamodeld in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

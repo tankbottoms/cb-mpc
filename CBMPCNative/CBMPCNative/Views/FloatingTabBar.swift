@@ -42,8 +42,10 @@ struct FloatingTabBar: View {
                             }
                         } label: {
                             Image(systemName: "chevron.right")
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundColor(.gray.opacity(0.4))
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(.gray.opacity(0.6))
+                                .frame(width: 32, height: 32)
+                                .contentShape(Rectangle())
                         }
                     }
                     .frame(height: 42)
