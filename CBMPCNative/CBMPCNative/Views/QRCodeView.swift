@@ -4,13 +4,25 @@ import CoreImage
 struct QRCodeView: View {
     let data: String
     var size: CGFloat = 160
+    var showBorder: Bool = true
 
     var body: some View {
         if let image = generateQR(data) {
-            Image(uiImage: image)
+            let qrImage = Image(uiImage: image)
                 .interpolation(.none)
                 .resizable()
                 .frame(width: size, height: size)
+
+            if showBorder {
+                qrImage
+                    .padding(4)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 2)
+                            .stroke(Color.black, lineWidth: 3)
+                    )
+            } else {
+                qrImage
+            }
         } else {
             VStack(spacing: 8) {
                 Image(systemName: "qrcode")

@@ -37,10 +37,10 @@ struct KeyDetailView: View {
 
                     Spacer()
 
-                    // QR Code in top-right
+                    // QR Code in top-right (3x larger)
                     Button(action: { showQRSheet = true }) {
-                        QRCodeView(data: key.publicKey, size: 48)
-                            .frame(width: 48, height: 48)
+                        QRCodeView(data: key.publicKey, size: 144)
+                            .frame(width: 144, height: 144)
                     }
                     .buttonStyle(.plain)
                 }
@@ -88,6 +88,18 @@ struct KeyDetailView: View {
                         Spacer()
                         Text("secp256k1 (\(key.curveCode))")
                             .font(.system(.caption, design: .monospaced))
+                    }
+
+                    if let path = key.derivationPath {
+                        Divider()
+                        HStack {
+                            Text("Derivation Path")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Text(path)
+                                .font(.system(.caption, design: .monospaced))
+                        }
                     }
 
                     Divider()
@@ -246,7 +258,7 @@ struct KeyDetailView: View {
         .sheet(isPresented: $showQRSheet) {
             NavigationStack {
                 VStack(spacing: 16) {
-                    QRCodeView(data: key.publicKey, size: 200)
+                    QRCodeView(data: key.publicKey, size: 280)
                         .padding()
 
                     VStack(alignment: .leading, spacing: 6) {
@@ -283,6 +295,7 @@ struct KeyDetailView: View {
                     }
                 }
             }
+            .presentationDetents([.medium])
         }
     }
 

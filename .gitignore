@@ -43,8 +43,23 @@ openssl-*.tar.gz
 # Superseded
 ios-demo-app/
 
+# Build artifacts
+build-ios-device/
+build-ios-sim/
+
+# Credentials & keys
+private_keys/
+*.p8
+*.p12
+*.mobileprovision
+
+# Dependencies
+node_modules/
+package-lock.json
+
 # Misc
 *.log
 cmake_test_discovery_*.json
 .DS_Store
 .omc/
+.claude/

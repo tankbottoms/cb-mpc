@@ -20,7 +20,7 @@ struct VerifySignatureSheetView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
-                    if !key.signingRecords.isEmpty && !showManualEntry {
+                    if !key.signingRecords.isEmpty {
                         Text("Select a record to verify")
                             .font(.system(size: 10, design: .monospaced))
                             .foregroundColor(.secondary)
@@ -66,7 +66,11 @@ struct VerifySignatureSheetView: View {
                     }
 
                     // Manual verification
-                    Button(action: { showManualEntry.toggle() }) {
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            showManualEntry.toggle()
+                        }
+                    }) {
                         HStack {
                             Text(showManualEntry ? "Hide Manual Entry" : "Manual Verification")
                                 .font(.system(size: 10, weight: .medium, design: .monospaced))
