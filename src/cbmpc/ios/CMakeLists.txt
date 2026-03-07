@@ -9,6 +9,12 @@ add_library(cbmpc_ios OBJECT
   cbmpc_ios_hd.cpp
   cbmpc_ios_agree_random.cpp
   cbmpc_ios_zk.cpp
+  cbmpc_ios_jobmp.cpp
+  cbmpc_ios_curve.cpp
+  cbmpc_ios_eckeymp.cpp
+  cbmpc_ios_ecdsamp.cpp
+  cbmpc_ios_eddsamp.cpp
+  cbmpc_ios_ac.cpp
 )
 
 target_include_directories(cbmpc_ios PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
