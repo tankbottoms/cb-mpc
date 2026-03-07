@@ -47,8 +47,12 @@ void uc_dl_t::prove(const ecc_point_t& Q, const bn_t& w, mem_t session_id, uint6
       },
 
       // response_next
+      // Use BN_mod_add instead of bn_mod_add_fixed_top: the hash callback calls
+      // correct_top() on z_tag (via get_bin_size), which strips the fixed-top
+      // representation. Subsequent bn_mod_add_fixed_top calls then read stale
+      // limbs beyond the corrected top on arm64, producing wrong z values.
       [&](int e_tag) {
-        int res = bn_mod_add_fixed_top(z_tag, z_tag, w, q_value);
+        int res = BN_mod_add(z_tag, z_tag, w, q_value, bn_t::thread_local_storage_bn_ctx());
         cb_assert(res && "z' = z' + w (mod q) failed");
       });
 }

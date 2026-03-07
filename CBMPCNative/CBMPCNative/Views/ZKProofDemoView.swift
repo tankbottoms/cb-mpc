@@ -126,10 +126,11 @@ func runZKProofDemo(runner: DemoRunner? = nil) -> [DemoStep] {
     let dt2 = CFAbsoluteTimeGetCurrent() - t2
 
     let verified = (verifyResult == 0)
+
     steps.append(DemoStep(
         title: "3. Verify Proof",
         status: verified ? .success : .failure,
-        detail: "Verification: \(verified ? "VALID" : "INVALID (code \(verifyResult))")\nChecks: 32x (zi*G == Ai + ei*Q) + Fischlin constraint\nC++: zk::uc_dl_t::verify(Q, sid, aux)",
+        detail: "Verification: \(verified ? "VALID" : "INVALID (code \(verifyResult))")\nC++: zk::uc_dl_t::verify(Q, sid, aux)",
         duration: dt2
     ))
     runner?.appendStep(steps.last!)
@@ -156,7 +157,7 @@ func runZKProofDemo(runner: DemoRunner? = nil) -> [DemoStep] {
     let totalTime = steps.reduce(0.0) { $0 + $1.duration }
     let allPass = steps.allSatisfy { $0.status == .success }
     steps.append(DemoStep(
-        title: "5. Cross-Platform Verification",
+        title: "5. Summary",
         status: allPass ? .success : .failure,
         detail: "UC-secure DL proof: prove + verify + soundness check\nFischlin transform: non-interactive, 32 parallel reps\nProof: \(proofSize)B | Curve: secp256k1\nTotal: \(String(format: "%.0fms", totalTime * 1000))",
         duration: totalTime

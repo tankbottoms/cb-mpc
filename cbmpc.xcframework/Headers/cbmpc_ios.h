@@ -68,6 +68,50 @@ void cbmpc_job2p_free(cbmpc_job2p_t* job);
 /* Get the role (party index) of this job */
 int  cbmpc_job2p_role(const cbmpc_job2p_t* job);
 
+/* ==================== Job Management (N-Party MPC) ==================== */
+
+typedef struct { void* opaque; } cbmpc_jobmp_t;
+
+/* Create a new N-party MPC job
+ * callbacks: transport callback functions
+ * ctx: opaque context pointer (passed to callbacks)
+ * party_count: total number of parties (must equal pname_count)
+ * role: this party's index (0..party_count-1)
+ * pnames: array of party names
+ * pname_count: must equal party_count
+ * Returns: pointer to new job, or NULL on error
+ */
+cbmpc_jobmp_t* cbmpc_jobmp_new(const cbmpc_transport_t* callbacks, void* ctx,
+                                int party_count, int role,
+                                const char* const* pnames, int pname_count);
+
+/* Free a multi-party job and all associated resources */
+void cbmpc_jobmp_free(cbmpc_jobmp_t* job);
+
+/* Get the role (party index) of this job */
+int  cbmpc_jobmp_role(const cbmpc_jobmp_t* job);
+
+/* Get the total number of parties in this job */
+int  cbmpc_jobmp_n_parties(const cbmpc_jobmp_t* job);
+
+/* ==================== Curve Operations ==================== */
+
+typedef struct { void* opaque; } cbmpc_curve_t;
+typedef struct { void* opaque; } cbmpc_point_t;
+
+/* Create a curve reference from OpenSSL NID
+ * curve_code: OpenSSL NID (714 = secp256k1, 415 = prime256v1)
+ */
+cbmpc_curve_t* cbmpc_curve_new(int curve_code);
+void cbmpc_curve_free(cbmpc_curve_t* curve);
+
+/* Point operations */
+cbmpc_point_t* cbmpc_point_from_bytes(cbmpc_cmem_t data);
+cbmpc_cmem_t   cbmpc_point_to_bytes(cbmpc_point_t* point);
+void           cbmpc_point_free(cbmpc_point_t* point);
+cbmpc_cmem_t   cbmpc_point_get_x(cbmpc_point_t* point);
+cbmpc_cmem_t   cbmpc_point_get_y(cbmpc_point_t* point);
+
 /* ==================== ECDSA 2-Party DKG, Sign, Refresh ==================== */
 
 typedef struct { void* opaque; } cbmpc_ecdsa2p_key_t;
@@ -218,6 +262,140 @@ int cbmpc_zk_dl_verify(int curve_code, cbmpc_cmem_t pub_key_oct,
 
 /* Free a ZK proof handle */
 void cbmpc_zk_proof_free(cbmpc_zk_proof_t* proof);
+
+/* ==================== Access Structures ==================== */
+
+typedef struct { void* opaque; } cbmpc_ac_node_t;
+typedef struct { void* opaque; } cbmpc_ac_t;
+
+/* Node type constants */
+#define CBMPC_AC_NODE_AND       0
+#define CBMPC_AC_NODE_OR        1
+#define CBMPC_AC_NODE_THRESHOLD 2
+#define CBMPC_AC_NODE_LEAF      3
+
+/* Create an access structure node
+ * node_type: CBMPC_AC_NODE_AND/OR/THRESHOLD/LEAF
+ * name: node label (e.g., party name for leaf, "" for gates)
+ * threshold: threshold value (only used for THRESHOLD nodes)
+ * Returns: pointer to new node
+ */
+cbmpc_ac_node_t* cbmpc_ac_node_new(int node_type, const char* name, int threshold);
+
+/* Add a child node to a parent node */
+void cbmpc_ac_node_add_child(cbmpc_ac_node_t* parent, cbmpc_ac_node_t* child);
+
+/* Create an access structure from a root node and curve
+ * root: root node of the access structure tree
+ * curve: curve reference (for generator point)
+ * Returns: pointer to new access structure
+ */
+cbmpc_ac_t* cbmpc_ac_new(cbmpc_ac_node_t* root, cbmpc_curve_t* curve);
+
+/* Free an access structure */
+void cbmpc_ac_free(cbmpc_ac_t* ac);
+
+/* ==================== EC Key Multi-Party ==================== */
+
+typedef struct { void* opaque; } cbmpc_eckey_mp_t;
+
+/* Multi-party distributed key generation
+ * job: N-party job
+ * curve: curve reference
+ * out: [output] newly created key share
+ * Returns: 0 on success, non-zero on error
+ */
+int  cbmpc_eckey_mp_dkg(cbmpc_jobmp_t* job, cbmpc_curve_t* curve, cbmpc_eckey_mp_t* out);
+
+/* Multi-party key refresh
+ * job: N-party job
+ * sid: session ID
+ * key: existing key share
+ * out: [output] refreshed key share
+ * Returns: 0 on success, non-zero on error
+ */
+int  cbmpc_eckey_mp_refresh(cbmpc_jobmp_t* job, cbmpc_cmem_t sid,
+                              cbmpc_eckey_mp_t* key, cbmpc_eckey_mp_t* out);
+
+/* Free a multi-party key share */
+void cbmpc_eckey_mp_free(cbmpc_eckey_mp_t key);
+
+/* Get the compressed SEC1 public key (33 bytes) */
+cbmpc_cmem_t cbmpc_eckey_mp_pubkey(cbmpc_eckey_mp_t* key);
+
+/* Get the party name associated with this key share */
+cbmpc_cmem_t cbmpc_eckey_mp_party_name(cbmpc_eckey_mp_t* key);
+
+/* Get the private share (x_share) as big-endian bytes */
+cbmpc_cmem_t cbmpc_eckey_mp_x_share(cbmpc_eckey_mp_t* key);
+
+/* Serialize multi-party key share to cmems_t (5 fields: x_share, Q, Qis, curve, party_name) */
+int  cbmpc_eckey_mp_serialize(cbmpc_eckey_mp_t* key, cbmpc_cmems_t* out);
+
+/* Deserialize multi-party key share from cmems_t */
+int  cbmpc_eckey_mp_deserialize(cbmpc_cmems_t data, cbmpc_eckey_mp_t* out);
+
+/* ==================== Threshold DKG ==================== */
+
+typedef struct { void* opaque; } cbmpc_party_set_t;
+
+/* Create an empty party set */
+cbmpc_party_set_t* cbmpc_party_set_new(void);
+
+/* Add a party index to the set */
+void cbmpc_party_set_add(cbmpc_party_set_t* set, int party_idx);
+
+/* Free the party set */
+void cbmpc_party_set_free(cbmpc_party_set_t* set);
+
+/* Threshold DKG with access structure
+ * job: N-party job
+ * curve: curve reference
+ * sid: session ID
+ * ac: access structure
+ * quorum: set of party indices forming the quorum
+ * out: [output] key share
+ * Returns: 0 on success
+ */
+int cbmpc_eckey_mp_threshold_dkg(cbmpc_jobmp_t* job, cbmpc_curve_t* curve,
+                                  cbmpc_cmem_t sid, cbmpc_ac_t* ac,
+                                  cbmpc_party_set_t* quorum, cbmpc_eckey_mp_t* out);
+
+/* Convert threshold key share to additive share for signing
+ * key: threshold key share
+ * ac: access structure
+ * quorum_names: cmems_t of party name strings forming the quorum
+ * out: [output] additive key share
+ * Returns: 0 on success
+ */
+int cbmpc_eckey_mp_to_additive(cbmpc_eckey_mp_t* key, cbmpc_ac_t* ac,
+                                cbmpc_cmems_t quorum_names, cbmpc_eckey_mp_t* out);
+
+/* ==================== ECDSA Multi-Party Signing ==================== */
+
+/* Sign a message using multi-party ECDSA
+ * job: N-party job
+ * key: multi-party key share (must be additive for threshold keys)
+ * msg: message hash (32 bytes SHA256)
+ * sig_receiver: party index that receives the signature
+ * out_sig: [output] DER-encoded signature (only valid for sig_receiver, caller must free)
+ * Returns: 0 on success, non-zero on error
+ */
+int cbmpc_ecdsamp_sign(cbmpc_jobmp_t* job, cbmpc_eckey_mp_t* key,
+                        cbmpc_cmem_t msg, int sig_receiver, cbmpc_cmem_t* out_sig);
+
+/* ==================== EdDSA Multi-Party Signing ==================== */
+
+/* Sign a message using multi-party EdDSA (Ed25519)
+ * job: N-party job
+ * key: multi-party key share
+ * msg: message bytes (not pre-hashed for EdDSA)
+ * sig_receiver: party index that receives the signature
+ * out_sig: [output] EdDSA signature (64 bytes, only valid for sig_receiver)
+ * Returns: 0 on success, non-zero on error
+ */
+int cbmpc_eddsamp_sign(cbmpc_jobmp_t* job, cbmpc_eckey_mp_t* key,
+                        cbmpc_cmem_t msg, int sig_receiver, cbmpc_cmem_t* out_sig);
 
 /* ==================== Stateless Signature Verification ==================== */
 

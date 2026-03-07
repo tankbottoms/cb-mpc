@@ -1,8 +1,11 @@
 #include "cbmpc_ios.h"
 
 #include <cbmpc/crypto/base.h>
+#include <cbmpc/crypto/ro.h>
 #include <cbmpc/ffi/cmem_adapter.h>
 #include <cbmpc/zk/zk_ec.h>
+
+#include <cstring>
 
 using namespace coinbase;
 
@@ -63,8 +66,7 @@ int cbmpc_zk_dl_prove(int curve_code, cbmpc_cmem_t pub_key_oct, cbmpc_cmem_t pri
     ecc_point_t Q;
     Q.from_oct(curve, mem_t(static_cast<uint8_t*>(pub_key_oct.data), pub_key_oct.size));
 
-    bn_t w;
-    w.from_bin(mem_t(static_cast<uint8_t*>(priv_key_bn.data), priv_key_bn.size));
+    bn_t w = bn_t::from_bin(mem_t(static_cast<uint8_t*>(priv_key_bn.data), priv_key_bn.size));
 
     mem_t sid(static_cast<uint8_t*>(session_id.data), session_id.size);
 
@@ -76,7 +78,7 @@ int cbmpc_zk_dl_prove(int curve_code, cbmpc_cmem_t pub_key_oct, cbmpc_cmem_t pri
     // Prove
     ctx->proof.prove(Q, w, sid, aux);
 
-    // Immediately verify (same stack frame, same objects) to cache result
+    // Verify immediately to cache result for later verify calls
     error_t err = ctx->proof.verify(Q, sid, aux);
     ctx->verify_result = err ? static_cast<int>(err) : 0;
 
