@@ -133,6 +133,13 @@ class KeyStore: NSObject, ObservableObject {
         )
     }
 
+    /// Add a signing record to a key's history
+    func addSigningRecord(_ record: SigningRecord, to keyId: UUID) {
+        if let idx = keys.firstIndex(where: { $0.id == keyId }) {
+            keys[idx].signingRecords.insert(record, at: 0)
+        }
+    }
+
     // MARK: - Cryptographic Operations
 
     /// Generate a real cryptographic key using DKG

@@ -19,11 +19,12 @@ struct SignMessageSheetView: View {
     @State private var showServerSubmitSheet = false
     @State private var serverSubmitInProgress = false
     @State private var serverSubmitError: String?
+    @State private var signError: String?
 
     var messageHash: String {
         let data = message.data(using: .utf8) ?? Data()
         let digest = SHA256.hash(data: data)
-        return digest.map { String(format: "%02x", $0) }.joined()
+        return digest.map { String(format: "%02X", $0) }.joined()
     }
 
     var body: some View {
@@ -70,7 +71,7 @@ struct SignMessageSheetView: View {
                         .buttonStyle(.borderless)
                     }
 
-                    Text(nonce)
+                    Text(nonce.uppercased())
                         .font(.system(size: 9, design: .monospaced))
                         .lineLimit(2)
                         .truncationMode(.middle)
@@ -172,6 +173,11 @@ struct SignMessageSheetView: View {
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .interactiveDismissDisabled(false)
+            .alert("Error", isPresented: Binding(get: { signError != nil }, set: { if !$0 { signError = nil } })) {
+                Button("OK") { signError = nil }
+            } message: {
+                Text(signError ?? "")
+            }
         }
         .sheet(isPresented: $showServerSubmitSheet) {
             ServerSubmitResultView(
@@ -198,18 +204,42 @@ struct SignMessageSheetView: View {
 
     private func signMessage() {
         isSigning = true
+        signError = nil
 
-        // Include nonce in the signed message
         let messageWithNonce = "\(message)|\(nonce)"
+        let keyId = key.id
+        let curveCode = Int(key.curveCode)
 
-        // Sign on main thread (KeyStore is MainActor)
-        do {
-            let sig = try keyStore.signMessage(messageWithNonce, with: key)
-            self.signature = sig
-            isSigning = false
-        } catch {
-            print("Signing failed: \(error)")
-            isSigning = false
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                guard let keyData = UserDefaults.standard.data(forKey: "key_\(keyId.uuidString)") else {
+                    throw CBMPCError.invalidKeyData
+                }
+                let engine = CBMPCCryptoEngine()
+                let messageData = messageWithNonce.data(using: .utf8) ?? Data()
+                let messageHash = sha256(messageData)
+                let sigData = try engine.signMessage(messageHash, keyData: keyData, curveCode: curveCode)
+                let sigHex = sigData.map { String(format: "%02X", $0) }.joined()
+                let hashHex = messageHash.map { String(format: "%02X", $0) }.joined()
+                DispatchQueue.main.async {
+                    self.signature = sigHex
+                    self.isSigning = false
+                    // Record signing in key history
+                    let record = SigningRecord(
+                        id: UUID(),
+                        messageHash: hashHex,
+                        signature: sigHex,
+                        timestamp: Date(),
+                        verified: true
+                    )
+                    self.keyStore.addSigningRecord(record, to: self.key.id)
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    self.signError = "Signing failed: \(error.localizedDescription)"
+                    self.isSigning = false
+                }
+            }
         }
     }
 }

@@ -2,91 +2,72 @@ import Foundation
 
 /// High-level crypto engine for key generation and signing
 class CBMPCCryptoEngine {
-    private let transport: CBMPCMockTransport
 
-    init(transport: CBMPCMockTransport = CBMPCMockTransport()) {
-        self.transport = transport
-    }
-
-    /// Generate an ECDSA 2-party key (simulated locally for demo)
+    /// Generate an ECDSA 2-party key using LocalTwoPartyRunner
+    /// Stores both party shares in a length-prefixed format: [UInt32 k0Size][k0 bytes][k1 bytes]
     func generateKey(curveCode: Int) throws -> (publicKey: Data, serializedKey: Data) {
-        do {
-            print("[CryptoEngine] Starting key generation with curveCode: \(curveCode)")
+        let partyNames = ["local", "remote"]
 
-            let wrappedTransport = try CBMPCTransport(transport)
-            print("[CryptoEngine] Transport created successfully")
-
-            let job = try CBMPCJob(role: .party1, partyNames: ["Local", "Remote"], transport: wrappedTransport)
-            print("[CryptoEngine] Job created successfully")
-
-            guard let cJob = job.cJob else {
-                print("[CryptoEngine] ERROR: cJob is nil")
-                throw CBMPCError.jobCreationFailed
-            }
-
+        let (k0, k1) = try LocalTwoPartyRunner.run(partyNames: partyNames) { job, role in
             var keyVar = cbmpc_ecdsa2p_key_t()
-            print("[CryptoEngine] Calling cbmpc_ecdsa2p_dkg...")
-            let result = cbmpc_ecdsa2p_dkg(cJob, Int32(curveCode), &keyVar)
-            print("[CryptoEngine] DKG result: \(result)")
-
-            guard result == 0 else {
-                print("[CryptoEngine] ERROR: DKG failed with result: \(result)")
-                throw CBMPCError.keyGenerationFailed
-            }
-
-            print("[CryptoEngine] Creating KeyShare...")
-            let keyShare = CBMPCKeyShare(keyPtr: keyVar, curveCode: curveCode)
-
-            // Extract public key
-            guard let pubKey = keyShare.getPublicKey() else {
-                print("[CryptoEngine] ERROR: Could not get public key")
-                throw CBMPCError.invalidKeyData
-            }
-
-            // Serialize for storage
-            guard let serialized = keyShare.serialize() else {
-                print("[CryptoEngine] ERROR: Could not serialize key")
-                throw CBMPCError.keySerializationFailed
-            }
-
-            print("[CryptoEngine] Key generation succeeded!")
-            return (pubKey, serialized)
-        } catch let error as CBMPCError {
-            print("[CryptoEngine] CBMPCError: \(error)")
-            throw error
-        } catch {
-            print("[CryptoEngine] Unexpected error: \(error)")
-            throw CBMPCError.jobCreationFailed
+            let result = cbmpc_ecdsa2p_dkg(job.cJob, Int32(curveCode), &keyVar)
+            guard result == 0 else { throw CBMPCError.keyGenerationFailed }
+            return CBMPCKeyShare(keyPtr: keyVar, curveCode: curveCode)
         }
+
+        guard let pubKey = k0.getPublicKey() else {
+            throw CBMPCError.invalidKeyData
+        }
+        guard let ser0 = k0.serialize(), let ser1 = k1.serialize() else {
+            throw CBMPCError.keySerializationFailed
+        }
+
+        // Pack both shares: [4 bytes k0 length][k0 bytes][k1 bytes]
+        var combined = Data()
+        var k0Size = UInt32(ser0.count)
+        combined.append(Data(bytes: &k0Size, count: 4))
+        combined.append(ser0)
+        combined.append(ser1)
+
+        return (pubKey, combined)
     }
 
-    /// Sign a message with a deserialized key
+    /// Sign a message with both deserialized key shares using LocalTwoPartyRunner
     func signMessage(_ message: Data, keyData: Data, curveCode: Int) throws -> Data {
-        do {
-            // Deserialize the key
-            let keyShare = try CBMPCKeyShare.deserialize(keyData, curveCode: curveCode)
+        let (keyShare0, keyShare1) = try Self.unpackKeyShares(keyData, curveCode: curveCode)
 
-            // Create a job for signing
-            let wrappedTransport = try CBMPCTransport(transport)
-            let job = try CBMPCJob(role: .party1, partyNames: ["Local", "Remote"], transport: wrappedTransport)
+        let sessionId = UUID().uuidString.data(using: .utf8) ?? Data()
+        let partyNames = ["local", "remote"]
 
-            // Generate a session ID
-            let sessionId = UUID().uuidString.data(using: .utf8) ?? Data()
-
-            // Sign the message
-            let signatures = try CBMPCSigner.signMessages([message], with: keyShare, sessionId: sessionId, job: job)
-
-            guard !signatures.isEmpty else {
-                throw CBMPCError.signingFailed
-            }
-
-            // Return first signature (or combine if multiple)
-            return signatures[0]
-        } catch let error as CBMPCError {
-            throw error
-        } catch {
-            throw CBMPCError.signingFailed
+        let (sig0, _) = try LocalTwoPartyRunner.run(partyNames: partyNames) { job, role in
+            let keyShare = (role == 0) ? keyShare0 : keyShare1
+            let sigs = try CBMPCSigner.signMessages([message], with: keyShare, sessionId: sessionId, job: job)
+            return sigs.first ?? Data()
         }
+
+        guard !sig0.isEmpty else { throw CBMPCError.signingFailed }
+        return sig0
+    }
+
+    /// Unpack length-prefixed key share data into two separate shares
+    static func unpackKeyShares(_ data: Data, curveCode: Int) throws -> (CBMPCKeyShare, CBMPCKeyShare) {
+        guard data.count > 4 else { throw CBMPCError.invalidKeyData }
+
+        let k0Size = data.withUnsafeBytes { buf in
+            buf.load(as: UInt32.self)
+        }
+        let k0Start = 4
+        let k0End = k0Start + Int(k0Size)
+        guard k0End <= data.count else { throw CBMPCError.invalidKeyData }
+
+        let ser0 = data[k0Start..<k0End]
+        let ser1 = data[k0End...]
+
+        guard !ser0.isEmpty, !ser1.isEmpty else { throw CBMPCError.invalidKeyData }
+
+        let share0 = try CBMPCKeyShare.deserialize(Data(ser0), curveCode: curveCode)
+        let share1 = try CBMPCKeyShare.deserialize(Data(ser1), curveCode: curveCode)
+        return (share0, share1)
     }
 
     /// Verify an ECDSA signature (stateless, no key share needed)

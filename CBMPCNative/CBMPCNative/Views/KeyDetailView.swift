@@ -17,22 +17,28 @@ struct KeyDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
                 // Header
-                HStack {
+                HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(key.name)
                             .font(.system(.headline, design: .monospaced))
                         Text(key.keyType.rawValue.uppercased())
                             .font(.system(.caption, design: .monospaced))
                             .foregroundColor(.secondary)
+                        if key.isBackedUp {
+                            Label("Synced", systemImage: "checkmark.circle.fill")
+                                .font(.caption2)
+                                .foregroundColor(.green)
+                        }
                     }
 
                     Spacer()
 
-                    if key.isBackedUp {
-                        Label("Synced", systemImage: "checkmark.circle.fill")
-                            .font(.caption)
-                            .foregroundColor(.green)
+                    // QR Code in top-right
+                    Button(action: { showQRSheet = true }) {
+                        QRCodeView(data: key.publicKey, size: 48)
+                            .frame(width: 48, height: 48)
                     }
+                    .buttonStyle(.plain)
                 }
                 .padding(.bottom, 8)
 
@@ -159,29 +165,49 @@ struct KeyDetailView: View {
 
                 // Signing History
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Recent Signings")
+                    Text("Signing History")
                         .font(.system(.headline, design: .monospaced))
 
                     if key.signingRecords.isEmpty {
                         Text("No signing history")
                             .font(.caption)
                             .foregroundColor(.secondary)
+                            .padding(.vertical, 8)
                     } else {
                         ForEach(key.signingRecords.prefix(5)) { record in
-                            VStack(alignment: .leading, spacing: 2) {
+                            VStack(alignment: .leading, spacing: 4) {
                                 HStack {
-                                    Text(record.timestamp.formatted(date: .omitted, time: .shortened))
-                                        .font(.caption)
+                                    Text(record.timestamp.formatted(date: .abbreviated, time: .shortened))
+                                        .font(.system(size: 9, design: .monospaced))
                                     Spacer()
                                     if record.verified {
                                         Label("Verified", systemImage: "checkmark.circle.fill")
-                                            .font(.caption2)
+                                            .font(.system(size: 9))
                                             .foregroundColor(.green)
                                     }
                                 }
-                                Text(record.messageHashDisplay)
-                                    .font(.system(.caption2, design: .monospaced))
-                                    .foregroundColor(.secondary)
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("SHA-256")
+                                        .font(.system(size: 8, weight: .medium, design: .monospaced))
+                                        .foregroundColor(.secondary)
+                                    Text(record.messageHash)
+                                        .font(.system(size: 8, design: .monospaced))
+                                        .lineLimit(2)
+                                        .truncationMode(.middle)
+                                        .foregroundColor(.secondary)
+                                }
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Signature")
+                                        .font(.system(size: 8, weight: .medium, design: .monospaced))
+                                        .foregroundColor(.secondary)
+                                    Text(record.signature)
+                                        .font(.system(size: 8, design: .monospaced))
+                                        .lineLimit(2)
+                                        .truncationMode(.middle)
+                                        .foregroundColor(.secondary)
+                                }
                             }
                             .padding(6)
                             .background(.gray.opacity(0.1))
@@ -210,21 +236,22 @@ struct KeyDetailView: View {
                             .font(.system(.caption, design: .monospaced))
                             .foregroundColor(.secondary)
 
-                        HStack {
-                            Text(key.publicKey)
-                                .font(.system(.caption2, design: .monospaced))
-                                .lineLimit(4)
-                                .truncationMode(.middle)
-                                .padding(8)
-                                .background(.gray.opacity(0.1))
-                                .cornerRadius(4)
+                        Text(key.publicKey)
+                            .font(.system(size: 8, design: .monospaced))
+                            .lineLimit(nil)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .textSelection(.enabled)
+                            .padding(8)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(.gray.opacity(0.1))
+                            .cornerRadius(4)
 
-                            Button(action: { copyToClipboard(key.publicKey) }) {
-                                Image(systemName: "doc.on.doc")
-                                    .font(.caption)
-                            }
-                            .buttonStyle(.bordered)
+                        Button(action: { copyToClipboard(key.publicKey) }) {
+                            Label("Copy", systemImage: "doc.on.doc")
+                                .font(.system(size: 9, design: .monospaced))
                         }
+                        .controlSize(.mini)
+                        .buttonStyle(.bordered)
                     }
                     .padding(12)
 
