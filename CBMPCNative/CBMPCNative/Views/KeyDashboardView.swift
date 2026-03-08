@@ -3,10 +3,26 @@ import SwiftUI
 struct KeyDashboardView: View {
     @EnvironmentObject var keyStore: KeyStore
     @State private var showCreateKeySheet = false
+    @AppStorage("instructionLevel") private var instructionLevel = "verbose"
 
     var body: some View {
         NavigationStack {
             List {
+                // Instructions section
+                if instructionLevel != "off" {
+                    Section {
+                        if instructionLevel == "verbose" {
+                            Text("Keys are generated using distributed key generation (DKG) with two MPC shares. The private key never exists in a single location. Use Standard ECDSA for general signing, HD Master to create a key hierarchy, or HD Child for derived wallet addresses.")
+                                .font(.system(size: 10, design: .monospaced))
+                                .foregroundColor(.secondary)
+                        } else {
+                            Text("Tap + to create a new key. Swipe left to delete.")
+                                .font(.system(size: 10, design: .monospaced))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+
                 if keyStore.keys.isEmpty {
                     #if os(macOS)
                     VStack(alignment: .center, spacing: 12) {
@@ -37,7 +53,6 @@ struct KeyDashboardView: View {
                     .onDelete { indexSet in
                         for index in indexSet {
                             let key = keyStore.keys[index]
-                            UserDefaults.standard.removeObject(forKey: "key_\(key.id.uuidString)")
                             keyStore.deleteKey(key.id)
                         }
                     }
@@ -47,7 +62,7 @@ struct KeyDashboardView: View {
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button(action: { showCreateKeySheet = true }) {
-                        Label("New Key", systemImage: "plus.circle.fill")
+                        Image(systemName: "plus.circle.fill")
                     }
                 }
             }
@@ -62,23 +77,27 @@ struct KeyDashboardView: View {
 struct KeyListItemView: View {
     let key: ManagedKey
 
+    private var hasKeyData: Bool {
+        UserDefaults.standard.data(forKey: "key_\(key.id.uuidString)") != nil
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            // Line 1: Name + Badge
+            // Line 1: Name + Valid key indicator
             HStack(spacing: 8) {
                 Text(key.name)
                     .font(.system(size: 13, weight: .semibold, design: .monospaced))
 
                 Spacer()
 
-                if key.isBackedUp {
+                if hasKeyData {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.caption2)
                         .foregroundColor(.green)
                 } else {
-                    Image(systemName: "exclamationmark.circle.fill")
+                    Image(systemName: "xmark.circle.fill")
                         .font(.caption2)
-                        .foregroundColor(.orange)
+                        .foregroundColor(.red)
                 }
             }
 

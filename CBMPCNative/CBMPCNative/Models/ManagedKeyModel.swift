@@ -37,11 +37,44 @@ struct ManagedKey: Identifiable {
     var displayKeyType: String {
         switch keyType {
         case .simple:
-            return "Simple Key"
+            return "ECDSA"
         case .hdMaster:
-            return "HD Master"
+            return "HD-MASTER"
         case .hdChild:
-            return "HD Child"
+            return "HD-CHILD"
+        }
+    }
+
+    /// Derivation standard based on BIP-44 path structure:
+    /// - Ledger Live: increments account index: m/44'/60'/0'/0/0, m/44'/60'/1'/0/0
+    /// - MetaMask: increments address_index: m/44'/60'/0'/0/0, m/44'/60'/0'/0/1
+    /// - MetaMask (imported seeds): m/44'/60'/0'/0
+    var derivationPreset: String? {
+        guard let path = derivationPath else { return nil }
+        switch path {
+        case "m":
+            return nil
+        case "m/44'/60'/0'/0":
+            // MetaMask default for imported seed phrases
+            return "MetaMask"
+        default:
+            // Check for Ledger Live pattern: m/44'/60'/X'/0/0
+            // Account index varies, address_index is always 0
+            let ledgerPattern = #"^m/44'/60'/\d+'/0/0$"#
+            if path.range(of: ledgerPattern, options: .regularExpression) != nil {
+                return "Ledger Live"
+            }
+            // Check for MetaMask pattern: m/44'/60'/0'/0/X
+            // Account is always 0, address_index varies
+            let metamaskPattern = #"^m/44'/60'/0'/0/\d+$"#
+            if path.range(of: metamaskPattern, options: .regularExpression) != nil {
+                return "MetaMask"
+            }
+            // Generic BIP-44 Ethereum path
+            if path.hasPrefix("m/44'/60'") {
+                return "Custom"
+            }
+            return "Custom"
         }
     }
 
@@ -53,6 +86,15 @@ struct ManagedKey: Identifiable {
             return "Keychain"
         }
     }
+
+    /// Short address-style display: 0xABCD...WXYZ
+    var shortAddress: String {
+        let pk = publicKey
+        guard pk.count >= 8 else { return "0x\(pk)" }
+        let prefix = String(pk.prefix(4))
+        let suffix = String(pk.suffix(4))
+        return "0x\(prefix)...\(suffix)"
+    }
 }
 
 // MARK: - Swift Model: SigningRecord
@@ -63,6 +105,7 @@ struct SigningRecord: Identifiable {
     let signature: String
     let timestamp: Date
     let verified: Bool
+    var keyId: UUID?
 
     var messageHashDisplay: String {
         String(messageHash.prefix(16)) + "..."
@@ -70,6 +113,20 @@ struct SigningRecord: Identifiable {
 
     var signatureDisplay: String {
         String(signature.prefix(20)) + "..."
+    }
+}
+
+// MARK: - Date Formatting
+
+enum AppDateFormat {
+    static let formatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyyMMdd-HHmmss"
+        return f
+    }()
+
+    static func string(from date: Date) -> String {
+        formatter.string(from: date)
     }
 }
 

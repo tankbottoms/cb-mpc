@@ -11,7 +11,7 @@ struct SignMessageSheetView: View {
     @EnvironmentObject var keyStore: KeyStore
     @Environment(\.dismiss) var dismiss
 
-    @State private var message = "Hello, blockchain!"
+    @State private var message = ""
     @State private var nonce = UUID().uuidString
     @State private var isSigning = false
     @State private var signature: String?
@@ -100,14 +100,22 @@ struct SignMessageSheetView: View {
                                 .foregroundColor(.green)
                         }
 
-                        Text(sig)
-                            .font(.system(.caption2, design: .monospaced))
-                            .lineLimit(3)
-                            .truncationMode(.middle)
-                            .padding(8)
-                            .background(.gray.opacity(0.1))
-                            .cornerRadius(4)
-                            .textSelection(.enabled)
+                        HStack(alignment: .top, spacing: 4) {
+                            Text(sig)
+                                .font(.system(.caption2, design: .monospaced))
+                                .lineLimit(3)
+                                .truncationMode(.middle)
+                                .textSelection(.enabled)
+                            Button(action: { copyToClipboard(sig) }) {
+                                Image(systemName: "doc.on.doc")
+                                    .font(.system(size: 9))
+                                    .foregroundColor(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(8)
+                        .background(.gray.opacity(0.1))
+                        .cornerRadius(4)
                     }
                 }
 
@@ -224,6 +232,14 @@ struct SignMessageSheetView: View {
                 DispatchQueue.main.async {
                     self.signature = sigHex
                     self.isSigning = false
+
+                    // Auto-copy signature to clipboard with haptic
+                    #if os(iOS)
+                    UIPasteboard.general.string = sigHex
+                    let impact = UIImpactFeedbackGenerator(style: .medium)
+                    impact.impactOccurred()
+                    #endif
+
                     // Record signing in key history
                     let record = SigningRecord(
                         id: UUID(),

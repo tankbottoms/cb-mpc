@@ -1,5 +1,10 @@
 import SwiftUI
 import CryptoKit
+#if os(iOS)
+import UIKit
+#else
+import AppKit
+#endif
 
 struct VerifySignatureSheetView: View {
     let key: ManagedKey
@@ -20,17 +25,28 @@ struct VerifySignatureSheetView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
-                    if !key.signingRecords.isEmpty {
-                        Text("Select a record to verify")
-                            .font(.system(size: 10, design: .monospaced))
+                    // Instructions
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Tap a signing record to verify it")
+                            .font(.system(size: 10, weight: .medium, design: .monospaced))
+                        Text("Verification confirms the signature was produced by this key's private share for the given message hash, using ECDSA over secp256k1.")
+                            .font(.system(size: 9, design: .monospaced))
                             .foregroundColor(.secondary)
+                    }
+                    .padding(8)
+                    .background(.blue.opacity(0.05))
+                    .cornerRadius(4)
 
+                    if !key.signingRecords.isEmpty {
                         ForEach(key.signingRecords.prefix(10)) { record in
                             Button(action: { verifyRecord(record) }) {
                                 VStack(alignment: .leading, spacing: 4) {
                                     HStack {
-                                        Text(record.timestamp.formatted(date: .abbreviated, time: .shortened))
+                                        Text(AppDateFormat.string(from: record.timestamp))
                                             .font(.system(size: 9, design: .monospaced))
+                                        Text(key.name)
+                                            .font(.system(size: 9, design: .monospaced))
+                                            .foregroundColor(.secondary)
                                         Spacer()
                                         if selectedRecord?.id == record.id {
                                             if isVerifying {
@@ -45,15 +61,43 @@ struct VerifySignatureSheetView: View {
                                         }
                                     }
 
-                                    Text("Hash: \(record.messageHash.prefix(40))...")
-                                        .font(.system(size: 8, design: .monospaced))
-                                        .foregroundColor(.secondary)
-                                        .lineLimit(1)
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("HASH")
+                                                .font(.system(size: 8, weight: .medium, design: .monospaced))
+                                                .foregroundColor(.secondary)
+                                            Text(record.messageHash)
+                                                .font(.system(size: 8, design: .monospaced))
+                                                .foregroundColor(.secondary)
+                                                .textSelection(.enabled)
+                                        }
+                                        Spacer()
+                                        Button(action: { copyToClipboard(record.messageHash) }) {
+                                            Image(systemName: "doc.on.doc")
+                                                .font(.system(size: 9))
+                                                .foregroundColor(.secondary)
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
 
-                                    Text("Sig: \(record.signature.prefix(40))...")
-                                        .font(.system(size: 8, design: .monospaced))
-                                        .foregroundColor(.secondary)
-                                        .lineLimit(1)
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("SIGNATURE")
+                                                .font(.system(size: 8, weight: .medium, design: .monospaced))
+                                                .foregroundColor(.secondary)
+                                            Text(record.signature)
+                                                .font(.system(size: 8, design: .monospaced))
+                                                .foregroundColor(.secondary)
+                                                .textSelection(.enabled)
+                                        }
+                                        Spacer()
+                                        Button(action: { copyToClipboard(record.signature) }) {
+                                            Image(systemName: "doc.on.doc")
+                                                .font(.system(size: 9))
+                                                .foregroundColor(.secondary)
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
                                 }
                                 .padding(8)
                                 .background(.gray.opacity(0.1))
@@ -178,6 +222,15 @@ struct VerifySignatureSheetView: View {
                 }
             }
         }
+    }
+
+    private func copyToClipboard(_ text: String) {
+        #if os(iOS)
+        UIPasteboard.general.string = text
+        #else
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+        #endif
     }
 
     private func verifyRecord(_ record: SigningRecord) {

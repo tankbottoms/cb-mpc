@@ -3,10 +3,10 @@ import CoreData
 class PersistenceController {
     static let shared = PersistenceController()
 
-    let container: NSPersistentCloudKitContainer
+    let container: NSPersistentContainer
 
     init(inMemory: Bool = false) {
-        container = NSPersistentCloudKitContainer(name: "CBMPCNative")
+        container = NSPersistentContainer(name: "CBMPCNative")
 
         if inMemory {
             container.persistentStoreDescriptions.first?.url = URL(fileURLWithPath: "/dev/null")

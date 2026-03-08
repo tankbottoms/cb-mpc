@@ -1,66 +1,136 @@
 import SwiftUI
 import CoreData
+import CryptoKit
+import LocalAuthentication
 
 @main
 struct CBMPCApp: App {
     let persistenceController = PersistenceController.shared
+    @AppStorage("useFaceID") private var useFaceID = false
+    @AppStorage("keystorePasswordHash") private var keystorePasswordHash = ""
+    @State private var isUnlocked = false
+    @State private var passwordAttempt = ""
+    @State private var passwordError: String?
+    @State private var hasAttemptedBiometrics = false
 
-    init() {
-        // Seed demo data on first launch if no keys exist
-        let context = persistenceController.container.viewContext
-        let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: "ManagedKeyEntity")
-        do {
-            let results = try context.fetch(fetchRequest)
-            if results.isEmpty {
-                seedDemoData()
-            }
-        } catch {
-            print("Error checking for existing keys: \(error)")
-        }
+    private var needsAuth: Bool {
+        !isUnlocked && (useFaceID || !keystorePasswordHash.isEmpty)
     }
 
     var body: some Scene {
         WindowGroup {
-            AppNavigation()
-                .environment(\.managedObjectContext, persistenceController.container.viewContext)
+            ZStack {
+                AppNavigation()
+                    .environment(\.managedObjectContext, persistenceController.container.viewContext)
+                    .blur(radius: needsAuth ? 20 : 0)
+                    .allowsHitTesting(!needsAuth)
+
+                if needsAuth {
+                    lockOverlay
+                }
+            }
+            .task {
+                guard !isUnlocked, !hasAttemptedBiometrics else { return }
+                if !useFaceID && keystorePasswordHash.isEmpty {
+                    isUnlocked = true
+                    return
+                }
+                if useFaceID {
+                    hasAttemptedBiometrics = true
+                    await authenticateWithBiometrics()
+                }
+            }
         }
     }
 
-    private func seedDemoData() {
-        let context = persistenceController.container.viewContext
+    private var lockOverlay: some View {
+        VStack(spacing: 24) {
+            Spacer()
 
-        DispatchQueue.global(qos: .userInitiated).async {
-            do {
-                let (demoKeys, keyDataMap) = try DemoDataGenerator.generateRealDemoKeys()
+            Image(systemName: "lock.shield.fill")
+                .font(.system(size: 48))
+                .foregroundColor(.secondary)
 
-                DispatchQueue.main.async {
-                    for key in demoKeys {
-                        if let keyData = keyDataMap[key.id] {
-                            UserDefaults.standard.set(keyData, forKey: "key_\(key.id.uuidString)")
-                        }
-                        let entity = NSEntityDescription.insertNewObject(forEntityName: "ManagedKeyEntity", into: context)
-                        entity.setValue(key.id, forKey: "id")
-                        entity.setValue(key.name, forKey: "name")
-                        entity.setValue(key.publicKey, forKey: "publicKey")
-                        entity.setValue(key.keyType.rawValue, forKey: "keyType")
-                        entity.setValue(key.curveCode, forKey: "curveCode")
-                        entity.setValue(key.derivationPath, forKey: "derivationPath")
-                        entity.setValue(key.parentKeyId, forKey: "parentKeyId")
-                        entity.setValue(key.storageLocation.rawValue, forKey: "storageLocation")
-                        entity.setValue(key.createdAt, forKey: "createdAt")
-                        entity.setValue(key.lastUsedAt, forKey: "lastUsedAt")
-                        entity.setValue(key.isBackedUp, forKey: "isBackedUp")
-                    }
+            Text("CB-MPC")
+                .font(.system(.title2, design: .monospaced))
 
-                    do {
-                        try context.save()
-                    } catch {
-                        print("Failed to save demo data: \(error)")
-                    }
+            if useFaceID {
+                Button(action: {
+                    Task { await authenticateWithBiometrics() }
+                }) {
+                    Label("Unlock with Face ID", systemImage: "faceid")
+                        .font(.system(size: 14, design: .monospaced))
+                        .frame(maxWidth: .infinity)
                 }
-            } catch {
-                print("Failed to generate demo keys: \(error)")
+                .buttonStyle(.borderedProminent)
+                .padding(.horizontal, 40)
             }
+
+            if !keystorePasswordHash.isEmpty {
+                VStack(spacing: 8) {
+                    SecureField("Password", text: $passwordAttempt)
+                        .font(.system(.body, design: .monospaced))
+                        .padding(10)
+                        .background(.gray.opacity(0.15))
+                        .cornerRadius(8)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .onSubmit { checkPassword() }
+
+                    if let err = passwordError {
+                        Text(err)
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundColor(.red)
+                    }
+
+                    Button("Unlock") { checkPassword() }
+                        .font(.system(size: 14, design: .monospaced))
+                        .buttonStyle(.borderedProminent)
+                        .disabled(passwordAttempt.isEmpty)
+                }
+                .padding(.horizontal, 40)
+            }
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(.ultraThinMaterial)
+    }
+
+    private func authenticateWithBiometrics() async {
+        let context = LAContext()
+        var error: NSError?
+
+        guard context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) else {
+            if keystorePasswordHash.isEmpty {
+                await MainActor.run { isUnlocked = true }
+            }
+            return
+        }
+
+        do {
+            let success = try await context.evaluatePolicy(
+                .deviceOwnerAuthenticationWithBiometrics,
+                localizedReason: "Unlock CB-MPC to access your keys"
+            )
+            if success {
+                await MainActor.run { isUnlocked = true }
+            }
+        } catch {
+            // User cancelled or biometrics failed -- fall through to password
+        }
+    }
+
+    private func checkPassword() {
+        let hash = SHA256.hash(data: Data(passwordAttempt.utf8))
+        let hashHex = hash.map { String(format: "%02x", $0) }.joined()
+        if hashHex == keystorePasswordHash {
+            isUnlocked = true
+            passwordAttempt = ""
+            passwordError = nil
+        } else {
+            passwordError = "Incorrect password"
+            passwordAttempt = ""
         }
     }
 }

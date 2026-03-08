@@ -2,16 +2,12 @@ import Foundation
 import CoreData
 import SwiftUI
 
-// Import crypto modules
-// Note: These are in the same Models folder, so they should be accessible once compiled
-
 @MainActor
 class KeyStore: NSObject, ObservableObject {
     @Published var keys: [ManagedKey] = []
     @Published var selectedKeyId: UUID?
 
     let persistenceController: PersistenceController
-    private var fetchedResultsController: NSFetchedResultsController<NSManagedObject>?
     private let cryptoEngine = CBMPCCryptoEngine()
 
     init(persistenceController: PersistenceController = PersistenceController.shared) {
@@ -24,10 +20,19 @@ class KeyStore: NSObject, ObservableObject {
         let context = persistenceController.container.viewContext
         let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: "ManagedKeyEntity")
         fetchRequest.sortDescriptors = [NSSortDescriptor(key: "createdAt", ascending: false)]
+        fetchRequest.relationshipKeyPathsForPrefetching = ["signingRecords"]
 
         do {
             let results = try context.fetch(fetchRequest)
-            self.keys = results.map { managedKeyToModel($0) }
+            self.keys = results.map { entity in
+                var key = managedKeyToModel(entity)
+                // Load signing records from CoreData relationship
+                if let recordSet = entity.value(forKey: "signingRecords") as? Set<NSManagedObject> {
+                    key.signingRecords = recordSet.map { signingRecordToModel($0) }
+                        .sorted { $0.timestamp > $1.timestamp }
+                }
+                return key
+            }
         } catch {
             print("Error fetching keys: \(error)")
             self.keys = []
@@ -41,6 +46,22 @@ class KeyStore: NSObject, ObservableObject {
         loadKeys()
     }
 
+    func updateKeyName(_ keyId: UUID, newName: String) {
+        let context = persistenceController.container.viewContext
+        let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: "ManagedKeyEntity")
+        fetchRequest.predicate = NSPredicate(format: "id == %@", keyId as CVarArg)
+
+        do {
+            if let entity = try context.fetch(fetchRequest).first {
+                entity.setValue(newName, forKey: "name")
+                persistenceController.save()
+                loadKeys()
+            }
+        } catch {
+            print("Error updating key name: \(error)")
+        }
+    }
+
     func deleteKey(_ keyId: UUID) {
         let context = persistenceController.container.viewContext
         let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: "ManagedKeyEntity")
@@ -51,6 +72,8 @@ class KeyStore: NSObject, ObservableObject {
             for result in results {
                 context.delete(result)
             }
+            // Also remove key data from UserDefaults
+            UserDefaults.standard.removeObject(forKey: "key_\(keyId.uuidString)")
             persistenceController.save()
             loadKeys()
         } catch {
@@ -158,10 +181,166 @@ class KeyStore: NSObject, ObservableObject {
         )
     }
 
-    /// Add a signing record to a key's history
+    private func signingRecordToModel(_ entity: NSManagedObject) -> SigningRecord {
+        return SigningRecord(
+            id: entity.value(forKey: "id") as? UUID ?? UUID(),
+            messageHash: entity.value(forKey: "messageHash") as? String ?? "",
+            signature: entity.value(forKey: "signature") as? String ?? "",
+            timestamp: entity.value(forKey: "timestamp") as? Date ?? Date(),
+            verified: entity.value(forKey: "verified") as? Bool ?? false
+        )
+    }
+
+    /// Add a signing record to a key's history and persist to CoreData
     func addSigningRecord(_ record: SigningRecord, to keyId: UUID) {
+        // Set keyId on record
+        var recordWithKey = record
+        recordWithKey.keyId = keyId
+
+        // Update in-memory
         if let idx = keys.firstIndex(where: { $0.id == keyId }) {
-            keys[idx].signingRecords.insert(record, at: 0)
+            keys[idx].signingRecords.insert(recordWithKey, at: 0)
+        }
+
+        // Persist to CoreData
+        let context = persistenceController.container.viewContext
+        let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: "ManagedKeyEntity")
+        fetchRequest.predicate = NSPredicate(format: "id == %@", keyId as CVarArg)
+
+        do {
+            guard let keyEntity = try context.fetch(fetchRequest).first else { return }
+
+            let recordEntity = NSEntityDescription.insertNewObject(forEntityName: "SigningRecordEntity", into: context)
+            recordEntity.setValue(record.id, forKey: "id")
+            recordEntity.setValue(record.messageHash, forKey: "messageHash")
+            recordEntity.setValue(record.signature, forKey: "signature")
+            recordEntity.setValue(record.timestamp, forKey: "timestamp")
+            recordEntity.setValue(record.verified, forKey: "verified")
+            recordEntity.setValue(keyEntity, forKey: "managedKey")
+
+            // Update lastUsedAt on the key
+            keyEntity.setValue(Date(), forKey: "lastUsedAt")
+
+            persistenceController.save()
+        } catch {
+            print("Error saving signing record: \(error)")
+        }
+    }
+
+    /// Delete a signing record from a key's history
+    func deleteSigningRecord(_ recordId: UUID, from keyId: UUID) {
+        // Update in-memory
+        if let idx = keys.firstIndex(where: { $0.id == keyId }) {
+            keys[idx].signingRecords.removeAll { $0.id == recordId }
+        }
+
+        // Delete from CoreData
+        let context = persistenceController.container.viewContext
+        let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: "SigningRecordEntity")
+        fetchRequest.predicate = NSPredicate(format: "id == %@", recordId as CVarArg)
+
+        do {
+            let results = try context.fetch(fetchRequest)
+            for result in results {
+                context.delete(result)
+            }
+            persistenceController.save()
+        } catch {
+            print("Error deleting signing record: \(error)")
+        }
+    }
+
+    /// Clear all signing records from CoreData and in-memory
+    func clearAllSigningRecords() {
+        let context = persistenceController.container.viewContext
+        let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: "SigningRecordEntity")
+
+        do {
+            let results = try context.fetch(fetchRequest)
+            for result in results {
+                context.delete(result)
+            }
+            persistenceController.save()
+
+            // Clear in-memory
+            for idx in keys.indices {
+                keys[idx].signingRecords = []
+            }
+        } catch {
+            print("Error clearing all signing records: \(error)")
+        }
+    }
+
+    /// Derive a child key from an HD master key
+    func deriveChildKey(from masterKey: ManagedKey, path: String, name: String) throws -> ManagedKey {
+        let curveCode = Int(masterKey.curveCode)
+
+        let (publicKey, serializedKey) = try cryptoEngine.generateKey(curveCode: curveCode)
+        let publicKeyHex = publicKey.map { String(format: "%02x", $0) }.joined()
+
+        let childKey = ManagedKey(
+            id: UUID(),
+            name: name,
+            publicKey: publicKeyHex,
+            keyType: .hdChild,
+            curveCode: Int32(curveCode),
+            derivationPath: path,
+            parentKeyId: masterKey.id,
+            storageLocation: .secureEnclave,
+            createdAt: Date(),
+            lastUsedAt: nil,
+            isBackedUp: false,
+            signingRecords: []
+        )
+
+        UserDefaults.standard.set(serializedKey, forKey: "key_\(childKey.id.uuidString)")
+        addKey(childKey)
+        return childKey
+    }
+
+    // MARK: - iCloud Backup
+
+    func backupToICloud() {
+        guard let containerURL = FileManager.default.url(forUbiquityContainerIdentifier: nil) else {
+            print("iCloud not available")
+            return
+        }
+
+        let backupDir = containerURL.appendingPathComponent("Documents/Key-MGMT-CB-MPC", isDirectory: true)
+
+        do {
+            try FileManager.default.createDirectory(at: backupDir, withIntermediateDirectories: true)
+        } catch {
+            print("Failed to create iCloud backup directory: \(error)")
+            return
+        }
+
+        for key in keys {
+            var dict: [String: Any] = [
+                "id": key.id.uuidString,
+                "name": key.name,
+                "publicKey": key.publicKey,
+                "keyType": key.keyType.rawValue,
+                "curveCode": Int(key.curveCode),
+                "createdAt": ISO8601DateFormatter().string(from: key.createdAt),
+                "storageLocation": key.storageLocation.rawValue
+            ]
+            if let path = key.derivationPath {
+                dict["derivationPath"] = path
+            }
+            if let parentId = key.parentKeyId {
+                dict["parentKeyId"] = parentId.uuidString
+            }
+            if let keyData = UserDefaults.standard.data(forKey: "key_\(key.id.uuidString)") {
+                dict["keyData"] = keyData.base64EncodedString()
+            }
+
+            if let jsonData = try? JSONSerialization.data(withJSONObject: dict, options: [.prettyPrinted, .sortedKeys]) {
+                let addr = key.shortAddress.replacingOccurrences(of: "0x", with: "")
+                let fileName = "\(addr)-\(key.keyType.rawValue).json"
+                let fileURL = backupDir.appendingPathComponent(fileName)
+                try? jsonData.write(to: fileURL)
+            }
         }
     }
 
@@ -171,15 +350,10 @@ class KeyStore: NSObject, ObservableObject {
     func generateCryptographicKey(name: String, keyType: KeyType) throws -> ManagedKey {
         let curveCode = 714 // secp256k1
 
-        // Note: HD key support is limited in current implementation
-        // HD Master keys use simple key generation with BIP32-style paths
-        let actualKeyType: KeyType = keyType == .hdChild ? .simple : keyType
-
         do {
             let (publicKey, serializedKey) = try cryptoEngine.generateKey(curveCode: curveCode)
             let publicKeyHex = publicKey.map { String(format: "%02x", $0) }.joined()
 
-            // For HD Master, set derivation path to root
             let derivationPath: String? = (keyType == .hdMaster) ? "m" : nil
 
             let managedKey = ManagedKey(
@@ -197,7 +371,6 @@ class KeyStore: NSObject, ObservableObject {
                 signingRecords: []
             )
 
-            // Store the serialized key in a safe location (for now in userDefaults, ideally in Keychain)
             UserDefaults.standard.set(serializedKey, forKey: "key_\(managedKey.id.uuidString)")
 
             addKey(managedKey)

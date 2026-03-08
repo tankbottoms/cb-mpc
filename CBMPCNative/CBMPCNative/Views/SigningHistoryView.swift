@@ -1,101 +1,167 @@
 import SwiftUI
+#if os(iOS)
+import UIKit
+#endif
 
 struct SigningHistoryView: View {
     @EnvironmentObject var keyStore: KeyStore
+    @State private var showClearAllAlert = false
+    @State private var copiedId: String?
 
-    var allSignings: [SigningRecord] {
-        let real = keyStore.keys
-            .flatMap { $0.signingRecords }
-            .sorted { $0.timestamp > $1.timestamp }
-        return real.isEmpty ? Self.sampleSignings : real
+    var allSignings: [(record: SigningRecord, keyName: String, keyPublicKey: String, keyType: String)] {
+        keyStore.keys.flatMap { key in
+            key.signingRecords.map { record in
+                (record: record, keyName: key.name, keyPublicKey: key.publicKey, keyType: key.displayKeyType)
+            }
+        }
+        .sorted { $0.record.timestamp > $1.record.timestamp }
     }
 
     var body: some View {
         NavigationStack {
-            List {
-                ForEach(allSignings) { record in
-                    HStack(alignment: .center, spacing: 8) {
-                        if record.verified {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 12))
-                                .foregroundColor(.green)
-                        } else {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 12))
-                                .foregroundColor(.red)
-                        }
+            Group {
+                if allSignings.isEmpty {
+                    VStack(spacing: 12) {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 36))
+                            .foregroundColor(.secondary.opacity(0.5))
+                        Text("No signing history")
+                            .font(.system(size: 13, design: .monospaced))
+                            .foregroundColor(.secondary)
+                        Text("Sign a message from any key to see records here")
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundColor(.secondary.opacity(0.7))
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    List {
+                        ForEach(Array(allSignings.enumerated()), id: \.element.record.id) { _, entry in
+                            VStack(alignment: .leading, spacing: 6) {
+                                // Timestamp + key type + delete + wallet info
+                                HStack {
+                                    if entry.record.verified {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .font(.system(size: 10))
+                                            .foregroundColor(.green)
+                                    } else {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .font(.system(size: 10))
+                                            .foregroundColor(.red)
+                                    }
 
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(record.timestamp.formatted(date: .abbreviated, time: .shortened))
-                                .font(.system(size: 10, design: .monospaced))
+                                    Text(AppDateFormat.string(from: entry.record.timestamp))
+                                        .font(.system(size: 9, design: .monospaced))
 
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(record.messageHash)
-                                    .font(.system(size: 8, design: .monospaced))
-                                    .foregroundColor(.secondary)
-                                    .lineLimit(1)
-                                    .truncationMode(.middle)
+                                    Text(entry.keyType)
+                                        .font(.system(size: 7, weight: .bold, design: .monospaced))
+                                        .foregroundColor(.secondary)
 
-                                Text(record.signatureDisplay)
-                                    .font(.system(size: 8, design: .monospaced))
+                                    // Delete glyph right after wallet type
+                                    Button(action: {
+                                        if let key = keyStore.keys.first(where: { $0.signingRecords.contains(where: { $0.id == entry.record.id }) }) {
+                                            keyStore.deleteSigningRecord(entry.record.id, from: key.id)
+                                        }
+                                    }) {
+                                        Image(systemName: "trash")
+                                            .font(.system(size: 8))
+                                            .foregroundColor(.red.opacity(0.5))
+                                    }
+                                    .buttonStyle(.plain)
+
+                                    Spacer()
+
+                                    Text(entry.keyName)
+                                        .font(.system(size: 8, weight: .medium, design: .monospaced))
+                                        .foregroundColor(.secondary)
+                                }
+
+                                // Full public key - no truncation
+                                Text(entry.keyPublicKey)
+                                    .font(.system(size: 7, design: .monospaced))
                                     .foregroundColor(.secondary.opacity(0.7))
-                                    .lineLimit(1)
-                                    .truncationMode(.middle)
+                                    .fixedSize(horizontal: false, vertical: true)
+
+                                // Full hash with copy - no truncation
+                                HStack(alignment: .top, spacing: 4) {
+                                    VStack(alignment: .leading, spacing: 1) {
+                                        Text("SHA-256")
+                                            .font(.system(size: 7, weight: .bold, design: .monospaced))
+                                            .foregroundColor(.secondary)
+                                        Text(entry.record.messageHash)
+                                            .font(.system(size: 7, design: .monospaced))
+                                            .foregroundColor(.secondary)
+                                            .fixedSize(horizontal: false, vertical: true)
+                                    }
+                                    Spacer(minLength: 4)
+                                    copyButton(entry.record.messageHash, id: "h-\(entry.record.id)")
+                                }
+
+                                // Full signature with copy - no truncation
+                                HStack(alignment: .top, spacing: 4) {
+                                    VStack(alignment: .leading, spacing: 1) {
+                                        Text("SIGNATURE")
+                                            .font(.system(size: 7, weight: .bold, design: .monospaced))
+                                            .foregroundColor(.secondary)
+                                        Text(entry.record.signature)
+                                            .font(.system(size: 7, design: .monospaced))
+                                            .foregroundColor(.secondary.opacity(0.7))
+                                            .fixedSize(horizontal: false, vertical: true)
+                                    }
+                                    Spacer(minLength: 4)
+                                    copyButton(entry.record.signature, id: "s-\(entry.record.id)")
+                                }
                             }
+                            .padding(.vertical, 2)
                         }
                     }
-                    .padding(.vertical, 2)
+                    .listStyle(.plain)
                 }
             }
-            .listStyle(.plain)
             .navigationTitle("History")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
+            .toolbar {
+                if !allSignings.isEmpty {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button(action: { showClearAllAlert = true }) {
+                            Image(systemName: "trash")
+                                .font(.system(size: 12))
+                                .foregroundColor(.red)
+                        }
+                    }
+                }
+            }
+            .alert("Clear All History", isPresented: $showClearAllAlert) {
+                Button("Cancel", role: .cancel) {}
+                Button("Clear All", role: .destructive) {
+                    keyStore.clearAllSigningRecords()
+                }
+            } message: {
+                Text("This will permanently delete all signing history records.")
+            }
         }
     }
 
-    // Sample data for when no real signings exist
-    static let sampleSignings: [SigningRecord] = {
-        let now = Date()
-        return [
-            SigningRecord(
-                id: UUID(),
-                messageHash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-                signature: "3045022100a3f20e4c8b9d1a6e7f2b3c4d5e6f7081929a3b4c5d6e7f8091a2b3c4d5e6f7b7c4",
-                timestamp: now.addingTimeInterval(-120),
-                verified: true
-            ),
-            SigningRecord(
-                id: UUID(),
-                messageHash: "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
-                signature: "30440220784e3a1b5c9d2e4f6a8b0c1d3e5f7a9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d9a12",
-                timestamp: now.addingTimeInterval(-3600),
-                verified: true
-            ),
-            SigningRecord(
-                id: UUID(),
-                messageHash: "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
-                signature: "3046022100d8b2a1c3e5f7091b3d5f7a9c1e3f5a7b9d1e3f5a7c9e1f3a5c7e9b1d3f5a4f01",
-                timestamp: now.addingTimeInterval(-7200),
-                verified: true
-            ),
-            SigningRecord(
-                id: UUID(),
-                messageHash: "d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592",
-                signature: "3045022100e1c7b3a5d7f9012b4c6e8f0a2c4e6a8c0e2a4c6e8f0b2d4f6a8c0e2a4c6b33",
-                timestamp: now.addingTimeInterval(-86400),
-                verified: true
-            ),
-            SigningRecord(
-                id: UUID(),
-                messageHash: "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
-                signature: "3044022039af1b3d5e7f9a1c3e5a7c9e1f3b5d7f9a1c3e5a7c9e1f3b5d7f9a1c3ec821",
-                timestamp: now.addingTimeInterval(-172800),
-                verified: false
-            ),
-        ]
-    }()
+    @ViewBuilder
+    private func copyButton(_ text: String, id: String) -> some View {
+        Button(action: {
+            #if os(iOS)
+            UIPasteboard.general.string = text
+            let impact = UIImpactFeedbackGenerator(style: .light)
+            impact.impactOccurred()
+            #endif
+            copiedId = id
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                if copiedId == id { copiedId = nil }
+            }
+        }) {
+            Image(systemName: "doc.on.doc")
+                .font(.system(size: 8))
+                .foregroundColor(copiedId == id ? .blue : .secondary)
+        }
+        .buttonStyle(.plain)
+    }
 }
 
 #Preview {
