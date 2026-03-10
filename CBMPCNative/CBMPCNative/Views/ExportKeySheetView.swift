@@ -158,18 +158,29 @@ struct ExportKeySheetView: View {
                         ForEach(ExportDestination.allCases, id: \.rawValue) { dest in
                             let exported = isDestinationExported(dest)
                             Button(action: {
-                                handleExportDestination(dest)
+                                if dest.isAvailable {
+                                    handleExportDestination(dest)
+                                }
                             }) {
                                 HStack {
                                     Image(systemName: exported ? "checkmark.circle.fill" : dest.icon)
                                         .font(.system(size: 14))
-                                        .foregroundColor(exported ? .blue : .primary)
+                                        .foregroundColor(exported ? .blue : dest.isAvailable ? .primary : .secondary)
                                         .frame(width: 24)
                                     Text(dest.rawValue)
                                         .font(.system(size: 11, design: .monospaced))
-                                        .foregroundColor(exported ? .blue : .primary)
+                                        .foregroundColor(exported ? .blue : dest.isAvailable ? .primary : .secondary)
+                                    if !dest.isAvailable {
+                                        Text("Coming Soon")
+                                            .font(.system(size: 8, weight: .medium, design: .monospaced))
+                                            .foregroundColor(.orange)
+                                            .padding(.horizontal, 5)
+                                            .padding(.vertical, 2)
+                                            .background(.orange.opacity(0.1))
+                                            .cornerRadius(3)
+                                    }
                                     Spacer()
-                                    if !exported {
+                                    if !exported && dest.isAvailable {
                                         Image(systemName: "chevron.right")
                                             .font(.system(size: 10))
                                             .foregroundColor(.secondary)
@@ -180,6 +191,7 @@ struct ExportKeySheetView: View {
                                 .cornerRadius(6)
                             }
                             .buttonStyle(.plain)
+                            .disabled(!dest.isAvailable)
                         }
                     }
 
@@ -350,6 +362,7 @@ struct ExportKeySheetView: View {
         case .secureEnclave: return exportedToSecureEnclave
         case .icloudKeychain: return exportedToICloudKeychain
         case .storage: return exportedToStorage
+        case .pairedDevice, .mpcServer: return false
         }
     }
 
@@ -417,6 +430,9 @@ struct ExportKeySheetView: View {
                 exportedToStorage = true
                 exportStatusMessage = "\(utcFileName).json exported via File Export at \(exportTimeString)"
             }
+
+        case .pairedDevice, .mpcServer:
+            break  // Coming soon — handled by isAvailable check in UI
         }
     }
 

@@ -8,8 +8,8 @@ struct ServerRegistrationView: View {
     @Environment(\.dismiss) var dismiss
     @ObservedObject var pairingManager = PairingManager.shared
 
-    @State private var serverURL = ""
-    @State private var serverName = ""
+    @State private var serverURL = "https://cb-mpc-key-server.atsignhandle.workers.dev"
+    @State private var serverName = "CB-MPC Key Server"
     @State private var isConnecting = false
     @State private var isRegistering = false
     @State private var connectionResult: ConnectionResult?

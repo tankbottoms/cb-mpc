@@ -90,6 +90,10 @@ struct KeyListItemView: View {
         UserDefaults.standard.data(forKey: "key_\(key.id.uuidString)") != nil
     }
 
+    private var origin: TransportOrigin {
+        TransportOrigin.load(for: key.id)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             // Line 1: Name + Valid key indicator
@@ -97,12 +101,9 @@ struct KeyListItemView: View {
                 Text(key.name)
                     .font(.system(size: 13, weight: .semibold, design: .monospaced))
                     .foregroundColor(isNew && highlightVisible ? .blue : .primary)
+                    .lineLimit(1)
 
                 Spacer()
-
-                Image(systemName: "shield.lefthalf.filled")
-                    .font(.system(size: 10))
-                    .foregroundColor(.orange)
 
                 if hasKeyData {
                     Image(systemName: "checkmark.circle.fill")
@@ -115,16 +116,27 @@ struct KeyListItemView: View {
                 }
             }
 
-            // Line 2: Public Key + Type
-            HStack(spacing: 12) {
-                Text(key.publicKey.prefix(32).map { String($0) }.joined() + "...")
+            // Line 2: Key type + Custody badge
+            HStack(spacing: 6) {
+                Text(key.displayKeyType)
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundColor(isNew && highlightVisible ? .blue.opacity(0.7) : .secondary)
-                    .lineLimit(1)
+
+                HStack(spacing: 3) {
+                    Image(systemName: origin.shieldIcon)
+                        .font(.system(size: 7))
+                    Text(origin.badgeText)
+                        .font(.system(size: 7, weight: .bold, design: .monospaced))
+                }
+                .foregroundColor(origin.badgeColor)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 1)
+                .background(origin.badgeColor.opacity(0.1))
+                .cornerRadius(3)
 
                 Spacer()
 
-                Text(key.displayKeyType)
+                Text(key.shortAddress)
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundColor(isNew && highlightVisible ? .blue.opacity(0.7) : .secondary)
             }

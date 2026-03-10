@@ -1,5 +1,6 @@
 import SwiftUI
 import Security
+import CryptoKit
 #if os(iOS)
 import UIKit
 #endif
@@ -12,16 +13,59 @@ struct NetworkView: View {
     @State private var isRefreshing = false
     @State private var showPairingSheet = false
     @State private var showServerSheet = false
+    @State private var deviceToDelete: PairedDevice?
+    @State private var serverToDelete: MPCServer?
 
     var body: some View {
         NavigationStack {
             List {
-                Section(header: Text("NODES"), footer:
-                    SectionFooterText(text: "All locations where key shares and keystore data are stored. Tap a node to see details.")
+                // Fixed nodes (this device + iCloud) — no swipe
+                Section(header: Text("THIS DEVICE"), footer:
+                    SectionFooterText(text: "Local storage locations for key shares.")
                 ) {
-                    ForEach(nodes) { node in
+                    ForEach(fixedNodes) { node in
                         NavigationLink(destination: NodeDetailView(node: node, keyStore: keyStore)) {
                             NodeRow(node: node)
+                        }
+                    }
+                }
+
+                // Paired devices — swipe-to-delete
+                if !pairedDeviceNodes.isEmpty {
+                    Section(header: Text("PAIRED DEVICES")) {
+                        ForEach(pairedDeviceNodes) { node in
+                            NavigationLink(destination: NodeDetailView(node: node, keyStore: keyStore)) {
+                                NodeRow(node: node)
+                            }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    if let device = pairingManager.pairedDevices.first(where: { $0.id.uuidString == node.id }) {
+                                        deviceToDelete = device
+                                    }
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Servers — swipe-to-delete
+                if !serverNodes.isEmpty {
+                    Section(header: Text("SERVERS")) {
+                        ForEach(serverNodes) { node in
+                            NavigationLink(destination: NodeDetailView(node: node, keyStore: keyStore)) {
+                                NodeRow(node: node)
+                            }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    if let server = pairingManager.servers.first(where: { $0.id.uuidString == node.id }) {
+                                        serverToDelete = server
+                                    }
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
                         }
                     }
                 }
@@ -85,8 +129,54 @@ struct NetworkView: View {
                 ServerRegistrationView()
                     .onDisappear { refreshNodes() }
             }
+            .alert("Delete Device", isPresented: Binding(
+                get: { deviceToDelete != nil },
+                set: { if !$0 { deviceToDelete = nil } }
+            )) {
+                Button("Cancel", role: .cancel) { deviceToDelete = nil }
+                Button("Delete", role: .destructive) {
+                    if let device = deviceToDelete {
+                        pairingManager.removePairedDevice(device)
+                        refreshNodes()
+                    }
+                    deviceToDelete = nil
+                }
+            } message: {
+                Text("Remove \"\(deviceToDelete?.name ?? "this device")\" from paired devices? This cannot be undone.")
+            }
+            .alert("Delete Server", isPresented: Binding(
+                get: { serverToDelete != nil },
+                set: { if !$0 { serverToDelete = nil } }
+            )) {
+                Button("Cancel", role: .cancel) { serverToDelete = nil }
+                Button("Delete", role: .destructive) {
+                    if let server = serverToDelete {
+                        pairingManager.removeServer(server)
+                        refreshNodes()
+                    }
+                    serverToDelete = nil
+                }
+            } message: {
+                Text("Remove \"\(serverToDelete?.name ?? "this server")\"? Auth tokens will be deleted from Keychain.")
+            }
         }
     }
+
+    // MARK: - Node Filters
+
+    private var fixedNodes: [NetworkNode] {
+        nodes.filter { $0.nodeType == .thisDevice || $0.nodeType == .icloud }
+    }
+
+    private var pairedDeviceNodes: [NetworkNode] {
+        nodes.filter { $0.nodeType == .pairedDevice }
+    }
+
+    private var serverNodes: [NetworkNode] {
+        nodes.filter { $0.nodeType == .server }
+    }
+
+    // MARK: - Refresh
 
     private func refreshNodes() {
         isRefreshing = true
@@ -95,22 +185,33 @@ struct NetworkView: View {
         allNodes.append(buildThisDeviceNode())
         allNodes.append(buildICloudNode())
 
-        // Add paired devices
+        // Add paired devices with live connection status
         for device in pairingManager.pairedDevices {
-            allNodes.append(NetworkNode(
+            let connState = pairingManager.connectionState(for: device.id)
+            let isConnected = connState == .connected
+            // Derive short fingerprint from public key
+            let fingerprint = SHA256.hash(data: device.publicKey)
+                .prefix(8)
+                .map { String(format: "%02X", $0) }
+                .joined(separator: ":")
+            let isIPad = device.deviceModel.lowercased().contains("ipad")
+            var pairedNode = NetworkNode(
                 id: device.id.uuidString,
                 name: device.name,
-                icon: "iphone",
+                icon: isIPad ? "ipad" : "iphone",
                 nodeType: .pairedDevice,
-                status: device.isOnline ? .active : .offline,
+                status: isConnected ? .active : (device.isOnline ? .active : .offline),
                 shareCount: device.shareCount,
                 keychainItems: 0,
                 keychainBytes: 0,
                 userDefaultsEntries: 0,
                 userDefaultsBytes: 0,
                 deviceModel: device.deviceModel,
-                lastSeen: device.lastSeenAt
-            ))
+                lastSeen: device.lastSeenAt,
+                vendorId: fingerprint
+            )
+            pairedNode.pairedAt = device.pairedAt
+            allNodes.append(pairedNode)
         }
 
         // Add servers with async health check
@@ -192,25 +293,9 @@ struct NetworkView: View {
             kcBytes = items.reduce(0) { $0 + $1.count }
         }
 
-        let deviceName: String = {
-            #if os(iOS)
-            return UIDevice.current.name
-            #else
-            return Host.current().localizedName ?? "This Mac"
-            #endif
-        }()
-
-        let deviceModel: String = {
-            #if os(iOS)
-            return UIDevice.current.model
-            #else
-            return "Mac"
-            #endif
-        }()
-
-        return NetworkNode(
+        var thisNode = NetworkNode(
             id: "this-device",
-            name: deviceName,
+            name: DeviceInfo.deviceName,
             icon: "iphone",
             nodeType: .thisDevice,
             status: .active,
@@ -219,9 +304,14 @@ struct NetworkView: View {
             keychainBytes: kcBytes,
             userDefaultsEntries: udKeys.count,
             userDefaultsBytes: udBytes,
-            deviceModel: deviceModel,
-            lastSeen: Date()
+            deviceModel: DeviceInfo.modelName,
+            lastSeen: Date(),
+            vendorId: DeviceInfo.vendorIdentifier,
+            hardwareId: DeviceInfo.hardwareIdentifier,
+            iCloudAvailable: DeviceInfo.isICloudAvailable
         )
+        thisNode.ipAddress = DeviceInfo.wifiIPAddress
+        return thisNode
     }
 
     private func buildICloudNode() -> NetworkNode {
@@ -274,6 +364,11 @@ struct NetworkNode: Identifiable {
     let deviceModel: String?
     let lastSeen: Date?
     var isRegistered: Bool = false
+    var vendorId: String?
+    var hardwareId: String?
+    var iCloudAvailable: Bool = false
+    var pairedAt: Date?
+    var ipAddress: String?
 
     var totalBytes: Int { keychainBytes + userDefaultsBytes }
 
@@ -320,7 +415,15 @@ struct NodeRow: View {
                 HStack(spacing: 6) {
                     Text(node.name)
                         .font(CBStyle.Fonts.bodyMedium)
+                        .lineLimit(1)
                     NodeStatusDot(color: node.status.color)
+                }
+
+                if let model = node.deviceModel, node.nodeType == .thisDevice || node.nodeType == .pairedDevice {
+                    Text(model)
+                        .font(CBStyle.Fonts.crypto)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
                 }
 
                 HStack(spacing: 8) {
@@ -328,6 +431,16 @@ struct NodeRow: View {
 
                     if node.nodeType == .server && node.isRegistered {
                         TagBadge(text: "Registered", color: .blue)
+                    }
+
+                    if node.iCloudAvailable && node.nodeType == .thisDevice {
+                        HStack(spacing: 2) {
+                            Image(systemName: "icloud.fill")
+                                .font(.system(size: 8))
+                            Text("iCloud")
+                                .font(CBStyle.Fonts.badge)
+                        }
+                        .foregroundColor(.blue)
                     }
 
                     if node.shareCount > 0 {
@@ -356,17 +469,163 @@ struct NodeDetailView: View {
     let node: NetworkNode
     let keyStore: KeyStore
 
+    private var pairedDevice: PairedDevice? {
+        PairingManager.shared.pairedDevices.first(where: { $0.id.uuidString == node.id })
+    }
+
+    private var mpcServer: MPCServer? {
+        PairingManager.shared.servers.first(where: { $0.id.uuidString == node.id })
+    }
+
+    /// Keys co-signed with this node
+    private var coSignedKeys: [ManagedKey] {
+        if node.nodeType == .pairedDevice {
+            return TransportOrigin.keysWithCoSigner(node.id, in: keyStore.keys)
+        } else if node.nodeType == .server, let server = mpcServer {
+            return TransportOrigin.keysWithCoSigner(server.url, in: keyStore.keys)
+        }
+        return []
+    }
+
+    /// Signing records for keys co-signed with this node
+    private var signingHistory: [(key: ManagedKey, record: SigningRecord)] {
+        coSignedKeys.flatMap { key in
+            key.signingRecords.map { (key: key, record: $0) }
+        }
+        .sorted { $0.record.timestamp > $1.record.timestamp }
+    }
+
     var body: some View {
         List {
+            // Reconnect button for paired devices
+            if node.nodeType == .pairedDevice, let device = pairedDevice {
+                Section {
+                    let connState = PairingManager.shared.connectionState(for: device.id)
+                    Button(action: { PairingManager.shared.reconnect(to: device) }) {
+                        Label(connState == .connected ? "Connected" : "Reconnect",
+                              systemImage: connState == .connected ? "link" : "arrow.triangle.2.circlepath")
+                    }
+                    .disabled(connState == .connected || connState == .connecting)
+                }
+            }
+
+            // Server connection badge
+            if node.nodeType == .server, let server = mpcServer {
+                Section {
+                    HStack {
+                        Image(systemName: server.isOnline ? "bolt.fill" : "bolt.slash")
+                            .foregroundColor(server.isOnline ? .green : .orange)
+                        Text(server.isOnline ? "Connected" : "Disconnected")
+                            .font(CBStyle.Fonts.cryptoMedium)
+                        Spacer()
+                        if !server.isOnline {
+                            Button("Ping") {
+                                PairingManager.shared.pingServer(server) { online, _ in
+                                    if let idx = PairingManager.shared.servers.firstIndex(where: { $0.id == server.id }) {
+                                        PairingManager.shared.servers[idx].isOnline = online
+                                        PairingManager.shared.saveServers()
+                                    }
+                                }
+                            }
+                            .buttonStyle(.bordered)
+                        }
+                    }
+                }
+            }
+
             Section(header: Text("NODE INFO")) {
                 InfoRow(label: "Name", value: node.name)
-                InfoRow(label: "Type", value: nodeTypeLabel)
+                // Type row: show IP for this device, keep labels for others
+                if node.nodeType == .thisDevice {
+                    InfoRow(label: "IP Address", value: node.ipAddress ?? "WiFi")
+                } else {
+                    InfoRow(label: "Type", value: nodeTypeLabel)
+                }
                 InfoRow(label: "Status", value: node.status.rawValue)
-                if let model = node.deviceModel {
-                    InfoRow(label: "Device", value: model)
+                if let model = node.deviceModel, node.nodeType != .server {
+                    InfoRow(label: "Model", value: model)
+                }
+                if let vendorId = node.vendorId, node.nodeType == .thisDevice {
+                    InfoRow(label: "Vendor ID", value: vendorId)
+                }
+                if node.iCloudAvailable {
+                    HStack {
+                        Text("iCloud")
+                            .font(CBStyle.Fonts.crypto)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        HStack(spacing: 4) {
+                            Image(systemName: "checkmark.icloud.fill")
+                                .font(.system(size: 12))
+                                .foregroundColor(.blue)
+                            Text("Signed In")
+                                .font(CBStyle.Fonts.crypto)
+                                .foregroundColor(.blue)
+                        }
+                    }
                 }
                 if let seen = node.lastSeen {
                     InfoRow(label: "Last Seen", value: formatDate(seen))
+                }
+            }
+
+            // iCloud identity section
+            if node.nodeType == .icloud {
+                Section(header: Text("ICLOUD IDENTITY")) {
+                    if let token = FileManager.default.ubiquityIdentityToken {
+                        if let tokenData = try? NSKeyedArchiver.archivedData(withRootObject: token, requiringSecureCoding: false) {
+                            let hash = SHA256.hash(data: tokenData).prefix(8).map { String(format: "%02x", $0) }.joined()
+                            InfoRow(label: "iCloud ID", value: hash)
+                        }
+                    } else {
+                        InfoRow(label: "iCloud", value: "Not signed in")
+                    }
+                }
+            }
+
+            // Paired device details
+            if node.nodeType == .pairedDevice, let device = pairedDevice {
+                Section(header: Text("PAIRING INFO")) {
+                    InfoRow(label: "Paired", value: formatAbsoluteDate(device.pairedAt))
+                    InfoRow(label: "Device Model", value: device.deviceModel)
+                    if let vendorId = node.vendorId {
+                        InfoRow(label: "Fingerprint", value: vendorId)
+                    }
+                    if let token = device.discoveryToken {
+                        InfoRow(label: "Discovery Token", value: String(token.prefix(16)) + "...")
+                    }
+                    let connState = PairingManager.shared.connectionState(for: device.id)
+                    InfoRow(label: "Connection", value: connectionLabel(connState))
+                    if let lastSeen = device.lastSeenAt {
+                        InfoRow(label: "Last Active", value: formatDate(lastSeen))
+                    }
+                }
+            }
+
+            // Server details
+            if node.nodeType == .server, let server = mpcServer {
+                Section(header: Text("SERVER INFO")) {
+                    InfoRow(label: "URL", value: server.url)
+                    InfoRow(label: "Registered", value: formatAbsoluteDate(server.registeredAt))
+                    if let devId = server.serverDeviceId {
+                        InfoRow(label: "Device ID", value: devId)
+                    }
+                    if let version = server.apiVersion {
+                        InfoRow(label: "API Version", value: version)
+                    }
+                    InfoRow(label: "Auth", value: server.isRegistered ? "Authenticated" : "Not registered")
+                }
+            }
+
+            // Device identity (this device only) — Hardware ID only here, not in NODE INFO
+            if node.nodeType == .thisDevice {
+                Section(header: Text("DEVICE IDENTITY")) {
+                    if let vendorId = node.vendorId {
+                        InfoRow(label: "Vendor ID", value: vendorId)
+                    }
+                    if let hwId = node.hardwareId {
+                        InfoRow(label: "Hardware ID", value: hwId)
+                    }
                 }
             }
 
@@ -378,28 +637,83 @@ struct NodeDetailView: View {
                 } else if node.nodeType == .icloud {
                     InfoRow(label: "Synced Items", value: "\(node.keychainItems) item\(node.keychainItems == 1 ? "" : "s")")
                     InfoRow(label: "Size", value: formatBytes(node.keychainBytes))
-                } else if node.nodeType == .server {
-                    InfoRow(label: "Shares", value: "\(node.shareCount) key\(node.shareCount == 1 ? "" : "s")")
-                } else if node.nodeType == .pairedDevice {
-                    InfoRow(label: "Shares", value: "\(node.shareCount) key\(node.shareCount == 1 ? "" : "s")")
+                } else if node.nodeType == .server || node.nodeType == .pairedDevice {
+                    InfoRow(label: "Co-signed Keys", value: "\(coSignedKeys.count) key\(coSignedKeys.count == 1 ? "" : "s")")
                 }
             }
 
-            if node.shareCount > 0 {
-                Section(header: Text("KEYS ON THIS NODE")) {
-                    if node.nodeType == .thisDevice {
-                        ForEach(keyStore.keys) { key in
-                            KeyOnNodeRow(key: key)
+            // Co-signed keys section (for paired devices and servers)
+            if !coSignedKeys.isEmpty {
+                Section(header: Text("CO-SIGNED KEYS")) {
+                    ForEach(coSignedKeys) { key in
+                        HStack(spacing: 8) {
+                            Image(systemName: key.keyType == .hdMaster ? "key.radiowaves.forward" : "key.fill")
+                                .font(.system(size: 12))
+                                .foregroundColor(.blue)
+                                .frame(width: 20)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(key.name)
+                                    .font(CBStyle.Fonts.cryptoMedium)
+                                    .lineLimit(1)
+                                HStack(spacing: 6) {
+                                    Text(key.shortAddress)
+                                        .font(CBStyle.Fonts.badge)
+                                        .foregroundColor(.secondary)
+                                    Text(formatAbsoluteDate(key.createdAt))
+                                        .font(CBStyle.Fonts.badge)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            Spacer()
+                            TagBadge(text: key.displayKeyType)
                         }
-                    } else if node.nodeType == .icloud {
-                        ForEach(keyStore.keys.filter { keySyncedToICloud($0) }) { key in
-                            KeyOnNodeRow(key: key)
-                        }
-                        if keyStore.keys.filter({ keySyncedToICloud($0) }).isEmpty {
-                            Text("No keys synced to iCloud Keychain")
-                                .font(CBStyle.Fonts.crypto)
+                    }
+                }
+            }
+
+            // Keys on this node (for this device and iCloud)
+            if node.nodeType == .thisDevice && node.shareCount > 0 {
+                Section(header: Text("ALL KEYS")) {
+                    ForEach(keyStore.keys) { key in
+                        KeyOnNodeRow(key: key)
+                    }
+                }
+            } else if node.nodeType == .icloud && node.shareCount > 0 {
+                Section(header: Text("SYNCED KEYS")) {
+                    ForEach(keyStore.keys.filter { keySyncedToICloud($0) }) { key in
+                        KeyOnNodeRow(key: key)
+                    }
+                    if keyStore.keys.filter({ keySyncedToICloud($0) }).isEmpty {
+                        Text("No keys synced to iCloud Keychain")
+                            .font(CBStyle.Fonts.crypto)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+
+            // Signing history (for paired devices and servers)
+            if !signingHistory.isEmpty {
+                Section(header: Text("SIGNING HISTORY")) {
+                    ForEach(signingHistory.prefix(10), id: \.record.id) { entry in
+                        VStack(alignment: .leading, spacing: 3) {
+                            HStack {
+                                Text(entry.key.name)
+                                    .font(CBStyle.Fonts.cryptoMedium)
+                                    .lineLimit(1)
+                                Spacer()
+                                Text(formatDate(entry.record.timestamp))
+                                    .font(CBStyle.Fonts.badge)
+                                    .foregroundColor(.secondary)
+                            }
+                            Text(entry.record.messageHash.prefix(32) + "...")
+                                .font(CBStyle.Fonts.badge)
                                 .foregroundColor(.secondary)
                         }
+                    }
+                    if signingHistory.count > 10 {
+                        Text("\(signingHistory.count - 10) more record\(signingHistory.count - 10 == 1 ? "" : "s")")
+                            .font(CBStyle.Fonts.caption)
+                            .foregroundColor(.secondary)
                     }
                 }
             }
@@ -430,7 +744,7 @@ struct NodeDetailView: View {
                         description: "Share transmitted via AES-256 encrypted channel after QR + 6-digit PIN pairing ceremony. Share stored in the paired device's Device Keychain.")
         case .server:
             SecurityRow(title: "MPC Server",
-                        description: "Server holds one key share. Authenticated via mTLS client certificates exchanged during server registration. Server cannot sign alone (requires quorum).")
+                        description: "Server holds one key share. Authenticated via HMAC token exchanged during device registration. Server cannot sign alone (requires quorum).")
         }
     }
 
@@ -443,6 +757,16 @@ struct NodeDetailView: View {
         }
     }
 
+    private func connectionLabel(_ state: PeerConnectionManager.ConnectionState) -> String {
+        switch state {
+        case .connected: return "Connected"
+        case .connecting: return "Connecting..."
+        case .searching: return "Searching..."
+        case .disconnected: return "Disconnected"
+        case .failed(let msg): return "Failed: \(msg)"
+        }
+    }
+
     private func keySyncedToICloud(_ key: ManagedKey) -> Bool {
         KeychainSyncManager.load(keyId: key.id) != nil
     }
@@ -451,6 +775,13 @@ struct NodeDetailView: View {
         let f = RelativeDateTimeFormatter()
         f.unitsStyle = .abbreviated
         return f.localizedString(for: date, relativeTo: Date())
+    }
+
+    private func formatAbsoluteDate(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        f.timeStyle = .short
+        return f.string(from: date)
     }
 
     private func formatBytes(_ bytes: Int) -> String {

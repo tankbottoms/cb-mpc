@@ -1,4 +1,5 @@
 import SwiftUI
+import CryptoKit
 import CoreImage.CIFilterBuiltins
 #if os(iOS)
 import UIKit
@@ -7,7 +8,7 @@ import AppKit
 #endif
 
 enum KeyDetailSheet: Identifiable {
-    case signing, signTx, verify, qrShare, derive, export
+    case signing, signTx, verify, qrShare, derive, export, coSigner
     var id: Int {
         switch self {
         case .signing: return 0
@@ -16,6 +17,7 @@ enum KeyDetailSheet: Identifiable {
         case .qrShare: return 3
         case .derive: return 4
         case .export: return 5
+        case .coSigner: return 6
         }
     }
 }
@@ -195,22 +197,12 @@ struct KeyDetailView: View {
                 }
                 .padding(.bottom, 8)
 
-                // Key security indicator
-                HStack(spacing: 6) {
-                    Image(systemName: "shield.lefthalf.filled")
-                        .font(.system(size: 10))
-                        .foregroundColor(.orange)
-                    Text("2-PARTY LOCAL")
-                        .font(.system(size: 8, weight: .bold, design: .monospaced))
-                        .foregroundColor(.orange)
-                    Spacer()
-                    Text("Both key shares stored on this device")
-                        .font(.system(size: 8, design: .monospaced))
-                        .foregroundColor(.secondary)
-                }
-                .padding(8)
-                .background(.orange.opacity(0.08))
-                .cornerRadius(4)
+                // Key custody indicator (tappable for co-signer details)
+                custodyBadgeView
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        activeSheet = .coSigner
+                    }
 
                 // Public Key Display -- 3/4 on top, 1/4 on bottom with copy glyph
                 VStack(alignment: .leading, spacing: 6) {
@@ -536,6 +528,19 @@ struct KeyDetailView: View {
                                     Spacer(minLength: 4)
                                     copyButton(record.signature, id: "sig-\(record.id)")
                                 }
+
+                                // Transport details
+                                if let transport = record.transportInfo {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "arrow.triangle.branch")
+                                            .font(.system(size: 7))
+                                            .foregroundColor(.blue.opacity(0.7))
+                                        Text(transport)
+                                            .font(.system(size: 7, design: .monospaced))
+                                            .foregroundColor(.blue.opacity(0.7))
+                                            .fixedSize(horizontal: false, vertical: true)
+                                    }
+                                }
                             }
                             .padding(6)
                             .background(.gray.opacity(0.1))
@@ -573,6 +578,10 @@ struct KeyDetailView: View {
                 ExportKeySheetView(key: key, exportJSON: exportJSON, utcFileName: utcFileName, exportFormatLabel: exportFormatLabel, exportDataForFormat: exportDataForFormat)
                     .environmentObject(keyStore)
                     .presentationDetents([.medium, .large])
+            case .coSigner:
+                CoSignerDetailSheetView(key: key)
+                    .environmentObject(keyStore)
+                    .presentationDetents([.medium, .large])
             }
         }
         .navigationDestination(item: $navigateToDerivedKeyId) { keyId in
@@ -581,6 +590,63 @@ struct KeyDetailView: View {
                     .environmentObject(keyStore)
             }
         }
+    }
+
+    // MARK: - Custody Badge
+
+    @ViewBuilder
+    private var custodyBadgeView: some View {
+        let origin = TransportOrigin.load(for: key.id)
+        let coSigner = TransportOrigin.coSignerRef(for: key.id)
+
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Image(systemName: origin.shieldIcon)
+                    .font(.system(size: 10))
+                    .foregroundColor(origin.badgeColor)
+                Text(origin.badgeText)
+                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .foregroundColor(origin.badgeColor)
+                Spacer()
+                Text(origin.shareDescription)
+                    .font(.system(size: 8, design: .monospaced))
+                    .foregroundColor(.secondary)
+            }
+
+            if origin == .server, let serverURL = coSigner {
+                HStack(spacing: 4) {
+                    Image(systemName: "server.rack")
+                        .font(.system(size: 9))
+                        .foregroundColor(.secondary)
+                    Text("Co-signer: \(serverURL)")
+                        .font(.system(size: 8, design: .monospaced))
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+            } else if origin == .peer, let deviceIdStr = coSigner,
+                      let deviceUUID = UUID(uuidString: deviceIdStr) {
+                let peerDevice = PairingManager.shared.pairedDevices.first(where: { $0.id == deviceUUID })
+                HStack(spacing: 4) {
+                    Image(systemName: "iphone")
+                        .font(.system(size: 9))
+                        .foregroundColor(.secondary)
+                    if let device = peerDevice {
+                        Text("Co-signer: \(device.name) (\(device.deviceModel))")
+                            .font(.system(size: 8, design: .monospaced))
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    } else {
+                        Text("Co-signer: Paired device \(deviceIdStr.prefix(8))...")
+                            .font(.system(size: 8, design: .monospaced))
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+                }
+            }
+        }
+        .padding(8)
+        .background(origin.badgeColor.opacity(0.08))
+        .cornerRadius(4)
     }
 
     // MARK: - Copy Button (turns blue on tap)
@@ -1149,6 +1215,198 @@ struct DeriveChildSheetView: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Co-Signer Detail Sheet
+
+struct CoSignerDetailSheetView: View {
+    let key: ManagedKey
+    @EnvironmentObject var keyStore: KeyStore
+    @Environment(\.dismiss) var dismiss
+
+    private var origin: TransportOrigin {
+        TransportOrigin.load(for: key.id)
+    }
+
+    private var coSignerRef: String? {
+        TransportOrigin.coSignerRef(for: key.id)
+    }
+
+    private var coSignedKeys: [ManagedKey] {
+        guard let ref = coSignerRef else { return [] }
+        return TransportOrigin.keysWithCoSigner(ref, in: keyStore.keys)
+    }
+
+    private var signingHistory: [(key: ManagedKey, record: SigningRecord)] {
+        coSignedKeys.flatMap { k in
+            k.signingRecords.map { (key: k, record: $0) }
+        }
+        .sorted { $0.record.timestamp > $1.record.timestamp }
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section(header: Text("CO-SIGNER")) {
+                    HStack(spacing: 6) {
+                        Image(systemName: origin.shieldIcon)
+                            .font(.system(size: 14))
+                            .foregroundColor(origin.badgeColor)
+                        Text(origin.badgeText)
+                            .font(.system(size: 11, weight: .bold, design: .monospaced))
+                            .foregroundColor(origin.badgeColor)
+                    }
+
+                    Text(origin.shareDescription)
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundColor(.secondary)
+                }
+
+                switch origin {
+                case .server:
+                    serverDetailSection
+                case .peer:
+                    peerDetailSection
+                case .local:
+                    Section(header: Text("LOCAL KEY")) {
+                        Text("Both key shares are stored on this device. No external co-signer.")
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundColor(.secondary)
+                        SecurityRow(title: "Security",
+                                    description: "Both shares protected by iOS data protection (AES-256 at rest). Consider exporting one share to a server or paired device for improved security.")
+                    }
+                }
+
+                if coSignedKeys.count > 1 {
+                    Section(header: Text("ALL KEYS WITH THIS CO-SIGNER")) {
+                        ForEach(coSignedKeys) { k in
+                            HStack(spacing: 8) {
+                                Image(systemName: k.keyType == .hdMaster ? "key.radiowaves.forward" : "key.fill")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.blue)
+                                    .frame(width: 20)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(k.name)
+                                        .font(.system(size: 11, weight: .medium, design: .monospaced))
+                                        .lineLimit(1)
+                                    Text(k.shortAddress)
+                                        .font(.system(size: 9, design: .monospaced))
+                                        .foregroundColor(.secondary)
+                                }
+                                Spacer()
+                                Text(k.displayKeyType)
+                                    .font(.system(size: 9, design: .monospaced))
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                }
+
+                if !signingHistory.isEmpty {
+                    Section(header: Text("SIGNING HISTORY")) {
+                        ForEach(signingHistory.prefix(5), id: \.record.id) { entry in
+                            VStack(alignment: .leading, spacing: 2) {
+                                HStack {
+                                    Text(entry.key.name)
+                                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                                        .lineLimit(1)
+                                    Spacer()
+                                    Text(formatDate(entry.record.timestamp))
+                                        .font(.system(size: 9, design: .monospaced))
+                                        .foregroundColor(.secondary)
+                                }
+                                Text(entry.record.messageHash.prefix(32) + "...")
+                                    .font(.system(size: 8, design: .monospaced))
+                                    .foregroundColor(.secondary)
+                                if let transport = entry.record.transportInfo {
+                                    Text(transport)
+                                        .font(.system(size: 7, design: .monospaced))
+                                        .foregroundColor(.blue.opacity(0.7))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Co-Signer Details")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") { dismiss() }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var serverDetailSection: some View {
+        if let serverURL = coSignerRef {
+            let server = PairingManager.shared.servers.first(where: { $0.url == serverURL })
+            Section(header: Text("SERVER")) {
+                InfoRow(label: "Name", value: server?.name ?? "MPC Server")
+                InfoRow(label: "URL", value: serverURL)
+                if let server = server {
+                    InfoRow(label: "Registered", value: formatAbsoluteDate(server.registeredAt))
+                    if let devId = server.serverDeviceId {
+                        InfoRow(label: "Device ID", value: devId)
+                    }
+                    InfoRow(label: "Status", value: server.isOnline ? "Online" : "Offline")
+                    InfoRow(label: "Auth", value: server.isRegistered ? "Authenticated" : "Not registered")
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var peerDetailSection: some View {
+        if let deviceIdStr = coSignerRef,
+           let deviceUUID = UUID(uuidString: deviceIdStr) {
+            let device = PairingManager.shared.pairedDevices.first(where: { $0.id == deviceUUID })
+            Section(header: Text("PAIRED DEVICE")) {
+                if let device = device {
+                    InfoRow(label: "Name", value: device.name)
+                    InfoRow(label: "Model", value: device.deviceModel)
+                    // Fingerprint from public key
+                    let fingerprint = SHA256.hash(data: device.publicKey)
+                        .prefix(8)
+                        .map { String(format: "%02X", $0) }
+                        .joined(separator: ":")
+                    InfoRow(label: "Fingerprint", value: fingerprint)
+                    InfoRow(label: "Paired", value: formatAbsoluteDate(device.pairedAt))
+                    let connState = PairingManager.shared.connectionState(for: device.id)
+                    InfoRow(label: "Connection", value: connectionLabel(connState))
+                } else {
+                    InfoRow(label: "Device ID", value: deviceIdStr)
+                    Text("Device no longer paired")
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundColor(.orange)
+                }
+            }
+        }
+    }
+
+    private func connectionLabel(_ state: PeerConnectionManager.ConnectionState) -> String {
+        switch state {
+        case .connected: return "Connected"
+        case .connecting: return "Connecting..."
+        case .searching: return "Searching..."
+        case .disconnected: return "Disconnected"
+        case .failed(let msg): return "Failed: \(msg)"
+        }
+    }
+
+    private func formatDate(_ date: Date) -> String {
+        let f = RelativeDateTimeFormatter()
+        f.unitsStyle = .abbreviated
+        return f.localizedString(for: date, relativeTo: Date())
+    }
+
+    private func formatAbsoluteDate(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        f.timeStyle = .short
+        return f.string(from: date)
     }
 }
 

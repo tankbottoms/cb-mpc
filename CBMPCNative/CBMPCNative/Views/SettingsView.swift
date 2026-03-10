@@ -4,11 +4,12 @@ import Security
 
 struct SettingsView: View {
     @EnvironmentObject var keyStore: KeyStore
+    @ObservedObject var pairingManager = PairingManager.shared
     @AppStorage("serverUrl") private var serverUrl = "https://api.cbmpc.atsignhandle.xyz"
     @State private var useMockServer = false
     @AppStorage("signingServerURL") private var signingServerURL = "https://signing.cbmpc.atsignhandle.xyz/submit"
     @AppStorage("instructionLevel") private var instructionLevel = "verbose"
-    @AppStorage("ethereumRPC") private var ethereumRPC = "hoodi"
+    @AppStorage("ethereumRPC") private var ethereumRPC = "mainnet"
     @AppStorage("infuraAPIKey") private var infuraAPIKey = "65980db64d52417abbda13b49e356d97"
     @AppStorage("exportFormat") private var exportFormat = "keystoreJSON"
     @AppStorage("useFaceID") private var useFaceID = false
@@ -168,6 +169,54 @@ struct SettingsView: View {
                         Text(totalStorageUsage)
                             .font(.system(size: 11, design: .monospaced))
                             .foregroundColor(.secondary)
+                    }
+
+                    // Paired devices
+                    ForEach(pairingManager.pairedDevices) { device in
+                        let connState = pairingManager.connectionState(for: device.id)
+                        let isConnected = connState == .connected
+                        HStack(spacing: 10) {
+                            Image(systemName: device.deviceModel.lowercased().contains("ipad") ? "ipad" : "iphone")
+                                .font(.system(size: 14))
+                                .foregroundColor(isConnected ? .green : .orange)
+                                .frame(width: 24)
+                            VStack(alignment: .leading, spacing: 2) {
+                                HStack(spacing: 6) {
+                                    Text(device.name)
+                                        .font(.system(size: 12, weight: .medium, design: .monospaced))
+                                    Circle()
+                                        .fill(isConnected ? .green : .orange)
+                                        .frame(width: 6, height: 6)
+                                }
+                                Text("\(device.deviceModel) · \(device.shareCount) key\(device.shareCount == 1 ? "" : "s")")
+                                    .font(.system(size: 10, design: .monospaced))
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                        }
+                    }
+
+                    // Servers
+                    ForEach(pairingManager.servers) { server in
+                        HStack(spacing: 10) {
+                            Image(systemName: "server.rack")
+                                .font(.system(size: 14))
+                                .foregroundColor(server.isOnline ? .green : .gray)
+                                .frame(width: 24)
+                            VStack(alignment: .leading, spacing: 2) {
+                                HStack(spacing: 6) {
+                                    Text(server.name)
+                                        .font(.system(size: 12, weight: .medium, design: .monospaced))
+                                    Circle()
+                                        .fill(server.isOnline ? .green : .gray)
+                                        .frame(width: 6, height: 6)
+                                }
+                                Text("\(server.isRegistered ? "Registered" : "Unregistered") · \(server.shareCount) key\(server.shareCount == 1 ? "" : "s")")
+                                    .font(.system(size: 10, design: .monospaced))
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                        }
                     }
                 }
 

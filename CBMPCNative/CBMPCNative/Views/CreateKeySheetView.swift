@@ -40,12 +40,16 @@ enum ExportDestination: String, CaseIterable {
     case secureEnclave = "Device Keychain"
     case icloudKeychain = "iCloud Keychain"
     case storage = "File Export"
+    case pairedDevice = "Paired Device"
+    case mpcServer = "Key Server"
 
     var icon: String {
         switch self {
         case .secureEnclave: return "lock.shield"
         case .icloudKeychain: return "key.icloud"
         case .storage: return "externaldrive"
+        case .pairedDevice: return "iphone"
+        case .mpcServer: return "server.rack"
         }
     }
 
@@ -57,6 +61,17 @@ enum ExportDestination: String, CaseIterable {
             return "Apple end-to-end encrypted. Syncs across devices signed into same Apple ID. Protected by device passcode + Apple ID."
         case .storage:
             return "Exported as file via share sheet. No automatic encryption. User responsible for secure storage."
+        case .pairedDevice:
+            return "Send key share to a paired device via encrypted MultipeerConnectivity channel."
+        case .mpcServer:
+            return "Upload key share to the MPC server for remote co-signing."
+        }
+    }
+
+    var isAvailable: Bool {
+        switch self {
+        case .secureEnclave, .icloudKeychain, .storage: return true
+        case .pairedDevice, .mpcServer: return false  // Coming soon
         }
     }
 }
@@ -82,12 +97,15 @@ struct CreateKeySheetView: View {
     @State private var batchChildCount = 1
     @State private var vanityPrefix = ""
     @State private var vanitySuffix = ""
-    @State private var selectedCustody: CustodyMode = .local
+    @State private var selectedCustody: CustodyMode = .deviceKeychain
     @State private var selectedServerURL: URL?
+    @State private var selectedPeerDeviceId: UUID?
 
     enum CustodyMode: String, CaseIterable {
-        case local = "This Device Only"
-        case server = "Server-Backed (2-of-2)"
+        case deviceKeychain = "Device Keychain"
+        case icloudKeychain = "iCloud Keychain"
+        case server = "Key Server"
+        case peerDevice = "Paired Device"
     }
     @State private var seedWordCount = 24
     @State private var isSeedRevealed = false
@@ -108,6 +126,25 @@ struct CreateKeySheetView: View {
     @State private var showQRScanner = false
     @State private var qrPassphrase = ""
     @State private var qrImportStatus: String?
+
+    private var custodySecurityNotice: String {
+        switch selectedCustody {
+        case .deviceKeychain:
+            return "Share 1: AES-256 encrypted, tied to device hardware. Both key shares stored locally — if this device is lost, the key is unrecoverable without backup."
+        case .icloudKeychain:
+            return "Share 1: End-to-end encrypted via Apple iCloud Keychain. Syncs across devices signed into same Apple ID."
+        case .peerDevice:
+            return "2-of-2 threshold: each device holds one share. Both must cooperate to sign — neither can act alone."
+        case .server:
+            return "2-of-2 threshold: your device holds one share, the server holds the other. Neither party can sign alone."
+        }
+    }
+
+    /// Whether this is a single-party setup (no second party selected)
+    private var isSingleParty: Bool {
+        (selectedCustody == .deviceKeychain || selectedCustody == .icloudKeychain) &&
+        selectedServerURL == nil && selectedPeerDeviceId == nil
+    }
 
     private var hdMasterKeys: [ManagedKey] {
         keyStore.keys.filter { $0.keyType == .hdMaster }
@@ -256,15 +293,16 @@ struct CreateKeySheetView: View {
                                 .foregroundColor(.secondary)
 
                             VStack(spacing: 0) {
-                                Button(action: { selectedCustody = .local; selectedServerURL = nil }) {
+                                // Device Keychain
+                                Button(action: { selectedCustody = .deviceKeychain; selectedServerURL = nil; selectedPeerDeviceId = nil }) {
                                     HStack(spacing: 10) {
-                                        Image(systemName: selectedCustody == .local ? "checkmark.circle.fill" : "circle")
-                                            .foregroundColor(selectedCustody == .local ? .blue : .secondary)
+                                        Image(systemName: selectedCustody == .deviceKeychain ? "checkmark.circle.fill" : "circle")
+                                            .foregroundColor(selectedCustody == .deviceKeychain ? .blue : .secondary)
                                             .font(.system(size: 16))
                                         VStack(alignment: .leading, spacing: 2) {
-                                            Text("This Device Only")
+                                            Text("Device Keychain")
                                                 .font(.system(size: 12, weight: .medium, design: .monospaced))
-                                            Text("Both key shares stored locally. No server required.")
+                                            Text("AES-256 encrypted, tied to device hardware.")
                                                 .font(.system(size: 9, design: .monospaced))
                                                 .foregroundColor(.secondary)
                                         }
@@ -274,6 +312,69 @@ struct CreateKeySheetView: View {
                                 }
                                 .buttonStyle(.plain)
 
+                                Divider()
+
+                                // iCloud Keychain
+                                Button(action: { selectedCustody = .icloudKeychain; selectedServerURL = nil; selectedPeerDeviceId = nil }) {
+                                    HStack(spacing: 10) {
+                                        Image(systemName: selectedCustody == .icloudKeychain ? "checkmark.circle.fill" : "circle")
+                                            .foregroundColor(selectedCustody == .icloudKeychain ? .blue : .secondary)
+                                            .font(.system(size: 16))
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("iCloud Keychain")
+                                                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                                            Text("End-to-end encrypted, syncs across Apple devices.")
+                                                .font(.system(size: 9, design: .monospaced))
+                                                .foregroundColor(.secondary)
+                                        }
+                                        Spacer()
+                                    }
+                                    .padding(10)
+                                }
+                                .buttonStyle(.plain)
+
+                                if !PairingManager.shared.pairedDevices.isEmpty {
+                                    Divider()
+
+                                    ForEach(PairingManager.shared.pairedDevices) { device in
+                                        Button(action: {
+                                            selectedCustody = .peerDevice
+                                            selectedPeerDeviceId = device.id
+                                            selectedServerURL = nil
+                                        }) {
+                                            HStack(spacing: 10) {
+                                                Image(systemName: selectedCustody == .peerDevice && selectedPeerDeviceId == device.id ? "checkmark.circle.fill" : "circle")
+                                                    .foregroundColor(selectedCustody == .peerDevice && selectedPeerDeviceId == device.id ? .blue : .secondary)
+                                                    .font(.system(size: 16))
+                                                VStack(alignment: .leading, spacing: 2) {
+                                                    HStack(spacing: 4) {
+                                                        Image(systemName: "iphone")
+                                                            .font(.system(size: 10))
+                                                        Text(device.name)
+                                                            .font(.system(size: 12, weight: .medium, design: .monospaced))
+                                                    }
+                                                    Text("2-of-2 peer: \(device.deviceModel) — each device holds one share.")
+                                                        .font(.system(size: 9, design: .monospaced))
+                                                        .foregroundColor(.secondary)
+                                                    let connState = PairingManager.shared.connectionState(for: device.id)
+                                                    if connState == .connected {
+                                                        Text("Connected")
+                                                            .font(.system(size: 8, weight: .medium, design: .monospaced))
+                                                            .foregroundColor(.green)
+                                                    } else {
+                                                        Text("Offline — pair again to generate keys")
+                                                            .font(.system(size: 8, design: .monospaced))
+                                                            .foregroundColor(.orange)
+                                                    }
+                                                }
+                                                Spacer()
+                                            }
+                                            .padding(10)
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+
                                 if !PairingManager.shared.servers.filter({ $0.isRegistered }).isEmpty {
                                     Divider()
 
@@ -281,14 +382,19 @@ struct CreateKeySheetView: View {
                                         Button(action: {
                                             selectedCustody = .server
                                             selectedServerURL = URL(string: server.url)
+                                            selectedPeerDeviceId = nil
                                         }) {
                                             HStack(spacing: 10) {
                                                 Image(systemName: selectedCustody == .server && selectedServerURL?.absoluteString == server.url ? "checkmark.circle.fill" : "circle")
                                                     .foregroundColor(selectedCustody == .server && selectedServerURL?.absoluteString == server.url ? .blue : .secondary)
                                                     .font(.system(size: 16))
                                                 VStack(alignment: .leading, spacing: 2) {
-                                                    Text("Server: \(server.name)")
-                                                        .font(.system(size: 12, weight: .medium, design: .monospaced))
+                                                    HStack(spacing: 4) {
+                                                        Image(systemName: "server.rack")
+                                                            .font(.system(size: 10))
+                                                        Text(server.name)
+                                                            .font(.system(size: 12, weight: .medium, design: .monospaced))
+                                                    }
                                                     Text("2-of-2 threshold: device + server must cooperate to sign.")
                                                         .font(.system(size: 9, design: .monospaced))
                                                         .foregroundColor(.secondary)
@@ -305,14 +411,26 @@ struct CreateKeySheetView: View {
                             .cornerRadius(4)
                         }
 
+                        // Single-party warning
+                        if isSingleParty {
+                            HStack(spacing: 6) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundColor(.orange)
+                                Text("Single-party key: if this device is lost, the key is unrecoverable. Consider adding a second party (server or paired device).")
+                                    .font(.system(size: 9, design: .monospaced))
+                                    .foregroundColor(.orange)
+                            }
+                            .padding(10)
+                            .background(.orange.opacity(0.08))
+                            .cornerRadius(6)
+                        }
+
                         // Storage notice
                         HStack(alignment: .top, spacing: 8) {
                             Image(systemName: "shield.lefthalf.filled")
                                 .foregroundColor(.orange)
                                 .font(.system(size: 12))
-                            Text(selectedCustody == .local
-                                ? "This will generate a private key using 2-party DKG. Both key shares are stored locally on this device. The complete private key never exists in memory."
-                                : "This will generate a 2-of-2 threshold key. Your device holds one share, the server holds the other. Neither party can sign alone.")
+                            Text(custodySecurityNotice)
                                 .font(.system(size: 9, design: .monospaced))
                                 .foregroundColor(.secondary)
                         }
@@ -851,6 +969,48 @@ struct CreateKeySheetView: View {
                                 .padding(12)
                                 .background(.green.opacity(0.05))
                                 .cornerRadius(4)
+
+                                // Scanned key metadata
+                                if let firstPart = scannedQRParts.first, firstPart.count >= 10 {
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        Text("SCANNED KEY")
+                                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                            .foregroundColor(.secondary)
+                                        let curveCode = firstPart.count > 6 ? firstPart.readUInt16BE(at: 4) : 0
+                                        HStack {
+                                            Text("Curve")
+                                                .font(.system(size: 9, design: .monospaced))
+                                                .foregroundColor(.secondary)
+                                            Spacer()
+                                            Text(curveCode == 714 ? "secp256k1" : "curve \(curveCode)")
+                                                .font(.system(size: 9, design: .monospaced))
+                                        }
+                                        HStack {
+                                            Text("Parts")
+                                                .font(.system(size: 9, design: .monospaced))
+                                                .foregroundColor(.secondary)
+                                            Spacer()
+                                            Text("\(scannedQRParts.count)/\(qrTotalParts)")
+                                                .font(.system(size: 9, design: .monospaced))
+                                        }
+                                        let totalBytes = scannedQRParts.reduce(0) { $0 + $1.count }
+                                        HStack {
+                                            Text("Size")
+                                                .font(.system(size: 9, design: .monospaced))
+                                                .foregroundColor(.secondary)
+                                            Spacer()
+                                            Text(String(format: "%.1f KB", Double(totalBytes) / 1024.0))
+                                                .font(.system(size: 9, design: .monospaced))
+                                        }
+                                        if qrTotalParts > 1 {
+                                            ProgressView(value: Double(scannedQRParts.count), total: Double(qrTotalParts))
+                                                .tint(.green)
+                                        }
+                                    }
+                                    .padding(10)
+                                    .background(.blue.opacity(0.05))
+                                    .cornerRadius(4)
+                                }
 
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text("Passphrase")

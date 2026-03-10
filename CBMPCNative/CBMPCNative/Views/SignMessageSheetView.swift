@@ -20,6 +20,9 @@ struct SignMessageSheetView: View {
     @State private var serverSubmitInProgress = false
     @State private var serverSubmitError: String?
     @State private var signError: String?
+    @State private var signStartTime: Date?
+    @State private var signDuration: TimeInterval?
+    @State private var transportInfo: String?
 
     var messageHash: String {
         let data = message.data(using: .utf8) ?? Data()
@@ -118,6 +121,37 @@ struct SignMessageSheetView: View {
                             .padding(8)
                             .background(.gray.opacity(0.1))
                             .cornerRadius(4)
+
+                            // Signing diagnostics
+                            VStack(alignment: .leading, spacing: 3) {
+                                if let info = transportInfo {
+                                    HStack(spacing: 4) {
+                                        Text("Transport")
+                                            .foregroundColor(.secondary)
+                                        Spacer()
+                                        Text(info)
+                                    }
+                                }
+                                if let duration = signDuration {
+                                    HStack(spacing: 4) {
+                                        Text("Duration")
+                                            .foregroundColor(.secondary)
+                                        Spacer()
+                                        Text(String(format: "%.2fs", duration))
+                                    }
+                                }
+                                HStack(spacing: 4) {
+                                    Text("Payload")
+                                        .foregroundColor(.secondary)
+                                    Spacer()
+                                    let inputBytes = (message.data(using: .utf8)?.count ?? 0) + nonce.count + 1
+                                    Text("\(inputBytes) bytes -> \(sig.count / 2) bytes")
+                                }
+                            }
+                            .font(.system(size: 8, design: .monospaced))
+                            .padding(6)
+                            .background(.blue.opacity(0.05))
+                            .cornerRadius(4)
                         }
                     }
                 }
@@ -130,10 +164,16 @@ struct SignMessageSheetView: View {
                     // Show transport origin for non-local keys
                     if TransportOrigin.load(for: key.id) != .local {
                         HStack(spacing: 6) {
-                            Image(systemName: TransportOrigin.load(for: key.id) == .server ? "server.rack" : "iphone.gen2")
+                            let origin = TransportOrigin.load(for: key.id)
+                            Image(systemName: origin == .server ? "server.rack" : "iphone.gen2")
                                 .font(.system(size: 10))
-                            Text(TransportOrigin.load(for: key.id) == .server ? "Server-backed signing" : "Peer-backed signing")
-                                .font(.system(size: 9, design: .monospaced))
+                            if isLocallyDerived {
+                                Text("Locally-derived from \(origin == .server ? "server" : "peer") parent")
+                                    .font(.system(size: 9, design: .monospaced))
+                            } else {
+                                Text(origin == .server ? "Server-backed signing" : "Peer-backed signing")
+                                    .font(.system(size: 9, design: .monospaced))
+                            }
                         }
                         .foregroundColor(.blue)
                         .padding(.bottom, 4)
@@ -144,7 +184,7 @@ struct SignMessageSheetView: View {
                             HStack(spacing: 8) {
                                 ProgressView()
                                     .scaleEffect(0.8)
-                                Text(TransportOrigin.load(for: key.id) == .local ? "Signing..." : "Signing with server...")
+                                Text(signingProgressLabel)
                             }
                         } else {
                             Label("Sign Message", systemImage: "checkmark.circle.fill")
@@ -239,17 +279,64 @@ struct SignMessageSheetView: View {
         #endif
     }
 
+    /// Check if key has both shares on device (locally-derived from server/peer parent)
+    private var isLocallyDerived: Bool {
+        UserDefaults.standard.bool(forKey: "key_\(key.id.uuidString)_localDerived")
+    }
+
+    private var signingProgressLabel: String {
+        if isLocallyDerived || TransportOrigin.load(for: key.id) == .local {
+            return "Signing..."
+        } else {
+            return "Signing with server..."
+        }
+    }
+
     private func signMessage() {
         isSigning = true
         signError = nil
+        signStartTime = Date()
 
         let messageWithNonce = "\(message)|\(nonce)"
         let origin = TransportOrigin.load(for: key.id)
 
+        // Set transport info — accurately reflects actual signing path
         switch origin {
         case .local:
+            transportInfo = "Local (2 shares on device)"
+        case .server:
+            if isLocallyDerived {
+                // HD-child derived from server parent — both shares on device
+                if let serverURL = TransportOrigin.coSignerRef(for: key.id) {
+                    let host = URL(string: serverURL)?.host ?? serverURL
+                    transportInfo = "Local (derived from server: \(host))"
+                } else {
+                    transportInfo = "Local (derived from server parent)"
+                }
+            } else {
+                if let serverURL = TransportOrigin.coSignerRef(for: key.id) {
+                    let host = URL(string: serverURL)?.host ?? serverURL
+                    transportInfo = "Server (\(host))"
+                } else {
+                    transportInfo = "Server"
+                }
+            }
+        case .peer:
+            if isLocallyDerived {
+                transportInfo = "Local (derived from peer parent)"
+            } else if let deviceIdStr = TransportOrigin.coSignerRef(for: key.id),
+               let deviceUUID = UUID(uuidString: deviceIdStr),
+               let device = PairingManager.shared.pairedDevices.first(where: { $0.id == deviceUUID }) {
+                transportInfo = "Peer (\(device.name))"
+            } else {
+                transportInfo = "Peer"
+            }
+        }
+
+        // Route: locally-derived keys always sign locally regardless of origin badge
+        if isLocallyDerived || origin == .local {
             signLocal(messageWithNonce: messageWithNonce)
-        case .server, .peer:
+        } else {
             signAsync(messageWithNonce: messageWithNonce)
         }
     }
@@ -301,6 +388,9 @@ struct SignMessageSheetView: View {
     }
 
     private func handleSigningSuccess(sigHex: String, hashHex: String) {
+        if let start = signStartTime {
+            self.signDuration = Date().timeIntervalSince(start)
+        }
         self.signature = sigHex
         self.isSigning = false
 
@@ -310,12 +400,25 @@ struct SignMessageSheetView: View {
         feedback.notificationOccurred(.success)
         #endif
 
+        // Build transport details string for signing record
+        var transportDetail = transportInfo ?? "Local"
+        if let duration = signDuration {
+            transportDetail += " | \(String(format: "%.2f", duration))s"
+        }
+        let origin = TransportOrigin.load(for: key.id)
+        if isLocallyDerived && origin != .local {
+            transportDetail += " | 2 shares on device (parent: \(origin.rawValue))"
+        } else {
+            transportDetail += " | \(origin.shareDescription)"
+        }
+
         let record = SigningRecord(
             id: UUID(),
             messageHash: hashHex,
             signature: sigHex,
             timestamp: Date(),
-            verified: true
+            verified: true,
+            transportInfo: transportDetail
         )
         self.keyStore.addSigningRecord(record, to: self.key.id)
     }
