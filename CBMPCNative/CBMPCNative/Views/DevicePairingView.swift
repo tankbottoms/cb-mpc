@@ -1,6 +1,7 @@
 import SwiftUI
 import CryptoKit
 import CoreImage.CIFilterBuiltins
+import MultipeerConnectivity
 #if os(iOS)
 import UIKit
 import AVFoundation
@@ -151,6 +152,8 @@ struct PairingSessionView: View {
     @State private var isGeneratingSharedKey = false
     @State private var sharedKeyError: String?
     @State private var sharedKeyGenerated = false
+    @State private var peerConnection: PeerConnectionManager?
+    @State private var mcState: PeerConnectionManager.ConnectionState = .disconnected
 
     enum PairingStep {
         case showQR
@@ -404,6 +407,9 @@ struct PairingSessionView: View {
             .background(.green.opacity(0.05))
             .cornerRadius(6)
 
+            // MultipeerConnectivity status
+            mcConnectionStatusView
+
             if sharedKeyGenerated {
                 HStack(spacing: 8) {
                     Image(systemName: "key.fill")
@@ -427,13 +433,13 @@ struct PairingSessionView: View {
             }
 
             VStack(spacing: 8) {
-                if !sharedKeyGenerated {
+                if !sharedKeyGenerated && mcState == .connected {
                     Button(action: generateSharedKey) {
                         if isGeneratingSharedKey {
                             HStack(spacing: 8) {
                                 ProgressView()
                                     .controlSize(.mini)
-                                Text("Generating shared key...")
+                                Text("Running peer DKG...")
                                     .font(.system(size: 13, design: .monospaced))
                             }
                         } else {
@@ -446,6 +452,7 @@ struct PairingSessionView: View {
                 }
 
                 Button("Done") {
+                    peerConnection?.stop()
                     onComplete()
                     dismiss()
                 }
@@ -458,25 +465,85 @@ struct PairingSessionView: View {
         .padding(16)
     }
 
+    @ViewBuilder
+    private var mcConnectionStatusView: some View {
+        switch mcState {
+        case .disconnected:
+            EmptyView()
+        case .searching:
+            HStack(spacing: 8) {
+                ProgressView()
+                    .controlSize(.mini)
+                Text("Searching for peer on local network...")
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundColor(.secondary)
+            }
+            .padding(10)
+            .background(.blue.opacity(0.05))
+            .cornerRadius(6)
+        case .connecting:
+            HStack(spacing: 8) {
+                ProgressView()
+                    .controlSize(.mini)
+                Text("Connecting to peer...")
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundColor(.orange)
+            }
+            .padding(10)
+            .background(.orange.opacity(0.05))
+            .cornerRadius(6)
+        case .connected:
+            HStack(spacing: 6) {
+                Image(systemName: "antenna.radiowaves.left.and.right")
+                    .font(.system(size: 10))
+                    .foregroundColor(.green)
+                Text("Peer connected — ready for shared key generation")
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundColor(.green)
+            }
+            .padding(10)
+            .background(.green.opacity(0.05))
+            .cornerRadius(6)
+        case .failed(let msg):
+            HStack(spacing: 6) {
+                Image(systemName: "exclamationmark.triangle")
+                    .font(.system(size: 10))
+                    .foregroundColor(.red)
+                Text(msg)
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundColor(.red)
+            }
+            .padding(10)
+            .background(.red.opacity(0.05))
+            .cornerRadius(6)
+        }
+    }
+
     private func generateSharedKey() {
-        // Peer DKG requires MCSession which is not available in the current
-        // pairing flow (QR-based ECDH only). This is a placeholder for
-        // MultipeerConnectivity-based DKG when the full MC session is available.
-        // For now, show the feature as "coming soon" or generate a local key
-        // tagged as peer-origin for demonstration.
+        guard let conn = peerConnection,
+              let remotePeer = conn.remotePeerID else {
+            sharedKeyError = "No peer connection available"
+            return
+        }
 
         isGeneratingSharedKey = true
         sharedKeyError = nil
 
+        let mcSession = conn.mcSession
+        let localPartyId = conn.partyId
+
         DispatchQueue.global(qos: .userInitiated).async {
             do {
-                let engine = CBMPCCryptoEngine()
-                let (publicKey, serializedKey) = try engine.generateKey(curveCode: 714)
-                let publicKeyHex = publicKey.map { String(format: "%02x", $0) }.joined()
+                let result = try PeerDKGCoordinator.generateKey(
+                    session: mcSession,
+                    remotePeerID: remotePeer,
+                    localPartyId: localPartyId,
+                    curveCode: 714
+                )
+
+                let publicKeyHex = result.publicKey.map { String(format: "%02x", $0) }.joined()
 
                 DispatchQueue.main.async {
-                    // Store as peer-origin key (device has both shares for now,
-                    // real peer DKG will give each device only one share)
                     let keyId = UUID()
                     let timestamp = AppDateFormat.string(from: Date())
                     let shortAddr = "0x\(String(publicKeyHex.prefix(4)))...\(String(publicKeyHex.suffix(4)))"
@@ -496,10 +563,9 @@ struct PairingSessionView: View {
                         signingRecords: []
                     )
 
-                    UserDefaults.standard.set(serializedKey, forKey: "key_\(keyId.uuidString)")
+                    UserDefaults.standard.set(result.localShare, forKey: "key_\(keyId.uuidString)")
                     TransportOrigin.save(.peer, for: keyId)
 
-                    // We need KeyStore access — use the shared notification pattern
                     NotificationCenter.default.post(
                         name: Notification.Name("CBMPCAddPeerKey"),
                         object: managedKey
@@ -515,7 +581,7 @@ struct PairingSessionView: View {
                 }
             } catch {
                 DispatchQueue.main.async {
-                    self.sharedKeyError = "Key generation failed: \(error.localizedDescription)"
+                    self.sharedKeyError = "Peer DKG failed: \(error.localizedDescription)"
                     self.isGeneratingSharedKey = false
                 }
             }
@@ -617,6 +683,16 @@ struct PairingSessionView: View {
         let success = UINotificationFeedbackGenerator()
         success.notificationOccurred(.success)
         #endif
+
+        // Start MultipeerConnectivity discovery using shared secret
+        if let sharedSecret = session.sharedSecret {
+            let conn = PeerConnectionManager(sharedSecret: sharedSecret, role: role)
+            conn.onStateChange = { [self] state in
+                self.mcState = state
+            }
+            self.peerConnection = conn
+            conn.startSearching()
+        }
 
         step = .paired
     }

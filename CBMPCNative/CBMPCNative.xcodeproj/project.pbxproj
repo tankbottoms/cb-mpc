@@ -166,6 +166,9 @@
 		FF16000100000000000000A8 /* PeerDKGCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Models/PeerDKGCoordinator.swift; sourceTree = SOURCE_ROOT; };
 		FF16000200000000000000A8 /* PeerDKGCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF16000100000000000000A8 /* PeerDKGCoordinator.swift */; };
 		FF16000300000000000000A8 /* PeerDKGCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF16000100000000000000A8 /* PeerDKGCoordinator.swift */; };
+		FF16000100000000000000A9 /* PeerConnectionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Models/PeerConnectionManager.swift; sourceTree = SOURCE_ROOT; };
+		FF16000200000000000000A9 /* PeerConnectionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF16000100000000000000A9 /* PeerConnectionManager.swift */; };
+		FF16000300000000000000A9 /* PeerConnectionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF16000100000000000000A9 /* PeerConnectionManager.swift */; };
 
 /* v0.14.0 network view */
 		FF14000100000000000000A1 /* NetworkView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Views/NetworkView.swift; sourceTree = SOURCE_ROOT; };
@@ -305,6 +308,7 @@
 				FF16000200000000000000A6 /* ServerSigningCoordinator.swift in Sources */,
 				FF16000200000000000000A7 /* MultipeerTransport.swift in Sources */,
 				FF16000200000000000000A8 /* PeerDKGCoordinator.swift in Sources */,
+				FF16000200000000000000A9 /* PeerConnectionManager.swift in Sources */,
 				A1E5F40C2D5E4A1B00C8F3E2 /* CBMPCNative.xcdatamodeld in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -396,6 +400,7 @@
 				FF16000300000000000000A6 /* ServerSigningCoordinator.swift in Sources */,
 				FF16000300000000000000A7 /* MultipeerTransport.swift in Sources */,
 				FF16000300000000000000A8 /* PeerDKGCoordinator.swift in Sources */,
+				FF16000300000000000000A9 /* PeerConnectionManager.swift in Sources */,
 				AA00000100000000000000C4 /* CBMPCNative.xcdatamodeld in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -465,7 +470,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = CBMPCNative/CBMPCNative.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 62;
+				CURRENT_PROJECT_VERSION = 63;
 				DEVELOPMENT_TEAM = YT6VJY3L35;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -478,7 +483,7 @@
 				);
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				SDKROOT = iphoneos;
-				MARKETING_VERSION = 0.16.0;
+				MARKETING_VERSION = 0.16.1;
 				"OTHER_LDFLAGS[sdk=iphonesimulator*]" = (
 					"$(SRCROOT)/../cbmpc.xcframework/ios-arm64-simulator/libcbmpc.a",
 					"$(SRCROOT)/../openssl-ios/iossimulator-arm64/lib/libssl.a",
@@ -505,7 +510,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = CBMPCNative/CBMPCNative.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 62;
+				CURRENT_PROJECT_VERSION = 63;
 				DEVELOPMENT_TEAM = YT6VJY3L35;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -518,7 +523,7 @@
 				);
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				SDKROOT = iphoneos;
-				MARKETING_VERSION = 0.16.0;
+				MARKETING_VERSION = 0.16.1;
 				"OTHER_LDFLAGS[sdk=iphonesimulator*]" = (
 					"$(SRCROOT)/../cbmpc.xcframework/ios-arm64-simulator/libcbmpc.a",
 					"$(SRCROOT)/../openssl-ios/iossimulator-arm64/lib/libssl.a",
@@ -556,7 +561,7 @@
 			buildSettings = {
 				ARCHS = arm64;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 62;
+				CURRENT_PROJECT_VERSION = 63;
 				DEVELOPMENT_TEAM = YT6VJY3L35;
 				INFOPLIST_FILE = CBMPCNative/Info.plist;
 				HEADER_SEARCH_PATHS = (
@@ -565,7 +570,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				SDKROOT = macosx;
-				MARKETING_VERSION = 0.16.0;
+				MARKETING_VERSION = 0.16.1;
 				OTHER_LDFLAGS = (
 					"$(SRCROOT)/../cbmpc.xcframework/macos-arm64/libcbmpc.a",
 					"/usr/local/opt/openssl@3.2.0/lib/libssl.a",
@@ -584,7 +589,7 @@
 			buildSettings = {
 				ARCHS = arm64;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 62;
+				CURRENT_PROJECT_VERSION = 63;
 				DEVELOPMENT_TEAM = YT6VJY3L35;
 				INFOPLIST_FILE = CBMPCNative/Info.plist;
 				HEADER_SEARCH_PATHS = (
@@ -593,7 +598,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				SDKROOT = macosx;
-				MARKETING_VERSION = 0.16.0;
+				MARKETING_VERSION = 0.16.1;
 				OTHER_LDFLAGS = (
 					"$(SRCROOT)/../cbmpc.xcframework/macos-arm64/libcbmpc.a",
 					"/usr/local/opt/openssl@3.2.0/lib/libssl.a",
