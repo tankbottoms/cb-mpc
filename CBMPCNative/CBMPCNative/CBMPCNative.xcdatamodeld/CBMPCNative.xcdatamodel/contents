@@ -23,6 +23,7 @@
         <attribute name="messageHash" attributeType="String" defaultValueString="" syncable="YES"/>
         <attribute name="signature" attributeType="String" defaultValueString="" syncable="YES"/>
         <attribute name="timestamp" attributeType="Date" optional="YES" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="transportInfo" attributeType="String" optional="YES" syncable="YES"/>
         <attribute name="verified" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES" syncable="YES"/>
         <relationship name="managedKey" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="ManagedKeyEntity" inverseName="signingRecords" inverseEntity="ManagedKeyEntity" syncable="YES"/>
         <uniqueConstraint>
