@@ -1,0 +1,15 @@
+This app performs threshold multi-party computation (MPC) for cryptographic key management. No server account is required for basic functionality.
+
+To test core features:
+1. Launch the app and tap "Create New Vault"
+2. Tap "+" on the Keys tab to generate a new key
+3. Select the key to view details, sign messages, or export
+
+The app uses:
+- Camera: for scanning QR codes during key import/export between devices
+- Face ID: optional biometric lock to protect key access
+- Local Network: for peer-to-peer MPC signing between paired devices
+- Bonjour (_cbmpc._tcp): device discovery on local network
+
+Encryption declaration: ITSAppUsesNonExemptEncryption = NO
+(Uses Apple's built-in CryptoKit; no custom encryption exported)

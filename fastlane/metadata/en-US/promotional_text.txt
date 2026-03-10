@@ -1,0 +1,1 @@
+Threshold key management powered by multi-party computation. Your private key never exists whole on any single device.

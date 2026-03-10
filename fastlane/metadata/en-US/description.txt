@@ -1,0 +1,35 @@
+Key MGMT wCB-MPC is a threshold cryptographic key manager built on Coinbase's open-source multi-party computation (MPC) library. Your private key is split into shares -- it never exists in one place.
+
+THRESHOLD KEY MANAGEMENT
+Generate secp256k1 keys using distributed key generation (DKG). Each key is split into two shares stored separately -- on your device, in iCloud Keychain, on a paired device, or on a registered MPC server. Signing requires both shares to cooperate, but neither share ever leaves its host.
+
+2-PARTY MPC SIGNING
+Sign messages and Ethereum transactions without ever reconstructing the private key. The two key shares perform a cryptographic protocol that produces a valid ECDSA signature without either party learning the other's share.
+
+MULTI-DEVICE PAIRING
+Pair iPhones over your local network using QR codes and MultipeerConnectivity. One device holds share 0, the paired device holds share 1. True 2-party security with no trusted server.
+
+SERVER CO-SIGNING
+Register a remote MPC key server to hold one share. The server participates in DKG and signing over WebSocket, providing always-available co-signing without custodial risk.
+
+HD KEY DERIVATION
+Derive child keys from any master key using BIP-32 compatible hierarchical deterministic derivation -- performed as a 2-party MPC protocol.
+
+QR KEY TRANSFER
+Export and import key shares via multi-frame QR codes. Transfer keys between devices without any network connection.
+
+SECURITY
+- Keys protected by iOS Keychain with biometric (Face ID) access control
+- Optional iCloud Keychain sync for backup
+- Built on Coinbase's audited cb-mpc C++ library (Cure53 audit)
+- secp256k1 curve (Bitcoin/Ethereum compatible)
+- No analytics, no tracking, no data collection
+
+ETHEREUM SUPPORT
+- Sign raw messages and EIP-155 transactions
+- Verify signatures against public keys
+- Multiple networks: Mainnet, Sepolia, Base, Arbitrum, Optimism, Polygon, BSC
+- Etherscan integration for address lookup
+
+OPEN SOURCE
+The complete source code for both the iOS app and key server is open source. Fork it, audit it, host your own server -- you own the entire stack.
