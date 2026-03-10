@@ -39,7 +39,7 @@ export class KeyVault extends DurableObject<Env> {
   private getKey(pubkey: string): Response {
     const rows = this.sql
       .exec(
-        "SELECT public_key, curve_code, participant_devices, created_at, last_used_at, sign_count FROM keys WHERE public_key = ?",
+        "SELECT public_key, curve_code, server_share, participant_devices, created_at, last_used_at, sign_count FROM keys WHERE public_key = ?",
         pubkey
       )
       .toArray();
@@ -49,9 +49,20 @@ export class KeyVault extends DurableObject<Env> {
     }
 
     const k = rows[0];
+
+    // Encode server_share as base64 for transport
+    let serverShareB64: string | null = null;
+    const raw = k.server_share;
+    if (raw instanceof ArrayBuffer) {
+      serverShareB64 = btoa(String.fromCharCode(...new Uint8Array(raw)));
+    } else if (ArrayBuffer.isView(raw)) {
+      serverShareB64 = btoa(String.fromCharCode(...new Uint8Array(raw.buffer as ArrayBuffer)));
+    }
+
     return Response.json({
       public_key: k.public_key,
       curve_code: k.curve_code,
+      server_share: serverShareB64,
       participant_devices: JSON.parse(k.participant_devices as string),
       created_at: k.created_at,
       last_used_at: k.last_used_at,
