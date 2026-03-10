@@ -64,6 +64,59 @@ class ServerDKGCoordinator {
         )
     }
 
+    /// Generate a server-backed key with ceremony lifecycle tracking.
+    /// Wraps the existing generateKey flow with CeremonyCoordinator state management
+    /// and stores the device share in Keychain via KeyShareManager.
+    @MainActor
+    static func generateKeyWithCeremony(
+        serverURL: URL,
+        ceremonyCoordinator: CeremonyCoordinator,
+        curveCode: Int = 714
+    ) async throws -> DKGResult {
+        let ceremony = try ceremonyCoordinator.createDKGCeremony(
+            participantMode: .server,
+            localPartyId: 0
+        )
+
+        do {
+            try ceremonyCoordinator.updateState(
+                ceremonyId: ceremony.id,
+                newState: .committed
+            )
+
+            // Run existing DKG flow
+            let result = try await generateKey(
+                serverURL: serverURL,
+                curveCode: curveCode
+            )
+
+            // Store device share in Keychain
+            let keyShareManager = KeyShareManager.shared
+            let publicKeyHex = result.publicKey.map { String(format: "%02x", $0) }.joined()
+            let share = try await keyShareManager.storeShare(
+                shareBytes: result.deviceShare,
+                keyId: ceremony.id,
+                partyId: 0,
+                ceremonyType: "device_server",
+                publicKey: publicKeyHex
+            )
+
+            try ceremonyCoordinator.completeCeremony(
+                ceremonyId: ceremony.id,
+                publicKey: publicKeyHex,
+                shareId: share.id
+            )
+
+            return result
+        } catch {
+            try? ceremonyCoordinator.failCeremony(
+                ceremonyId: ceremony.id,
+                error: error.localizedDescription
+            )
+            throw error
+        }
+    }
+
     /// Generate both key shares locally and return them separately
     private static func generateBothSharesLocally(curveCode: Int) throws -> (publicKey: Data, share0: Data, share1: Data) {
         let partyNames = ["device", "server"]
