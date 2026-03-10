@@ -82,9 +82,15 @@ struct ExportKeySheetView: View {
                                         }
                                     }
 
-                                    Text("Cycle speed: \(String(format: "%.1f", qrTransferSpeed))s -- change in Settings > QR Transfer")
-                                        .font(.system(size: 8, design: .monospaced))
-                                        .foregroundColor(.secondary.opacity(0.7))
+                                    Button {
+                                        dismiss()
+                                        NotificationCenter.default.post(name: .switchToSettingsTab, object: nil)
+                                    } label: {
+                                        Text("Cycle speed: \(String(format: "%.1f", qrTransferSpeed))s -- change in Settings > QR Transfer")
+                                            .font(.system(size: 8, design: .monospaced))
+                                            .foregroundColor(.blue.opacity(0.7))
+                                            .underline()
+                                    }
                                 }
                             }
                             Spacer()

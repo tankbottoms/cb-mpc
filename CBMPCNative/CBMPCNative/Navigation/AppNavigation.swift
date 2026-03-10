@@ -39,6 +39,9 @@ struct AppNavigation: View {
                 .padding(.bottom, 4)
         }
         .ignoresSafeArea(.keyboard)
+        .onReceive(NotificationCenter.default.publisher(for: .switchToSettingsTab)) { _ in
+            selectedTab = 5
+        }
     }
 
     #elseif os(macOS)
@@ -175,6 +178,12 @@ struct TransactionsPlaceholderView: View {
             #endif
         }
     }
+}
+
+// MARK: - Notifications
+
+extension Notification.Name {
+    static let switchToSettingsTab = Notification.Name("switchToSettingsTab")
 }
 
 #Preview {
