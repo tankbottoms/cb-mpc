@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DKG Ceremony — Visual Guide</title>
+<style>
+  :root {
+    --font-mono: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    --border-w: 3px;
+    --shadow-offset: 5px;
+    --radius: 0;
+    --phone: #6366f1;
+    --server: #f59e0b;
+    --public: #3b82f6;
+    --private: #ef4444;
+    --mail: #8b5cf6;
+    --ok: #22c55e;
+  }
+
+  [data-theme="light"] {
+    --bg: #f5f0e8;
+    --card: #ffffff;
+    --card2: #f0ebe3;
+    --text: #1a1a1a;
+    --muted: #6b7280;
+    --border: #1a1a1a;
+    --shadow-color: #1a1a1a;
+  }
+
+  [data-theme="dark"] {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --card2: #334155;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --border: #475569;
+    --shadow-color: #000000;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font-mono);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, var(--phone), var(--server));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .subtitle {
+    text-align: center;
+    color: var(--muted);
+    margin-bottom: 0;
+    font-size: 0.9rem;
+  }
+
+  /* Legend */
+  .legend {
+    display: flex;
+    gap: 1.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 3rem;
+    padding: 1rem;
+    background: var(--card);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+  }
+  .legend-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* Step container */
+  .step {
+    margin-bottom: 3rem;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    background: var(--card);
+  }
+
+  .step-header {
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .step-num {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+  }
+
+  .step-title { font-size: 1.1rem; font-weight: 600; }
+  .step-body { padding: 1.5rem; }
+
+  /* Diagram area */
+  .diagram {
+    background: var(--bg);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin: 1rem 0;
+    position: relative;
+    overflow-x: auto;
+  }
+
+  /* Party boxes */
+  .parties {
+    display: flex;
+    justify-content: space-around;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .party {
+    border: 2px solid;
+    border-radius: 12px;
+    padding: 1rem;
+    min-width: 200px;
+    flex: 1;
+    max-width: 350px;
+  }
+
+  .party.phone { border-color: var(--phone); }
+  .party.server { border-color: var(--server); }
+
+  .party-name {
+    font-weight: bold;
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .party.phone .party-name { color: var(--phone); }
+  .party.server .party-name { color: var(--server); }
+
+  .var-list { list-style: none; font-size: 0.8rem; }
+  .var-list li {
+    padding: 0.25rem 0.4rem;
+    margin: 0.2rem 0;
+    border-radius: 6px;
+  }
+  .var-list .secret {
+    background: rgba(239, 68, 68, 0.15);
+    border-left: 3px solid var(--private);
+  }
+  .var-list .public-var {
+    background: rgba(59, 130, 246, 0.15);
+    border-left: 3px solid var(--public);
+  }
+  .var-list .encrypted {
+    background: rgba(139, 92, 246, 0.15);
+    border-left: 3px solid var(--mail);
+  }
+
+  .tag {
+    display: inline-block;
+    font-size: 0.65rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+    vertical-align: middle;
+  }
+  .tag.priv { background: var(--private); color: white; }
+  .tag.pub { background: var(--public); color: white; }
+  .tag.mail { background: var(--mail); color: white; }
+  .tag.ok { background: var(--ok); color: white; }
+
+  /* Math block */
+  .math {
+    background: var(--card2);
+    border-radius: 8px;
+    padding: 0.8rem 1rem;
+    margin: 0.5rem 0;
+    font-size: 0.85rem;
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  .explanation {
+    color: var(--muted);
+    font-size: 0.82rem;
+    margin: 0.5rem 0;
+    padding: 0.5rem 0.8rem;
+    border-left: 3px solid var(--border);
+  }
+
+  /* Section divider */
+  .phase-divider {
+    text-align: center;
+    padding: 2rem 0;
+    color: var(--muted);
+    font-size: 1.2rem;
+    font-weight: 600;
+    position: relative;
+  }
+  .phase-divider::before,
+  .phase-divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 30%;
+    height: 1px;
+    background: var(--border);
+  }
+  .phase-divider::before { left: 0; }
+  .phase-divider::after { right: 0; }
+
+  /* Flow arrows */
+  .flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 0;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+  .flow .arrow {
+    font-size: 1.5rem;
+    margin: 0 0.5rem;
+  }
+
+  /* Public board */
+  .public-board {
+    border: 2px solid var(--public);
+    border-radius: 12px;
+    padding: 1rem;
+    margin: 1rem 0;
+    background: rgba(59, 130, 246, 0.05);
+  }
+  .public-board-title {
+    color: var(--public);
+    font-weight: bold;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Private mail */
+  .private-mail {
+    border: 2px dashed var(--mail);
+    border-radius: 12px;
+    padding: 1rem;
+    margin: 1rem 0;
+    background: rgba(139, 92, 246, 0.05);
+  }
+  .private-mail-title {
+    color: var(--mail);
+    font-weight: bold;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+  }
+
+  /* Overview table */
+  .overview-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    margin: 1rem 0;
+  }
+  .overview-table th {
+    text-align: left;
+    padding: 0.6rem 0.8rem;
+    border-bottom: 2px solid var(--border);
+    color: var(--muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .overview-table td {
+    padding: 0.5rem 0.8rem;
+    border-bottom: 1px solid rgba(71, 85, 105, 0.4);
+    vertical-align: top;
+  }
+
+  /* Verify box */
+  .verify-box {
+    border: 2px solid var(--ok);
+    border-radius: 12px;
+    padding: 1rem;
+    margin: 1rem 0;
+    text-align: center;
+    background: rgba(34, 197, 94, 0.08);
+  }
+  .verify-box .result { color: var(--ok); font-size: 1.3rem; font-weight: bold; }
+
+  /* Summary grid */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin: 1rem 0;
+  }
+  .summary-col {
+    border-radius: 12px;
+    padding: 1rem;
+  }
+  .summary-col.pub-col {
+    border: 2px solid var(--public);
+    background: rgba(59, 130, 246, 0.05);
+  }
+  .summary-col.priv-col {
+    border: 2px solid var(--private);
+    background: rgba(239, 68, 68, 0.05);
+  }
+  .summary-col h3 { font-size: 0.9rem; margin-bottom: 0.5rem; }
+  .summary-col.pub-col h3 { color: var(--public); }
+  .summary-col.priv-col h3 { color: var(--private); }
+  .summary-col ul { list-style: none; font-size: 0.82rem; }
+  .summary-col ul li { padding: 0.2rem 0; }
+  .summary-col ul li::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 0.5rem; vertical-align: middle; }
+  .pub-col ul li::before { background: var(--public); }
+  .priv-col ul li::before { background: var(--private); }
+
+  /* ---- THEME TOGGLE ---- */
+  .theme-toggle {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 100;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    padding: 0.4rem 0.8rem;
+    background: var(--card);
+    color: var(--text);
+    border: var(--border-w) solid var(--border);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .theme-toggle:hover {
+    background: var(--card2);
+  }
+
+  /* ---- DOC NAV ---- */
+  .doc-nav {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0;
+    border-bottom: var(--border-w) solid var(--border);
+    margin-bottom: 0;
+  }
+  .nav-link {
+    display: inline-block;
+    color: var(--muted);
+    text-decoration: none;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border: var(--border-w) solid transparent;
+    border-bottom: none;
+    margin-bottom: calc(-1 * var(--border-w));
+    transition: color 0.15s, background 0.15s;
+    white-space: nowrap;
+  }
+  .nav-link:hover {
+    color: var(--text);
+    background: var(--card2);
+  }
+  .nav-link.active {
+    color: var(--text);
+    font-weight: bold;
+    background: var(--bg);
+    border-color: var(--border);
+    border-bottom-color: var(--bg);
+  }
+  .page-title {
+    text-align: center;
+    padding: 2rem 1rem 1rem;
+    margin-bottom: 2rem;
+    border: var(--border-w) solid var(--border);
+    border-top: none;
+    background: var(--bg);
+  }
+
+  /* Cols-2 grid */
+  .cols-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  /* Failure mode table */
+  .failure-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    margin: 1rem 0;
+  }
+  .failure-table th {
+    text-align: left;
+    padding: 0.6rem 0.8rem;
+    border-bottom: 2px solid var(--border);
+    color: var(--private);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .failure-table td {
+    padding: 0.5rem 0.8rem;
+    border-bottom: 1px solid rgba(71, 85, 105, 0.4);
+    vertical-align: top;
+  }
+  .failure-table td:first-child {
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  /* Spinner animation */
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
+  .spinner {
+    width: 28px;
+    height: 28px;
+    border: 3px solid var(--card2);
+    border-top: 3px solid var(--phone);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0.5rem auto;
+  }
+
+  .blink-cursor {
+    animation: blink 1s step-end infinite;
+  }
+
+  /* Phone mockup progress */
+  .progress-line {
+    font-size: 0.7rem;
+    padding: 0.15rem 0;
+    font-family: var(--font-mono);
+  }
+  .progress-done { color: var(--ok); }
+  .progress-active { color: var(--phone); }
+  .progress-pending { color: var(--muted); }
+
+  /* Print styles */
+  @media print {
+    body { background: white; color: #1e293b; padding: 1rem; }
+    .step { break-inside: avoid; border-color: #ccc; background: white; }
+    .diagram { background: #f8fafc; }
+    .party { background: white; }
+    h1 { -webkit-text-fill-color: #1e293b; background: none; }
+    .theme-toggle, .doc-nav { display: none; }
+  }
+
+  @media (max-width: 700px) {
+    .cols-2 { grid-template-columns: 1fr; }
+    .parties { flex-direction: column; align-items: center; }
+    .summary-grid { grid-template-columns: 1fr; }
+  }
+
+  /* SVG diagram styles */
+  .seq-diagram {
+    display: flex;
+    justify-content: center;
+    margin: 1rem 0;
+  }
+  .seq-diagram svg text {
+    font-family: var(--font-mono);
+  }
+</style>
+<script src="https://fathom.atsignhandle.xyz/api/tracker/c0903d922ecd08d8" defer></script>
+</head>
+<body data-theme="light">
+
+<button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">[ DARK ]</button>
+
+<nav class="doc-nav">
+  <a href="/index.html" class="nav-link">Demo Guide</a>
+  <a href="/threshold-signing.html" class="nav-link">Threshold Signing</a>
+  <a href="/dkg-ceremony.html" class="nav-link active">DKG Ceremony</a>
+  <a href="/device-to-device.html" class="nav-link">Device-to-Device</a>
+  <a href="/server-architecture.html" class="nav-link">Server Architecture</a>
+</nav>
+
+<div class="page-title">
+  <h1>DKG Ceremony</h1>
+  <p class="subtitle">2-Party ECDSA Key Generation: Round-by-round message flow between mobile device (Party 0) and commitment server (Party 1)</p>
+</div>
+
+<!-- Legend -->
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:var(--phone)"></div> Phone (Party 0)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--server)"></div> Server (Party 1)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--private)"></div> Secret</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--public)"></div> Public</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--mail)"></div> Encrypted Channel</div>
+</div>
+
+<!-- ============================================================ -->
+<div class="phase-divider">Phase 1: Session Initialization</div>
+<!-- ============================================================ -->
+
+<!-- STEP 1 -->
+<div class="step">
+  <div class="step-header" style="background:rgba(99,102,241,0.1)">
+    <div class="step-num" style="background:var(--phone);color:white">1</div>
+    <div class="step-title">Session Handshake</div>
+  </div>
+  <div class="step-body">
+    <p class="explanation">The phone initiates a DKG session by sending a POST request to the commitment server. This establishes a unique session and exchanges ephemeral public keys for the secure channel. No secrets are exchanged yet -- this is purely a handshake.</p>
+
+    <div class="diagram">
+      <div class="parties">
+        <div class="party phone">
+          <div class="party-name">Phone (Party 0)</div>
+          <ul class="var-list">
+            <li class="public-var"><span class="tag pub">public</span> device_pk -- ephemeral ECDH key</li>
+            <li class="public-var"><span class="tag pub">public</span> curve: secp256k1</li>
+            <li class="public-var"><span class="tag pub">public</span> protocol: ECDSA-2PC</li>
+          </ul>
+          <div class="math">POST /keygen/init
+{
+  "curve": "secp256k1",
+  "protocol": "ECDSA-2PC",
+  "device_pk": "04abc...def"
+}</div>
+        </div>
+        <div class="party server">
+          <div class="party-name">Server (Party 1)</div>
+          <ul class="var-list">
+            <li class="public-var"><span class="tag pub">public</span> session_id -- unique identifier</li>
+            <li class="public-var"><span class="tag pub">public</span> server_pk -- ephemeral ECDH key</li>
+            <li class="public-var"><span class="tag pub">public</span> capabilities -- supported operations</li>
+          </ul>
+          <div class="math">Response 201 Created
+{
+  "session_id": "dkg-a1b2c3",
+  "server_pk": "04fed...cba",
+  "capabilities": ["keygen","sign"]
+}</div>
+        </div>
+      </div>
+
+      <!-- Sequence diagram -->
+      <div class="seq-diagram">
+        <svg width="100%" viewBox="0 0 800 200" xmlns="http://www.w3.org/2000/svg">
+          <!-- Phone lifeline -->
+          <rect x="120" y="20" width="120" height="36" rx="6" fill="none" stroke="var(--phone)" stroke-width="2"/>
+          <text x="180" y="43" text-anchor="middle" fill="var(--phone)" font-size="13" font-weight="bold">Phone</text>
+          <line x1="180" y1="56" x2="180" y2="190" stroke="var(--phone)" stroke-width="1.5" stroke-dasharray="6,4"/>
+
+          <!-- Server lifeline -->
+          <rect x="560" y="20" width="120" height="36" rx="6" fill="none" stroke="var(--server)" stroke-width="2"/>
+          <text x="620" y="43" text-anchor="middle" fill="var(--server)" font-size="13" font-weight="bold">Server</text>
+          <line x1="620" y1="56" x2="620" y2="190" stroke="var(--server)" stroke-width="1.5" stroke-dasharray="6,4"/>
+
+          <!-- Arrow: Phone -> Server -->
+          <line x1="185" y1="90" x2="610" y2="90" stroke="var(--public)" stroke-width="2" marker-end="url(#arrowBlue)"/>
+          <text x="400" y="82" text-anchor="middle" fill="var(--public)" font-size="11">POST /keygen/init  {curve, protocol, device_pk}</text>
+
+          <!-- Arrow: Server -> Phone -->
+          <line x1="615" y1="140" x2="190" y2="140" stroke="var(--server)" stroke-width="2" marker-end="url(#arrowAmber)"/>
+          <text x="400" y="132" text-anchor="middle" fill="var(--server)" font-size="11">{session_id, server_pk, capabilities}</text>
+
+          <!-- Arrowhead markers -->
+          <defs>
+            <marker id="arrowBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--public)"/>
+            </marker>
+            <marker id="arrowAmber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--server)"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+    </div>
+
+    <p class="explanation"><b>The server becomes Party 1.</b> No secrets exchanged yet -- just a handshake to establish a secure session. The ephemeral ECDH keys will be used to derive an AES-GCM encryption key for subsequent WebSocket messages. The session_id is used to correlate all future protocol rounds.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<div class="phase-divider">Phase 2: Commitment Exchange</div>
+<!-- ============================================================ -->
+
+<!-- STEP 2 -->
+<div class="step">
+  <div class="step-header" style="background:rgba(59,130,246,0.1)">
+    <div class="step-num" style="background:var(--public);color:white">2</div>
+    <div class="step-title">Mutual Commitment Exchange</div>
+  </div>
+  <div class="step-body">
+    <p class="explanation">Both parties generate cryptographic commitments that bind them to secret choices before revealing anything to the other side. This is the foundation of honest-verifier security -- like sealing your answer in an envelope before the other person reveals theirs.</p>
+
+    <div class="diagram">
+      <div class="parties">
+        <div class="party phone">
+          <div class="party-name">Phone (Party 0) generates:</div>
+          <ul class="var-list">
+            <li class="secret"><span class="tag priv">secret</span> Paillier keypair (N, p, q)</li>
+            <li class="secret"><span class="tag priv">secret</span> Random nonce k<sub>0</sub></li>
+            <li class="public-var"><span class="tag pub">public</span> Paillier public key N</li>
+            <li class="public-var"><span class="tag pub">public</span> Range proof for N</li>
+            <li class="public-var"><span class="tag pub">public</span> Commitment: H(k<sub>0</sub>)</li>
+          </ul>
+          <div class="math">// Paillier key generation
+(N, p, q) = PaillierGen(2048)
+
+// Commitment to random nonce
+com_0 = SHA256(k_0 || r_0)
+
+// ZK range proof that N is well-formed
+pi_N = RangeProof(N, p, q)</div>
+        </div>
+        <div class="party server">
+          <div class="party-name">Server (Party 1) generates:</div>
+          <ul class="var-list">
+            <li class="secret"><span class="tag priv">secret</span> Random scalar t<sub>1</sub></li>
+            <li class="public-var"><span class="tag pub">public</span> EC point T<sub>1</sub> = t<sub>1</sub> * G</li>
+            <li class="public-var"><span class="tag pub">public</span> Range proof for T<sub>1</sub></li>
+            <li class="public-var"><span class="tag pub">public</span> Commitment: H(t<sub>1</sub>)</li>
+          </ul>
+          <div class="math">// Server's random commitment
+t_1 = random_scalar(secp256k1.n)
+T_1 = t_1 * G
+
+// Commitment to random scalar
+com_1 = SHA256(t_1 || r_1)
+
+// ZK range proof for T_1
+pi_T = RangeProof(T_1, t_1)</div>
+        </div>
+      </div>
+
+      <!-- Sequence diagram -->
+      <div class="seq-diagram">
+        <svg width="100%" viewBox="0 0 800 250" xmlns="http://www.w3.org/2000/svg">
+          <!-- Phone lifeline -->
+          <rect x="80" y="15" width="120" height="36" rx="6" fill="none" stroke="var(--phone)" stroke-width="2"/>
+          <text x="140" y="38" text-anchor="middle" fill="var(--phone)" font-size="13" font-weight="bold">Phone</text>
+          <line x1="140" y1="51" x2="140" y2="240" stroke="var(--phone)" stroke-width="1.5" stroke-dasharray="6,4"/>
+
+          <!-- WebSocket channel -->
+          <rect x="340" y="15" width="120" height="36" rx="6" fill="none" stroke="var(--mail)" stroke-width="2" stroke-dasharray="4,2"/>
+          <text x="400" y="38" text-anchor="middle" fill="var(--mail)" font-size="12">WebSocket</text>
+
+          <!-- Server lifeline -->
+          <rect x="600" y="15" width="120" height="36" rx="6" fill="none" stroke="var(--server)" stroke-width="2"/>
+          <text x="660" y="38" text-anchor="middle" fill="var(--server)" font-size="13" font-weight="bold">Server</text>
+          <line x1="660" y1="51" x2="660" y2="240" stroke="var(--server)" stroke-width="1.5" stroke-dasharray="6,4"/>
+
+          <!-- Arrow: Phone -> Server (commitment bundle) -->
+          <line x1="145" y1="90" x2="650" y2="90" stroke="var(--mail)" stroke-width="2" marker-end="url(#arrowPurple)"/>
+          <text x="400" y="80" text-anchor="middle" fill="var(--mail)" font-size="10">{N, pi_N, com_0, range_proof}</text>
+          <text x="400" y="104" text-anchor="middle" fill="var(--muted)" font-size="9">Phone commitment bundle</text>
+
+          <!-- Arrow: Server -> Phone (commitment response) -->
+          <line x1="655" y1="150" x2="150" y2="150" stroke="var(--mail)" stroke-width="2" marker-end="url(#arrowPurple2)"/>
+          <text x="400" y="140" text-anchor="middle" fill="var(--mail)" font-size="10">{T_1, pi_T, com_1, range_proof}</text>
+          <text x="400" y="164" text-anchor="middle" fill="var(--muted)" font-size="9">Server commitment bundle</text>
+
+          <!-- Verification boxes -->
+          <rect x="95" y="190" width="90" height="30" rx="4" fill="none" stroke="var(--ok)" stroke-width="1.5"/>
+          <text x="140" y="209" text-anchor="middle" fill="var(--ok)" font-size="9">Verify pi_T</text>
+
+          <rect x="615" y="190" width="90" height="30" rx="4" fill="none" stroke="var(--ok)" stroke-width="1.5"/>
+          <text x="660" y="209" text-anchor="middle" fill="var(--ok)" font-size="9">Verify pi_N</text>
+
+          <defs>
+            <marker id="arrowPurple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--mail)"/>
+            </marker>
+            <marker id="arrowPurple2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--mail)"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+    </div>
+
+    <div class="public-board">
+      <div class="public-board-title">Commitment Data (both parties now hold)</div>
+      <ul style="list-style:none;font-size:0.8rem;color:var(--muted)">
+        <li><span style="color:var(--text)">Phone:</span> N (Paillier public key), com_0, range_proof_N</li>
+        <li><span style="color:var(--text)">Server:</span> T<sub>1</sub> (EC point), com_1, range_proof_T</li>
+      </ul>
+    </div>
+
+    <p class="explanation"><b>Commitments bind each party to their secret choices before revealing anything.</b> Like sealing your answer in an envelope before the other person reveals theirs. If either party tries to change their secret values after seeing the other's commitment, the hash verification in Phase 3 will fail and the protocol aborts. The Paillier keypair is critical -- it enables the server to perform homomorphic computations on encrypted data in the next phase.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<div class="phase-divider">Phase 3: Key Share Computation</div>
+<!-- ============================================================ -->
+
+<!-- STEP 3 -->
+<div class="step">
+  <div class="step-header" style="background:rgba(139,92,246,0.1)">
+    <div class="step-num" style="background:var(--mail);color:white">3</div>
+    <div class="step-title">Encrypted Share Exchange</div>
+  </div>
+  <div class="step-body">
+    <p class="explanation">Each party computes their secret key share contribution and exchanges encrypted data over the secure WebSocket channel. The Paillier encryption scheme allows the server to compute on the phone's encrypted data without ever seeing the plaintext. Both sides verify received data against commitments from Phase 2.</p>
+
+    <div class="diagram">
+      <div class="parties">
+        <div class="party phone">
+          <div class="party-name">Phone (Party 0) computes:</div>
+          <ul class="var-list">
+            <li class="secret"><span class="tag priv">secret</span> x<sub>0</sub> -- secret key share</li>
+            <li class="public-var"><span class="tag pub">public</span> X<sub>0</sub> = x<sub>0</sub> * G</li>
+            <li class="encrypted"><span class="tag mail">encrypted</span> E(x<sub>0</sub>) -- Paillier ciphertext</li>
+          </ul>
+          <div class="math">// Generate secret key share
+x_0 = random_scalar(secp256k1.n)
+X_0 = x_0 * G
+
+// Encrypt for server's homomorphic computation
+E(x_0) = PaillierEnc(N, x_0)
+
+// ZK proof of correct encryption
+pi_enc = EncProof(x_0, E(x_0), X_0)</div>
+        </div>
+        <div class="party server">
+          <div class="party-name">Server (Party 1) computes:</div>
+          <ul class="var-list">
+            <li class="secret"><span class="tag priv">secret</span> x<sub>1</sub> -- secret key share</li>
+            <li class="public-var"><span class="tag pub">public</span> X<sub>1</sub> = x<sub>1</sub> * G</li>
+            <li class="encrypted"><span class="tag mail">encrypted</span> E(x<sub>1</sub>) -- Paillier ciphertext</li>
+          </ul>
+          <div class="math">// Generate secret key share
+x_1 = random_scalar(secp256k1.n)
+X_1 = x_1 * G
+
+// Encrypt for verification
+E(x_1) = PaillierEnc(N, x_1)
+
+// ZK proof of correct encryption
+pi_enc = EncProof(x_1, E(x_1), X_1)</div>
+        </div>
+      </div>
+
+      <!-- Sequence diagram -->
+      <div class="seq-diagram">
+        <svg width="100%" viewBox="0 0 800 300" xmlns="http://www.w3.org/2000/svg">
+          <!-- Phone lifeline -->
+          <rect x="80" y="15" width="120" height="36" rx="6" fill="none" stroke="var(--phone)" stroke-width="2"/>
+          <text x="140" y="38" text-anchor="middle" fill="var(--phone)" font-size="13" font-weight="bold">Phone</text>
+          <line x1="140" y1="51" x2="140" y2="290" stroke="var(--phone)" stroke-width="1.5" stroke-dasharray="6,4"/>
+
+          <!-- Server lifeline -->
+          <rect x="600" y="15" width="120" height="36" rx="6" fill="none" stroke="var(--server)" stroke-width="2"/>
+          <text x="660" y="38" text-anchor="middle" fill="var(--server)" font-size="13" font-weight="bold">Server</text>
+          <line x1="660" y1="51" x2="660" y2="290" stroke="var(--server)" stroke-width="1.5" stroke-dasharray="6,4"/>
+
+          <!-- Arrow: Phone -> Server (encrypted share) -->
+          <line x1="145" y1="85" x2="650" y2="85" stroke="var(--mail)" stroke-width="2" marker-end="url(#arrowPurple)"/>
+          <text x="400" y="75" text-anchor="middle" fill="var(--mail)" font-size="10">{E(x_0), X_0, pi_enc, decommit(com_0)}</text>
+          <text x="400" y="100" text-anchor="middle" fill="var(--muted)" font-size="9">Phone's encrypted share + decommitment</text>
+
+          <!-- Server verifies -->
+          <rect x="610" y="115" width="100" height="24" rx="4" fill="none" stroke="var(--ok)" stroke-width="1.5"/>
+          <text x="660" y="131" text-anchor="middle" fill="var(--ok)" font-size="9">Verify com_0, pi_enc</text>
+
+          <!-- Arrow: Server -> Phone (encrypted share) -->
+          <line x1="655" y1="170" x2="150" y2="170" stroke="var(--mail)" stroke-width="2" marker-end="url(#arrowPurple2)"/>
+          <text x="400" y="160" text-anchor="middle" fill="var(--mail)" font-size="10">{E(x_1), X_1, pi_enc, decommit(com_1)}</text>
+          <text x="400" y="185" text-anchor="middle" fill="var(--muted)" font-size="9">Server's encrypted share + decommitment</text>
+
+          <!-- Phone verifies -->
+          <rect x="90" y="200" width="100" height="24" rx="4" fill="none" stroke="var(--ok)" stroke-width="1.5"/>
+          <text x="140" y="216" text-anchor="middle" fill="var(--ok)" font-size="9">Verify com_1, pi_enc</text>
+
+          <!-- Both compute Q -->
+          <rect x="90" y="245" width="100" height="30" rx="4" fill="none" stroke="var(--public)" stroke-width="1.5"/>
+          <text x="140" y="264" text-anchor="middle" fill="var(--public)" font-size="9">Q = X_0 + X_1</text>
+
+          <rect x="610" y="245" width="100" height="30" rx="4" fill="none" stroke="var(--public)" stroke-width="1.5"/>
+          <text x="660" y="264" text-anchor="middle" fill="var(--public)" font-size="9">Q = X_0 + X_1</text>
+
+          <line x1="195" y1="260" x2="605" y2="260" stroke="var(--ok)" stroke-width="1" stroke-dasharray="4,4"/>
+          <text x="400" y="253" text-anchor="middle" fill="var(--ok)" font-size="9">Both independently arrive at same Q</text>
+        </svg>
+      </div>
+    </div>
+
+    <div class="private-mail">
+      <div class="private-mail-title">Key Variables Summary</div>
+      <div class="cols-2">
+        <div>
+          <p style="font-size:0.82rem;margin-bottom:0.3rem"><b style="color:var(--phone)">Phone holds:</b></p>
+          <ul class="var-list">
+            <li class="secret"><span class="tag priv">secret</span> x<sub>0</sub> (private key share)</li>
+            <li class="encrypted"><span class="tag mail">encrypted</span> E(x<sub>0</sub>) (sent to server)</li>
+            <li class="public-var"><span class="tag pub">public</span> X<sub>0</sub>, X<sub>1</sub>, Q</li>
+          </ul>
+        </div>
+        <div>
+          <p style="font-size:0.82rem;margin-bottom:0.3rem"><b style="color:var(--server)">Server holds:</b></p>
+          <ul class="var-list">
+            <li class="secret"><span class="tag priv">secret</span> x<sub>1</sub> (private key share)</li>
+            <li class="encrypted"><span class="tag mail">encrypted</span> E(x<sub>1</sub>) (sent to phone)</li>
+            <li class="public-var"><span class="tag pub">public</span> X<sub>0</sub>, X<sub>1</sub>, Q</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <p class="explanation"><b>Each party contributes to the key without revealing their contribution.</b> The Paillier encryption allows the server to compute on encrypted data -- this property is essential for later signing operations where the server must help produce a signature without learning the phone's key share. The decommitment values prove the shares are consistent with the commitments from Phase 2.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<div class="phase-divider">Phase 4: Key Finalization</div>
+<!-- ============================================================ -->
+
+<!-- STEP 4 -->
+<div class="step">
+  <div class="step-header" style="background:rgba(34,197,94,0.1)">
+    <div class="step-num" style="background:var(--ok);color:white">4</div>
+    <div class="step-title">Joint Public Key Derivation &amp; Storage</div>
+  </div>
+  <div class="step-body">
+    <p class="explanation">Both parties independently compute the joint public key Q from the public EC points exchanged in Phase 3. They then confirm they computed the same result. The full private key x = x<sub>0</sub> + x<sub>1</sub> <b>never exists on any single device</b>.</p>
+
+    <div class="diagram">
+      <div class="parties">
+        <div class="party phone">
+          <div class="party-name">Phone (Party 0)</div>
+          <div class="math">// Compute joint public key
+Q = X_0 + X_1
+  = x_0*G + x_1*G
+  = (x_0 + x_1)*G
+
+// Verify: matches server's Q
+assert(Q_phone == Q_server)
+
+// Store share in Secure Enclave
+SecureEnclave.store(x_0, tag: key_id)</div>
+          <ul class="var-list">
+            <li class="secret"><span class="tag priv">secret</span> x<sub>0</sub> -- stored in Secure Enclave</li>
+            <li class="public-var"><span class="tag pub">public</span> Q -- joint public key (displayed)</li>
+          </ul>
+        </div>
+        <div class="party server">
+          <div class="party-name">Server (Party 1)</div>
+          <div class="math">// Compute joint public key
+Q = X_0 + X_1
+  = x_0*G + x_1*G
+  = (x_0 + x_1)*G
+
+// Verify: matches phone's Q
+assert(Q_server == Q_phone)
+
+// Store share in encrypted KV/SQLite
+EncryptedDB.store(x_1, session_id)</div>
+          <ul class="var-list">
+            <li class="secret"><span class="tag priv">secret</span> x<sub>1</sub> -- stored in encrypted KV</li>
+            <li class="public-var"><span class="tag pub">public</span> Q -- joint public key (stored)</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Final diagram -->
+      <div class="seq-diagram">
+        <svg width="100%" viewBox="0 0 800 220" xmlns="http://www.w3.org/2000/svg">
+          <!-- Phone side -->
+          <rect x="60" y="20" width="200" height="80" rx="8" fill="none" stroke="var(--phone)" stroke-width="2"/>
+          <text x="160" y="45" text-anchor="middle" fill="var(--phone)" font-size="12" font-weight="bold">Secure Enclave</text>
+          <text x="160" y="65" text-anchor="middle" fill="var(--private)" font-size="10">x_0 (Party 0 share)</text>
+          <text x="160" y="82" text-anchor="middle" fill="var(--muted)" font-size="9">Hardware-protected</text>
+
+          <!-- Server side -->
+          <rect x="540" y="20" width="200" height="80" rx="8" fill="none" stroke="var(--server)" stroke-width="2"/>
+          <text x="640" y="45" text-anchor="middle" fill="var(--server)" font-size="12" font-weight="bold">Encrypted KV/SQLite</text>
+          <text x="640" y="65" text-anchor="middle" fill="var(--private)" font-size="10">x_1 (Party 1 share)</text>
+          <text x="640" y="82" text-anchor="middle" fill="var(--muted)" font-size="9">At-rest encryption</text>
+
+          <!-- Center: Joint key -->
+          <rect x="290" y="130" width="220" height="70" rx="8" fill="none" stroke="var(--ok)" stroke-width="2.5"/>
+          <text x="400" y="153" text-anchor="middle" fill="var(--ok)" font-size="13" font-weight="bold">Joint Public Key Q</text>
+          <text x="400" y="172" text-anchor="middle" fill="var(--text)" font-size="10">Q = (x_0 + x_1) * G</text>
+          <text x="400" y="190" text-anchor="middle" fill="var(--muted)" font-size="9">Known to both -- private key NEVER assembled</text>
+
+          <!-- Lines from stores to Q -->
+          <line x1="160" y1="100" x2="310" y2="145" stroke="var(--phone)" stroke-width="1.5" stroke-dasharray="4,3"/>
+          <line x1="640" y1="100" x2="490" y2="145" stroke="var(--server)" stroke-width="1.5" stroke-dasharray="4,3"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="verify-box">
+      <div class="result">Q<sub>phone</sub> == Q<sub>server</sub></div>
+      <p style="font-size:0.82rem;color:var(--muted);margin-top:0.3rem">Both parties independently derived the same joint public key.</p>
+      <p style="font-size:0.82rem;color:var(--muted)">The Ethereum address is derived: addr = keccak256(Q.x || Q.y)[12:]</p>
+    </div>
+
+    <div class="summary-grid">
+      <div class="summary-col pub-col">
+        <h3>Public (known to both + world)</h3>
+        <ul>
+          <li>Q -- joint public key (compressed SEC1, 33 bytes)</li>
+          <li>X<sub>0</sub> -- Phone's public share</li>
+          <li>X<sub>1</sub> -- Server's public share</li>
+          <li>N -- Paillier public modulus</li>
+          <li>Ethereum address derived from Q</li>
+        </ul>
+      </div>
+      <div class="summary-col priv-col">
+        <h3>Secret (never leaves its device)</h3>
+        <ul>
+          <li>x<sub>0</sub> -- Phone's private share (Secure Enclave)</li>
+          <li>x<sub>1</sub> -- Server's private share (encrypted KV)</li>
+          <li>(p, q) -- Paillier primes (Phone only)</li>
+          <li>x = x<sub>0</sub> + x<sub>1</sub> -- NEVER computed anywhere</li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="explanation"><b>The full private key x = x<sub>0</sub> + x<sub>1</sub> NEVER exists on any single device.</b> Neither the phone nor the server alone can sign a transaction. Both must cooperate in a 2-party signing protocol to produce a valid ECDSA signature. This is the core security property of threshold cryptography.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<div class="phase-divider">Phase 5: Failure Modes</div>
+<!-- ============================================================ -->
+
+<!-- STEP 5 -->
+<div class="step">
+  <div class="step-header" style="background:rgba(239,68,68,0.1)">
+    <div class="step-num" style="background:var(--private);color:white">5</div>
+    <div class="step-title">Failure Modes &amp; Recovery</div>
+  </div>
+  <div class="step-body">
+    <p class="explanation">The DKG protocol is designed to fail safely. At every stage, if something goes wrong, both parties abort cleanly without leaking partial secrets. The protocol guarantees: either both parties get valid key shares, or neither does.</p>
+
+    <table class="failure-table">
+      <thead>
+        <tr>
+          <th>Failure Mode</th>
+          <th>Detection</th>
+          <th>Recovery</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="color:var(--private)">Timeout (30s)</td>
+          <td>Any protocol round exceeds 30-second deadline. Timer runs independently on both parties.</td>
+          <td>Both parties abort immediately. No partial state persisted. Phone shows "Session Expired" alert. Must restart with new session.</td>
+        </tr>
+        <tr>
+          <td style="color:var(--private)">Invalid Commitment</td>
+          <td>Range proof verification fails, or decommitment doesn't match hash from Phase 2. Caught by <code>assert(H(val || r) == com)</code>.</td>
+          <td>Protocol aborts immediately. Bad actor is identified (the party whose proof/commitment failed). Session is logged as suspicious. No retry -- user must investigate.</td>
+        </tr>
+        <tr>
+          <td style="color:var(--private)">Network Drop</td>
+          <td>WebSocket closes unexpectedly. Server detects via heartbeat (ping/pong every 5s). Phone detects via <code>URLSessionWebSocketTask</code> delegate.</td>
+          <td>Session can resume from last completed round (rounds are idempotent). Both sides persist round state. After 5 minutes without reconnection, session expires and all state is wiped.</td>
+        </tr>
+        <tr>
+          <td style="color:var(--private)">Server Crash</td>
+          <td>Phone receives WebSocket disconnect or HTTP 502/503 from load balancer. No heartbeat response within 10s.</td>
+          <td>Phone retries with exponential backoff (1s, 2s, 4s). Can start new session -- old session's partial state is cleaned up by server's garbage collector (runs every 60s).</td>
+        </tr>
+        <tr>
+          <td style="color:var(--private)">Invalid ZK Proof</td>
+          <td>Paillier range proof or encryption proof fails verification. The verifier's <code>VerifyProof()</code> returns false.</td>
+          <td>Protocol aborts. The party with the invalid proof is flagged. This could indicate a malicious party attempting to bias the key generation. All state is destroyed.</td>
+        </tr>
+        <tr>
+          <td style="color:var(--private)">Duplicate Session</td>
+          <td>Phone attempts to init a new DKG while an existing session is active for the same device_pk.</td>
+          <td>Server rejects with 409 Conflict. Phone must either resume the existing session or explicitly cancel it before starting a new one.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="diagram">
+      <div style="text-align:center;font-size:0.85rem">
+        <div class="math" style="display:inline-block;text-align:left">Protocol Invariant:
+  For any failure at round R:
+    - Secrets generated in rounds 0..R-1 are safe (committed + verified)
+    - Round R's data is discarded (not committed)
+    - No partial private key material leaks
+    - Both parties can independently verify the abort was legitimate</div>
+      </div>
+    </div>
+
+    <p class="explanation"><b>All-or-nothing guarantee:</b> Either the full DKG completes successfully and both parties hold valid key shares, or the protocol aborts cleanly with zero information leakage. There is no partial success state.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<div class="phase-divider">Phase 6: iOS User Experience</div>
+<!-- ============================================================ -->
+
+<!-- STEP 6 -->
+<div class="step">
+  <div class="step-header" style="background:rgba(99,102,241,0.1)">
+    <div class="step-num" style="background:var(--phone);color:white">6</div>
+    <div class="step-title">iOS UX: What the User Sees</div>
+  </div>
+  <div class="step-body">
+    <p class="explanation">The entire DKG ceremony takes 2-5 seconds on a modern iPhone. The user sees a streamlined progress flow that abstracts away the cryptographic complexity. Below are the three main screens during key generation.</p>
+
+    <div style="display:flex;gap:2rem;justify-content:center;flex-wrap:wrap;margin:1.5rem 0">
+
+      <!-- Phone 1: Connecting -->
+      <div style="width:200px">
+        <div style="background:var(--card);border:var(--border-w) solid var(--border);padding:1rem;min-height:300px;position:relative;box-shadow:var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color)">
+          <div style="width:40px;height:6px;background:var(--border);border-radius:3px;margin:0 auto 1rem"></div>
+          <!-- Status bar -->
+          <div style="font-size:0.6rem;color:var(--muted);text-align:center;margin-bottom:1.5rem">9:41</div>
+          <!-- Title -->
+          <div style="font-size:0.75rem;font-weight:bold;text-align:center;margin-bottom:1.5rem;color:var(--text)">Create New Key</div>
+          <!-- Server URL -->
+          <div style="font-size:0.55rem;color:var(--muted);text-align:center;margin-bottom:0.3rem">CONNECTING TO</div>
+          <div style="font-size:0.65rem;color:var(--phone);text-align:center;margin-bottom:1.5rem;word-break:break-all">wss://mpc.cb.xyz</div>
+          <!-- Spinner -->
+          <div class="spinner"></div>
+          <!-- Status text -->
+          <div style="font-size:0.6rem;color:var(--muted);text-align:center;margin-top:1rem">Establishing secure</div>
+          <div style="font-size:0.6rem;color:var(--muted);text-align:center">session<span class="blink-cursor">...</span></div>
+          <!-- Bottom hint -->
+          <div style="position:absolute;bottom:0.8rem;left:0;right:0;text-align:center;font-size:0.5rem;color:var(--muted)">Keep app open</div>
+        </div>
+        <div style="text-align:center;color:var(--muted);font-size:0.8rem;margin-top:0.5rem">Connecting to Server</div>
+      </div>
+
+      <!-- Phone 2: Generating -->
+      <div style="width:200px">
+        <div style="background:var(--card);border:var(--border-w) solid var(--border);padding:1rem;min-height:300px;position:relative;box-shadow:var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color)">
+          <div style="width:40px;height:6px;background:var(--border);border-radius:3px;margin:0 auto 1rem"></div>
+          <!-- Status bar -->
+          <div style="font-size:0.6rem;color:var(--muted);text-align:center;margin-bottom:1.5rem">9:41</div>
+          <!-- Title -->
+          <div style="font-size:0.75rem;font-weight:bold;text-align:center;margin-bottom:1.5rem;color:var(--text)">Generating Key</div>
+          <!-- Terminal-style progress -->
+          <div style="background:var(--bg);border-radius:6px;padding:0.6rem;font-size:0.55rem;line-height:1.8">
+            <div class="progress-line progress-done">[1/4] Session init<span style="float:right">[DONE]</span></div>
+            <div class="progress-line progress-done">[2/4] Commitments<span style="float:right">[DONE]</span></div>
+            <div class="progress-line progress-active">[3/4] Key shares<span style="float:right;animation:pulse 1.5s ease-in-out infinite">[...]</span></div>
+            <div class="progress-line progress-pending">[4/4] Finalize<span style="float:right">[&nbsp;&nbsp;&nbsp;&nbsp;]</span></div>
+          </div>
+          <!-- Progress bar -->
+          <div style="margin-top:1rem;height:4px;background:var(--card2);border-radius:2px;overflow:hidden">
+            <div style="width:65%;height:100%;background:linear-gradient(90deg,var(--phone),var(--mail));border-radius:2px"></div>
+          </div>
+          <div style="font-size:0.5rem;color:var(--muted);text-align:right;margin-top:0.3rem">Round 3 of 4</div>
+          <!-- Details -->
+          <div style="margin-top:1rem;font-size:0.5rem;color:var(--muted)">
+            <div>Curve: secp256k1</div>
+            <div>Protocol: ECDSA-2PC</div>
+            <div>Elapsed: 1.8s</div>
+          </div>
+        </div>
+        <div style="text-align:center;color:var(--muted);font-size:0.8rem;margin-top:0.5rem">Generating Key</div>
+      </div>
+
+      <!-- Phone 3: Key Created -->
+      <div style="width:200px">
+        <div style="background:var(--card);border:var(--border-w) solid var(--border);padding:1rem;min-height:300px;position:relative;box-shadow:var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color)">
+          <div style="width:40px;height:6px;background:var(--border);border-radius:3px;margin:0 auto 1rem"></div>
+          <!-- Status bar -->
+          <div style="font-size:0.6rem;color:var(--muted);text-align:center;margin-bottom:1rem">9:41</div>
+          <!-- Checkmark -->
+          <div style="width:40px;height:40px;border-radius:50%;background:var(--ok);margin:0 auto 0.8rem;display:flex;align-items:center;justify-content:center">
+            <span style="color:white;font-size:1.2rem;font-weight:bold">&#10003;</span>
+          </div>
+          <!-- Title -->
+          <div style="font-size:0.75rem;font-weight:bold;text-align:center;color:var(--ok);margin-bottom:1rem">Key Created</div>
+          <!-- Public key display -->
+          <div style="font-size:0.5rem;color:var(--muted);margin-bottom:0.2rem">PUBLIC KEY</div>
+          <div style="font-size:0.55rem;color:var(--text);background:var(--bg);padding:0.4rem;border-radius:4px;word-break:break-all;margin-bottom:0.8rem">02a1b2c3d4e5f6...7a8b9c0d</div>
+          <!-- Party info -->
+          <div style="display:flex;justify-content:space-between;font-size:0.5rem;margin-bottom:0.3rem">
+            <span style="color:var(--muted)">Your share</span>
+            <span style="color:var(--phone)">Party 0</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:0.5rem;margin-bottom:0.3rem">
+            <span style="color:var(--muted)">Server share</span>
+            <span style="color:var(--server)">Party 1</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:0.5rem;margin-bottom:1rem">
+            <span style="color:var(--muted)">Storage</span>
+            <span style="color:var(--ok)">Secure Enclave</span>
+          </div>
+          <!-- Backup button -->
+          <div style="background:var(--phone);color:white;text-align:center;padding:0.5rem;font-size:0.6rem;font-weight:bold;border:var(--border-w) solid var(--border);box-shadow:2px 2px 0 var(--shadow-color);cursor:pointer">BACKUP KEY SHARE</div>
+        </div>
+        <div style="text-align:center;color:var(--muted);font-size:0.8rem;margin-top:0.5rem">Key Created</div>
+      </div>
+
+    </div>
+
+    <p class="explanation"><b>Screen 1:</b> Phone initiates the WebSocket connection and performs the ECDH handshake (Phase 1). The spinner indicates the TLS + session setup is in progress.</p>
+    <p class="explanation"><b>Screen 2:</b> The four DKG rounds execute sequentially. Each round completes in under a second. The progress bar fills as rounds complete. The user sees a terminal-style readout of each phase.</p>
+    <p class="explanation"><b>Screen 3:</b> DKG succeeded. The joint public key is displayed (compressed SEC1 hex, 33 bytes). The "BACKUP KEY SHARE" button triggers QR export of the encrypted Party 0 share for offline recovery. The key share is stored in the iPhone Secure Enclave, protected by Face ID / Touch ID.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- Protocol Overview Table -->
+<!-- ============================================================ -->
+
+<div class="step">
+  <div class="step-header" style="background:rgba(59,130,246,0.1)">
+    <div class="step-num" style="background:var(--public);color:white">&#9776;</div>
+    <div class="step-title">Protocol Summary</div>
+  </div>
+  <div class="step-body">
+    <table class="overview-table">
+      <thead>
+        <tr>
+          <th>Round</th>
+          <th>Sender</th>
+          <th>Data Sent</th>
+          <th>Security Property</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td style="color:var(--phone)">Phone</td>
+          <td>curve, protocol, device_pk</td>
+          <td>Session established. ECDH key exchange for channel encryption.</td>
+        </tr>
+        <tr>
+          <td>1</td>
+          <td style="color:var(--server)">Server</td>
+          <td>session_id, server_pk, capabilities</td>
+          <td>Mutual authentication. AES-GCM channel key derived.</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td style="color:var(--phone)">Phone</td>
+          <td>N, pi_N, com_0</td>
+          <td>Paillier key binds phone. Commitment prevents equivocation.</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td style="color:var(--server)">Server</td>
+          <td>T_1, pi_T, com_1</td>
+          <td>Server bound to its random choice. Range proof ensures honest generation.</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td style="color:var(--phone)">Phone</td>
+          <td>E(x_0), X_0, pi_enc, decommit</td>
+          <td>Encrypted share enables homomorphic signing later. ZK proof of correct encryption.</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td style="color:var(--server)">Server</td>
+          <td>E(x_1), X_1, pi_enc, decommit</td>
+          <td>Decommitment verified against Phase 2 commitment. Shares are consistent.</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td style="color:var(--ok)">Both</td>
+          <td>Q (computed locally, compared)</td>
+          <td>Joint public key confirmed. Full private key NEVER assembled.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="math" style="font-size:0.82rem;text-align:center">Total messages:  6  (3 round-trips)
+Total latency:   2-5 seconds (typical iPhone + edge server)
+Key size:        secp256k1 (256-bit, 33-byte compressed public key)
+Security level:  128-bit (equivalent to AES-128)</div>
+  </div>
+</div>
+
+
+<p style="text-align:center;color:var(--muted);font-size:0.8rem;margin-top:2rem;padding-bottom:2rem">
+  CB-MPC Visual Guide -- DKG Ceremony
+</p>
+
+<script>
+function toggleTheme() {
+  const body = document.body;
+  const btn = document.getElementById('themeBtn');
+  const newTheme = body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  body.setAttribute('data-theme', newTheme);
+  btn.textContent = newTheme === 'dark' ? '[ LIGHT ]' : '[ DARK ]';
+  localStorage.setItem('cbmpc-theme', newTheme);
+}
+(function() {
+  var saved = localStorage.getItem('cbmpc-theme');
+  if (saved) {
+    document.body.setAttribute('data-theme', saved);
+  } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    document.body.setAttribute('data-theme', 'dark');
+  } else {
+    document.body.setAttribute('data-theme', 'light');
+  }
+  var theme = document.body.getAttribute('data-theme');
+  document.getElementById('themeBtn').textContent = theme === 'dark' ? '[ LIGHT ]' : '[ DARK ]';
+})();
+</script>
+</body>
+</html>

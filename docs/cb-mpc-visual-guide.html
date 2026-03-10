@@ -1,0 +1,1331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CB-MPC — Demo Guide &amp; Mobile UX Prototype</title>
+<style>
+  /* ============================================================
+     THEME SYSTEM — light/dark via [data-theme]
+     ============================================================ */
+  :root {
+    --font-mono: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    --font-sans: 'Inter', 'SF Pro', -apple-system, system-ui, sans-serif;
+
+    /* neo-brutalism constants */
+    --border-w: 3px;
+    --shadow-offset: 5px;
+    --radius: 0;
+
+    /* party colors (stable across themes) */
+    --party-0: #6366f1;
+    --party-1: #f59e0b;
+    --party-2: #10b981;
+    --party-3: #ef4444;
+    --secret: #ef4444;
+    --public: #3b82f6;
+    --mail: #8b5cf6;
+    --ok: #22c55e;
+    --warn: #f97316;
+  }
+
+  [data-theme="light"] {
+    --bg: #f5f0e8;
+    --bg2: #ffffff;
+    --card: #ffffff;
+    --card2: #f0ebe3;
+    --text: #1a1a1a;
+    --muted: #6b7280;
+    --border: #1a1a1a;
+    --shadow-color: #1a1a1a;
+    --tag-text: #fff;
+    --phone-bg: #e8e0d4;
+    --phone-screen: #ffffff;
+    --phone-bezel: #1a1a1a;
+    --code-bg: #f0ebe3;
+    --highlight: #fef08a;
+  }
+
+  [data-theme="dark"] {
+    --bg: #0f0f0f;
+    --bg2: #1a1a1a;
+    --card: #1e1e1e;
+    --card2: #2a2a2a;
+    --text: #e5e5e5;
+    --muted: #9ca3af;
+    --border: #e5e5e5;
+    --shadow-color: #000000;
+    --tag-text: #fff;
+    --phone-bg: #141414;
+    --phone-screen: #1e1e1e;
+    --phone-bezel: #e5e5e5;
+    --code-bg: #2a2a2a;
+    --highlight: #854d0e;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font-mono);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  /* ---- THEME TOGGLE ---- */
+  .theme-toggle {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 999;
+    border: var(--border-w) solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color);
+    transition: all 0.15s;
+  }
+  .theme-toggle:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 7px 7px 0 var(--shadow-color);
+  }
+  .theme-toggle:active {
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0 var(--shadow-color);
+  }
+
+  /* ---- DOC NAV ---- */
+  .doc-nav {
+    display: flex;
+    gap: 0;
+    justify-content: center;
+    margin: 1.5rem auto 0;
+    max-width: 500px;
+    border: var(--border-w) solid var(--border);
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color);
+    overflow: hidden;
+  }
+  .nav-link {
+    flex: 1;
+    text-align: center;
+    padding: 0.6rem 1rem;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-decoration: none;
+    color: var(--text);
+    background: var(--card);
+    border-right: var(--border-w) solid var(--border);
+    transition: background 0.15s;
+  }
+  .nav-link:last-child { border-right: none; }
+  .nav-link:hover { background: var(--card2); }
+  .nav-link.active {
+    background: var(--border);
+    color: var(--card);
+  }
+
+  /* ---- LAYOUT ---- */
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+  }
+
+  h1 {
+    font-size: 2.4rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: -0.03em;
+    border-bottom: var(--border-w) solid var(--border);
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .subtitle {
+    font-size: 0.9rem;
+    color: var(--muted);
+    margin-bottom: 3rem;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
+    margin: 3rem 0 1rem;
+    padding: 0.5rem 1rem;
+    background: var(--text);
+    color: var(--bg);
+    display: inline-block;
+  }
+
+  h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 1.5rem 0 0.5rem;
+    border-left: 6px solid var(--party-0);
+    padding-left: 0.75rem;
+  }
+
+  p { margin: 0.5rem 0; font-size: 0.88rem; }
+
+  /* ---- CARDS ---- */
+  .card {
+    border: var(--border-w) solid var(--border);
+    background: var(--card);
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color);
+    position: relative;
+  }
+
+  .card-label {
+    position: absolute;
+    top: -0.7rem;
+    left: 1rem;
+    background: var(--card);
+    padding: 0 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+  }
+
+  /* ---- TAGS ---- */
+  .tag {
+    display: inline-block;
+    font-size: 0.6rem;
+    padding: 0.15rem 0.5rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    vertical-align: middle;
+    border: 2px solid;
+  }
+  .tag.cpp { background: var(--party-0); color: var(--tag-text); border-color: var(--party-0); }
+  .tag.go { background: var(--party-2); color: var(--tag-text); border-color: var(--party-2); }
+  .tag.priv { background: var(--secret); color: var(--tag-text); border-color: var(--secret); }
+  .tag.pub { background: var(--public); color: var(--tag-text); border-color: var(--public); }
+  .tag.proto { background: var(--party-1); color: #1a1a1a; border-color: var(--party-1); }
+
+  /* ---- CODE ---- */
+  .code {
+    background: var(--code-bg);
+    border: 2px solid var(--border);
+    padding: 1rem;
+    margin: 0.75rem 0;
+    font-size: 0.78rem;
+    overflow-x: auto;
+    white-space: pre;
+    line-height: 1.5;
+  }
+
+  /* ---- DEMO GRID ---- */
+  .demo-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin: 1.5rem 0;
+  }
+  @media (max-width: 700px) {
+    .demo-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ---- FLOW DIAGRAM ---- */
+  .flow-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 1rem 0;
+    flex-wrap: wrap;
+  }
+  .flow-box {
+    border: var(--border-w) solid var(--border);
+    padding: 0.6rem 1rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-align: center;
+    min-width: 120px;
+    background: var(--card);
+  }
+  .flow-box.highlight { background: var(--highlight); }
+  .flow-arrow {
+    font-size: 1.5rem;
+    color: var(--muted);
+    font-weight: 900;
+  }
+
+  /* ---- PARTY BOXES ---- */
+  .parties {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 1rem 0;
+  }
+  .party-box {
+    border: var(--border-w) solid;
+    padding: 1rem;
+    flex: 1;
+    min-width: 200px;
+    max-width: 320px;
+  }
+  .party-box.p0 { border-color: var(--party-0); }
+  .party-box.p1 { border-color: var(--party-1); }
+  .party-box.p2 { border-color: var(--party-2); }
+  .party-box.p3 { border-color: var(--party-3); }
+  .party-name {
+    font-weight: 800;
+    font-size: 0.85rem;
+    margin-bottom: 0.4rem;
+  }
+  .party-box.p0 .party-name { color: var(--party-0); }
+  .party-box.p1 .party-name { color: var(--party-1); }
+  .party-box.p2 .party-name { color: var(--party-2); }
+  .party-box.p3 .party-name { color: var(--party-3); }
+
+  .var-list { list-style: none; font-size: 0.78rem; }
+  .var-list li { padding: 0.2rem 0; }
+  .var-list .secret { border-left: 3px solid var(--secret); padding-left: 0.5rem; margin: 0.15rem 0; }
+  .var-list .public-v { border-left: 3px solid var(--public); padding-left: 0.5rem; margin: 0.15rem 0; }
+
+  /* ---- DIVIDER ---- */
+  .divider {
+    text-align: center;
+    padding: 2.5rem 0 1rem;
+    font-size: 1.3rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    border-top: 2px dashed var(--muted);
+    margin-top: 2rem;
+  }
+
+  /* ---- TABLE ---- */
+  .overview-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+    margin: 0.75rem 0;
+  }
+  .overview-table th {
+    text-align: left;
+    padding: 0.5rem 0.6rem;
+    border-bottom: var(--border-w) solid var(--border);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+  }
+  .overview-table td {
+    padding: 0.4rem 0.6rem;
+    border-bottom: 1px solid var(--card2);
+    vertical-align: top;
+  }
+
+  /* ---- CALLOUT ---- */
+  .callout {
+    border-left: 6px solid var(--warn);
+    background: var(--card2);
+    padding: 1rem 1.25rem;
+    margin: 1rem 0;
+    font-size: 0.82rem;
+  }
+  .callout.info { border-left-color: var(--public); }
+  .callout.ok { border-left-color: var(--ok); }
+  .callout.danger { border-left-color: var(--secret); }
+  .callout-title { font-weight: 800; margin-bottom: 0.25rem; text-transform: uppercase; font-size: 0.75rem; }
+
+  /* ============================================================
+     PHONE MOCKUP
+     ============================================================ */
+  .phone-row {
+    display: flex;
+    gap: 2rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: 2rem 0;
+  }
+  .phone {
+    width: 280px;
+    border: var(--border-w) solid var(--phone-bezel);
+    background: var(--phone-bg);
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color);
+    position: relative;
+    padding: 0;
+  }
+  .phone-notch {
+    width: 100px;
+    height: 24px;
+    background: var(--phone-bezel);
+    margin: 0 auto;
+    position: relative;
+    z-index: 2;
+  }
+  .phone-screen {
+    background: var(--phone-screen);
+    margin: 0 8px 8px;
+    min-height: 480px;
+    border: 2px solid var(--phone-bezel);
+    padding: 1rem;
+    font-size: 0.72rem;
+    overflow: hidden;
+  }
+  .phone-label {
+    text-align: center;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.75rem 0 0.5rem;
+    color: var(--muted);
+  }
+
+  /* phone screen elements */
+  .screen-header {
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-align: center;
+    padding: 0.5rem 0;
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+  }
+  .screen-btn {
+    display: block;
+    width: 100%;
+    border: var(--border-w) solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.6rem;
+    margin: 0.4rem 0;
+    text-align: center;
+    cursor: pointer;
+    box-shadow: 3px 3px 0 var(--shadow-color);
+  }
+  .screen-btn.primary {
+    background: var(--party-0);
+    color: #fff;
+    border-color: var(--party-0);
+  }
+  .screen-btn.danger {
+    background: var(--secret);
+    color: #fff;
+    border-color: var(--secret);
+  }
+  .screen-btn.success {
+    background: var(--ok);
+    color: #fff;
+    border-color: var(--ok);
+  }
+  .screen-field {
+    border: 2px solid var(--border);
+    padding: 0.5rem;
+    margin: 0.4rem 0;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    background: var(--code-bg);
+  }
+  .screen-field-label {
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 0.5rem;
+  }
+  .screen-status {
+    text-align: center;
+    padding: 0.5rem;
+    margin: 0.4rem 0;
+    font-weight: 700;
+    font-size: 0.72rem;
+    border: 2px solid;
+  }
+  .screen-status.ok { border-color: var(--ok); color: var(--ok); }
+  .screen-status.warn { border-color: var(--warn); color: var(--warn); }
+  .screen-status.err { border-color: var(--secret); color: var(--secret); }
+  .screen-share-badge {
+    display: inline-block;
+    border: 2px solid;
+    padding: 0.2rem 0.5rem;
+    font-size: 0.65rem;
+    font-weight: 800;
+    margin: 0.15rem;
+  }
+
+  .screen-progress {
+    height: 8px;
+    background: var(--card2);
+    border: 2px solid var(--border);
+    margin: 0.5rem 0;
+    position: relative;
+  }
+  .screen-progress-bar {
+    height: 100%;
+    background: var(--party-0);
+    transition: width 0.3s;
+  }
+
+  .screen-icon { font-size: 2rem; text-align: center; padding: 0.5rem 0; }
+  .screen-detail {
+    font-size: 0.65rem;
+    color: var(--muted);
+    word-break: break-all;
+    margin: 0.25rem 0;
+  }
+
+  .screen-divider {
+    border-top: 1px dashed var(--muted);
+    margin: 0.6rem 0;
+  }
+
+  .screen-nav {
+    display: flex;
+    border-top: 2px solid var(--border);
+    margin-top: auto;
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
+  }
+  .screen-nav-item {
+    flex: 1;
+    text-align: center;
+    padding: 0.5rem 0;
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    border-right: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .screen-nav-item:last-child { border-right: none; }
+  .screen-nav-item.active { color: var(--party-0); border-bottom: 3px solid var(--party-0); }
+
+  /* ---- FOOTER ---- */
+  .footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.72rem;
+    padding: 3rem 0 2rem;
+    border-top: 2px solid var(--card2);
+    margin-top: 3rem;
+  }
+
+  /* ---- PRINT ---- */
+  @media print {
+    .theme-toggle { display: none; }
+    body { background: white; color: #1a1a1a; }
+    .card { box-shadow: none; border-color: #ccc; }
+    .phone { box-shadow: none; }
+  }
+</style>
+<script src="https://fathom-sveltekit.mark-phillips-f7c.workers.dev/api/tracker/abc9c4a5b463d635" defer></script>
+</head>
+<body data-theme="dark">
+
+<button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">[ LIGHT ]</button>
+
+<nav class="doc-nav">
+  <a href="/index.html" class="nav-link active">Demo Guide</a>
+  <a href="/threshold-signing.html" class="nav-link">Threshold Signing</a>
+</nav>
+
+<div class="container">
+
+<!-- ============================================================ -->
+<h1>CB-MPC</h1>
+<p class="subtitle">Coinbase Open Source MPC Library — Demo Guide, Protocol Walkthrough &amp; Mobile UX Prototype</p>
+<!-- ============================================================ -->
+
+<!-- ============================================================
+     SECTION 1: OVERVIEW
+     ============================================================ -->
+<h2>1. Library Overview</h2>
+
+<div class="card">
+<span class="card-label">What is CB-MPC?</span>
+<p>CB-MPC is Coinbase's open-source <strong>secure multi-party computation</strong> library for protecting cryptographic keys. Instead of one person holding a private key, the key is <strong>split into shares</strong> distributed across multiple parties. No single party ever sees the full key — yet together, a threshold of parties can sign transactions as if they held a single key.</p>
+
+<p style="margin-top:0.75rem">The library implements:</p>
+<table class="overview-table">
+  <tr><th>Protocol</th><th>Purpose</th><th>Parties</th></tr>
+  <tr><td>ECDSA-2PC</td><td>Two-party key generation, signing, refresh</td><td>2</td></tr>
+  <tr><td>ECDSA-MPC</td><td>N-party threshold key generation &amp; signing</td><td>N (any)</td></tr>
+  <tr><td>EC-DKG</td><td>Distributed key generation with access structures</td><td>N</td></tr>
+  <tr><td>PVE</td><td>Publicly verifiable encryption for key backup</td><td>N</td></tr>
+  <tr><td>Schnorr 2PC/MPC</td><td>Schnorr threshold signing</td><td>2 / N</td></tr>
+  <tr><td>ZK Proofs</td><td>Zero-knowledge proofs (discrete log, Paillier, etc.)</td><td>1</td></tr>
+  <tr><td>OT</td><td>Oblivious transfer &amp; extensions</td><td>2</td></tr>
+  <tr><td>AgreeRandom</td><td>Jointly agree on random values</td><td>2</td></tr>
+</table>
+</div>
+
+<!-- ============================================================
+     SECTION 2: DEMOS EXPLAINED
+     ============================================================ -->
+<h2>2. Demo Walkthrough</h2>
+
+<!-- ---- DEMO: basic_primitive (C++) ---- -->
+<h3 style="border-left-color: var(--party-0)">2.1 Basic Primitives <span class="tag cpp">C++</span></h3>
+<div class="card">
+<span class="card-label">demos-cpp/basic_primitive</span>
+<p>Demonstrates the foundational cryptographic building blocks: <strong>random oracle hashing</strong> and <strong>commitments</strong>.</p>
+
+<p style="margin-top:0.5rem"><strong>What it does:</strong></p>
+<ul style="font-size:0.82rem; padding-left:1.5rem; margin:0.25rem 0">
+  <li><code>hash_string()</code> — Hashes curve generator + random scalar into a 256-bit byte string via the random oracle</li>
+  <li><code>hash_number()</code> — Hashes into a field element (big number mod q)</li>
+  <li><code>hash_curve()</code> — Hashes into a new curve point (hash-to-curve)</li>
+  <li><code>com()</code> — Creates a cryptographic commitment (hiding + binding), then opens it to verify correctness</li>
+</ul>
+
+<div class="callout info">
+<div class="callout-title">Why this matters</div>
+Commitments are the building block of every MPC protocol. A party "commits" to a value (like locking it in a sealed envelope), then later "opens" it. This prevents cheating — you can't change your value after seeing others' values.
+</div>
+</div>
+
+<!-- ---- DEMO: zk (C++) ---- -->
+<h3 style="border-left-color: var(--party-0)">2.2 Zero-Knowledge Proof <span class="tag cpp">C++</span></h3>
+<div class="card">
+<span class="card-label">demos-cpp/zk</span>
+<p>Proves knowledge of a discrete logarithm <strong>without revealing the secret</strong>.</p>
+
+<div class="flow-row">
+  <div class="flow-box">Prover picks secret <strong>w</strong></div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-box">Computes Q = w * G</div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-box highlight">Proves: "I know w such that Q = w*G"</div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-box" style="border-color: var(--ok)">Verifier checks proof (no w revealed)</div>
+</div>
+
+<p>Uses <strong>Fischlin's transform</strong> with 16 parallel repetitions for a non-interactive proof. Output is 2315 bytes — compact enough to include on-chain or in a backup attestation.</p>
+</div>
+
+<!-- ---- DEMO: agreerandom (Go) ---- -->
+<h3 style="border-left-color: var(--party-2)">2.3 Agree Random <span class="tag go">Go</span></h3>
+<div class="card">
+<span class="card-label">demos-go/examples/agreerandom</span>
+<p>Two parties jointly generate a random value that <strong>neither can bias</strong>.</p>
+
+<div class="parties">
+  <div class="party-box p0">
+    <div class="party-name">Party 0</div>
+    <ul class="var-list">
+      <li class="secret">Picks private randomness r0</li>
+      <li class="public-v">Commits to r0</li>
+    </ul>
+  </div>
+  <div class="party-box p1">
+    <div class="party-name">Party 1</div>
+    <ul class="var-list">
+      <li class="secret">Picks private randomness r1</li>
+      <li class="public-v">Commits to r1</li>
+    </ul>
+  </div>
+</div>
+
+<div class="flow-row">
+  <div class="flow-box">Exchange commits</div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-box">Open commits</div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-box highlight">result = combine(r0, r1)</div>
+</div>
+
+<p>Both parties get the <strong>same</strong> random value. Supports arbitrary bit lengths (128-bit, 10-bit shown in demo). Used internally by signing protocols to agree on nonces.</p>
+</div>
+
+<!-- ---- DEMO: ecdsa-2pc (Go) ---- -->
+<h3 style="border-left-color: var(--party-2)">2.4 ECDSA 2-Party Computation <span class="tag go">Go</span></h3>
+<div class="card">
+<span class="card-label">demos-go/examples/ecdsa-2pc</span>
+<p>The core 2-party ECDSA workflow: <strong>key generation → signing → key refresh → re-signing</strong>.</p>
+
+<div class="flow-row">
+  <div class="flow-box" style="border-color: var(--party-0)">KeyGen<br><small>2 parties generate shares</small></div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-box" style="border-color: var(--party-1)">Sign #1<br><small>Collaborative signature</small></div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-box highlight">Refresh<br><small>Re-randomize shares</small></div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-box" style="border-color: var(--ok)">Sign #2<br><small>Sign with new shares</small></div>
+</div>
+
+<div class="demo-grid">
+  <div>
+    <strong style="font-size:0.82rem">Key Generation</strong>
+    <ul style="font-size:0.78rem; padding-left:1.2rem; margin:0.25rem 0">
+      <li>Each party gets a <strong>key share</strong> (x_i) — a scalar on secp256k1</li>
+      <li>Both parties compute the <strong>same public key Q</strong></li>
+      <li>The full private key x = x_0 + x_1 is <strong>never materialized</strong></li>
+    </ul>
+  </div>
+  <div>
+    <strong style="font-size:0.82rem">Collaborative Signing</strong>
+    <ul style="font-size:0.78rem; padding-left:1.2rem; margin:0.25rem 0">
+      <li>Party 0 receives the final DER-encoded ECDSA signature</li>
+      <li>Party 1 contributes to the protocol but gets no signature</li>
+      <li>Output is a <strong>standard ECDSA signature</strong> — verifiable by anyone</li>
+    </ul>
+  </div>
+</div>
+
+<div class="callout ok">
+<div class="callout-title">Key Refresh</div>
+After refresh, both parties hold <strong>new shares</strong> (different x_i values), but the <strong>public key Q stays the same</strong>. This means old shares are useless — even if an attacker stole a share before refresh, it's now invalid.
+</div>
+</div>
+
+<!-- ---- DEMO: ecdsa-mpc-with-backup (Go) ---- -->
+<h3 style="border-left-color: var(--party-2)">2.5 ECDSA MPC with Backup <span class="tag go">Go</span> <span class="tag proto">PVE</span></h3>
+<div class="card">
+<span class="card-label">demos-go/examples/ecdsa-mpc-with-backup</span>
+<p>The most comprehensive demo: <strong>N-party ECDSA key generation + PVE backup + restore + signing</strong>.</p>
+
+<div class="flow-row">
+  <div class="flow-box" style="border-color: var(--party-0)">4-Party<br>DKG</div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-box" style="border-color: var(--mail)">PVE<br>Backup</div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-box" style="border-color: var(--ok)">Verify<br>Backups</div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-box highlight">Restore<br>from Backup</div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-box" style="border-color: var(--party-1)">Sign</div>
+</div>
+
+<p><strong>Access Structure</strong> used for backup:</p>
+<div class="code">AND
+  LEAF p0               (party 0 required)
+  THRESHOLD th (2/3)    (2 of {p1, p2, p3} required)
+    LEAF p1
+    LEAF p2
+    LEAF p3</div>
+
+<p>This means: to restore a backup, you need <strong>party 0 AND any 2 of {p1, p2, p3}</strong>.</p>
+
+<div class="callout danger">
+<div class="callout-title">Key Share Management</div>
+<p><strong>Backup:</strong> Each party encrypts their key share using PVE (Publicly Verifiable Encryption) with RSA-OAEP KEM. The encrypted bundles can be publicly verified by all parties without decrypting.</p>
+<p style="margin-top:0.4rem"><strong>Restore:</strong> Each backup holder partially decrypts using their RSA private key. The partial decryptions are sent to the share owner, who aggregates them. The access structure enforces the threshold policy.</p>
+<p style="margin-top:0.4rem"><strong>Critical:</strong> In production, partial decryptions must be routed to the correct party only. Sending to the wrong party leaks information.</p>
+</div>
+</div>
+
+<!-- ---- DEMO: zk (Go) ---- -->
+<h3 style="border-left-color: var(--party-2)">2.6 Zero-Knowledge Proof <span class="tag go">Go</span></h3>
+<div class="card">
+<span class="card-label">demos-go/examples/zk</span>
+<p>Go wrapper for the same ZK discrete-log proof shown in the C++ demo. Generates a key pair on secp256k1, proves knowledge of the private key, and verifies the proof — all without revealing the secret witness.</p>
+</div>
+
+<!-- ---- DEMO: access-structure (Go) ---- -->
+<h3 style="border-left-color: var(--party-2)">2.7 Access Structure <span class="tag go">Go</span></h3>
+<div class="card">
+<span class="card-label">demos-go/examples/access-structure</span>
+<p>Demonstrates how to build complex authorization policies using <strong>boolean trees</strong>:</p>
+<div class="code">AND
+  OR role
+    LEAF role:Admin
+    LEAF dept:HR
+  THRESHOLD sig (2/3)
+    LEAF sig:A
+    LEAF sig:B
+    LEAF sig:C</div>
+<p>This encodes: <strong>(Admin OR HR) AND (2 of 3 signers)</strong>. Access structures define who can participate in key generation, signing, and backup/restore operations.</p>
+</div>
+
+
+<!-- ============================================================
+     SECTION 3: KEY SHARE LIFECYCLE
+     ============================================================ -->
+<h2>3. Key Share Lifecycle</h2>
+
+<div class="card">
+<span class="card-label">Lifecycle Diagram</span>
+
+<div class="flow-row">
+  <div class="flow-box" style="border-color: var(--party-0)">GENERATE<br><small>DKG protocol creates shares</small></div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-box" style="border-color: var(--party-1)">STORE<br><small>Secure enclave / keychain</small></div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-box" style="border-color: var(--mail)">BACKUP<br><small>PVE to USB-C / cloud</small></div>
+  <div class="flow-arrow">&darr;</div>
+</div>
+<div class="flow-row">
+  <div class="flow-box" style="border-color: var(--ok)">USE<br><small>Sign transactions</small></div>
+  <div class="flow-arrow">&larr;</div>
+  <div class="flow-box highlight">REFRESH<br><small>Rotate shares periodically</small></div>
+  <div class="flow-arrow">&larr;</div>
+  <div class="flow-box" style="border-color: var(--secret)">RESTORE<br><small>Quorum decryption from backup</small></div>
+</div>
+
+<table class="overview-table" style="margin-top:1rem">
+  <tr><th>Operation</th><th>What Happens</th><th>Security Property</th></tr>
+  <tr><td><strong>Generate</strong></td><td>DKG protocol runs; each party gets x_i, all see Q</td><td>Full key x never exists in one place</td></tr>
+  <tr><td><strong>Store</strong></td><td>x_i stored in device Secure Enclave / TEE</td><td>Hardware-bound, non-exportable</td></tr>
+  <tr><td><strong>Backup</strong></td><td>x_i encrypted via PVE; ciphertext publicly verifiable</td><td>Verifiable without decrypting</td></tr>
+  <tr><td><strong>Refresh</strong></td><td>x_i re-randomized; Q unchanged; old shares invalidated</td><td>Forward security — old leaks useless</td></tr>
+  <tr><td><strong>Sign</strong></td><td>Threshold parties run MPC signing; one gets signature</td><td>Standard ECDSA — indistinguishable from single-signer</td></tr>
+  <tr><td><strong>Restore</strong></td><td>Quorum holders partially decrypt; owner aggregates</td><td>Threshold enforcement by access structure</td></tr>
+</table>
+</div>
+
+
+<!-- ============================================================
+     SECTION 4: PROTOCOL FLOW — ECDSA-2PC
+     ============================================================ -->
+<h2>4. Protocol Flow: ECDSA-2PC</h2>
+
+<div class="card">
+<span class="card-label">Phase 1: Key Generation</span>
+
+<div class="parties">
+  <div class="party-box p0">
+    <div class="party-name">Party 0 (Phone)</div>
+    <ul class="var-list">
+      <li class="secret"><span class="tag priv">secret</span> x_0 — key share</li>
+      <li class="public-v"><span class="tag pub">public</span> Q = (x_0 + x_1) * G</li>
+    </ul>
+  </div>
+  <div class="party-box p1">
+    <div class="party-name">Party 1 (Server)</div>
+    <ul class="var-list">
+      <li class="secret"><span class="tag priv">secret</span> x_1 — key share</li>
+      <li class="public-v"><span class="tag pub">public</span> Q = (x_0 + x_1) * G</li>
+    </ul>
+  </div>
+</div>
+
+<p>Both parties run the interactive DKG protocol over a network channel. The output: each holds a share, both agree on the public key. The private key <code>x = x_0 + x_1</code> is <strong>never computed anywhere</strong>.</p>
+</div>
+
+<div class="card">
+<span class="card-label">Phase 2: Collaborative Signing</span>
+
+<div class="flow-row">
+  <div class="flow-box">Party 0: pick nonce k_0</div>
+  <div class="flow-arrow">&harr;</div>
+  <div class="flow-box">Party 1: pick nonce k_1</div>
+</div>
+<div class="flow-row">
+  <div class="flow-box">Exchange commitments &amp; partial sigs</div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-box highlight">Party 0 gets final (r, s) signature</div>
+</div>
+
+<p>The signature is a standard DER-encoded ECDSA signature that any blockchain node can verify. The 2PC protocol is invisible — it looks like one person signed.</p>
+</div>
+
+<div class="card">
+<span class="card-label">Phase 3: Key Refresh</span>
+
+<div class="parties">
+  <div class="party-box p0">
+    <div class="party-name">Party 0</div>
+    <ul class="var-list">
+      <li style="text-decoration: line-through; color: var(--muted)">x_0 (old) &mdash; discarded</li>
+      <li class="secret"><span class="tag priv">new</span> x_0' = x_0 + delta</li>
+    </ul>
+  </div>
+  <div class="party-box p1">
+    <div class="party-name">Party 1</div>
+    <ul class="var-list">
+      <li style="text-decoration: line-through; color: var(--muted)">x_1 (old) &mdash; discarded</li>
+      <li class="secret"><span class="tag priv">new</span> x_1' = x_1 - delta</li>
+    </ul>
+  </div>
+</div>
+
+<p><code>x_0' + x_1' = x_0 + x_1 = x</code> (unchanged). The public key Q stays the same, but an attacker who captured the old x_0 can no longer reconstruct x.</p>
+</div>
+
+
+<!-- ============================================================
+     SECTION 5: MOBILE UX PROTOTYPE
+     ============================================================ -->
+<div class="divider">Mobile UX Prototype</div>
+<h2>5. iOS App — Key Management UX</h2>
+
+<p>Neo-brutalist mobile prototype for on-device MPC key share management. The app runs one party of the MPC protocol locally; the counterparty is a server or another device.</p>
+
+<!-- ---- SCREEN SET 1: Onboarding + Key Gen ---- -->
+<h3 style="border-left-color: var(--party-0)">5.1 Key Share Generation (On-Device)</h3>
+
+<div class="phone-row">
+
+  <!-- Phone 1: Welcome -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-icon">&#9919;</div>
+      <div class="screen-header">CB-MPC Vault</div>
+      <p style="text-align:center; font-size:0.7rem; color:var(--muted); margin:0.5rem 0 1rem">
+        Threshold key management.<br>Your key never exists in one place.
+      </p>
+      <div class="screen-divider"></div>
+      <button class="screen-btn primary">CREATE NEW VAULT</button>
+      <button class="screen-btn">RESTORE FROM BACKUP</button>
+      <div style="margin-top:1rem">
+        <div class="screen-field-label">How it works</div>
+        <p style="font-size:0.62rem; color:var(--muted)">
+          Your private key is split into shares. This device holds one share. A server (or second device) holds another. Both must cooperate to sign. Neither can act alone.
+        </p>
+      </div>
+    </div>
+    <div class="phone-label">Welcome</div>
+  </div>
+
+  <!-- Phone 2: Generating -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-header">Generating Key Shares</div>
+      <div class="screen-icon" style="font-size:1.5rem">&#8987;</div>
+      <div class="screen-progress"><div class="screen-progress-bar" style="width:65%"></div></div>
+      <p style="text-align:center; font-size:0.68rem; color:var(--muted)">Running DKG protocol...</p>
+      <div class="screen-divider"></div>
+      <div class="screen-field-label">Protocol</div>
+      <div class="screen-field">ECDSA-2PC KeyGen (secp256k1)</div>
+      <div class="screen-field-label">Counterparty</div>
+      <div class="screen-field">Server: vault.coinbase.com</div>
+      <div class="screen-field-label">Status</div>
+      <div class="screen-field" style="font-size:0.62rem">
+Round 2/3: Exchanging commitments
+[##########--------] 65%
+      </div>
+      <div class="callout info" style="margin-top:0.5rem; padding:0.4rem 0.6rem; font-size:0.6rem">
+        <strong>Secure Enclave:</strong> Key share will be stored in iOS Secure Enclave — non-exportable, hardware-bound.
+      </div>
+    </div>
+    <div class="phone-label">Key Generation</div>
+  </div>
+
+  <!-- Phone 3: Done -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-header">Vault Created</div>
+      <div class="screen-status ok">[OK] KEY SHARE GENERATED</div>
+      <div class="screen-field-label">Public Key (Q)</div>
+      <div class="screen-field" style="font-size:0.58rem; word-break:break-all">
+04f6a303...3bdda17e
+358b2a1b...0b9e344f</div>
+      <div class="screen-field-label">Your Share</div>
+      <div class="screen-field">
+<span style="color:var(--secret)">[SECURE ENCLAVE]</span>
+Party 0 — Role: DEVICE
+      </div>
+      <div class="screen-field-label">Counterparty</div>
+      <div class="screen-field">
+Party 1 — Role: SERVER
+Status: ONLINE
+      </div>
+      <div class="screen-divider"></div>
+      <button class="screen-btn" style="background:var(--warn); color:#fff; border-color:var(--warn)">BACKUP KEY SHARE</button>
+      <button class="screen-btn">SKIP FOR NOW</button>
+    </div>
+    <div class="phone-label">Generation Complete</div>
+  </div>
+
+</div>
+
+
+<!-- ---- SCREEN SET 2: Signing ---- -->
+<h3 style="border-left-color: var(--party-1)">5.2 Transaction Signing</h3>
+
+<div class="phone-row">
+
+  <!-- Phone: Sign Request -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-header">Sign Request</div>
+      <div class="screen-field-label">Transaction</div>
+      <div class="screen-field" style="font-size:0.62rem">
+Send 1.5 ETH
+To: 0xd00d...beef
+Gas: 21000 gwei
+      </div>
+      <div class="screen-field-label">Message Hash (SHA-256)</div>
+      <div class="screen-detail">a1b2c3d4e5f6...78901234abcd</div>
+      <div class="screen-field-label">Signing Protocol</div>
+      <div class="screen-field">ECDSA-2PC (this device + server)</div>
+      <div class="screen-divider"></div>
+      <div style="display:flex; gap:0.5rem; margin-top:0.5rem">
+        <button class="screen-btn primary" style="flex:1">APPROVE &amp; SIGN</button>
+        <button class="screen-btn danger" style="flex:1">REJECT</button>
+      </div>
+      <p style="font-size:0.58rem; color:var(--muted); margin-top:0.5rem; text-align:center">
+        Biometric auth required. Your key share never leaves the Secure Enclave.
+      </p>
+    </div>
+    <div class="phone-label">Sign Approval</div>
+  </div>
+
+  <!-- Phone: Signing in Progress -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-header">Signing</div>
+      <div class="screen-icon" style="font-size:1.2rem">&#128274;</div>
+      <div class="screen-progress"><div class="screen-progress-bar" style="width:80%"></div></div>
+      <p style="text-align:center; font-size:0.68rem; color:var(--muted)">MPC signing protocol...</p>
+      <div class="screen-field" style="font-size:0.6rem; margin-top:0.5rem">
+[1/3] Nonce commitment    [DONE]
+[2/3] Partial signature   [DONE]
+[3/3] Signature assembly  [....]
+      </div>
+      <div class="screen-divider"></div>
+      <div class="screen-field-label">Signature Output</div>
+      <div class="screen-detail">DER-encoded ECDSA (standard)</div>
+      <p style="font-size:0.58rem; color:var(--muted); margin-top:0.4rem">
+        Neither party sees the full private key during signing. Only partial computations are exchanged.
+      </p>
+    </div>
+    <div class="phone-label">Signing Protocol</div>
+  </div>
+
+  <!-- Phone: Signed -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-header">Signed</div>
+      <div class="screen-status ok">[OK] SIGNATURE VERIFIED</div>
+      <div class="screen-field-label">Signature (DER)</div>
+      <div class="screen-field" style="font-size:0.55rem; word-break:break-all">
+30450221008403ac33c49b
+887d2625297e8ddc87edad
+b88db942a348fee1ba509d
+076013d102201c9d11dfeb
+8f7b869452881cf69e96c6
+5ca53752ce31d9da61ea7c
+effb8a69b4</div>
+      <div class="screen-field-label">Verified Against</div>
+      <div class="screen-field" style="font-size:0.6rem">
+Public Key Q
+Blockchain: Ethereum
+      </div>
+      <div class="screen-divider"></div>
+      <button class="screen-btn success">BROADCAST TX</button>
+    </div>
+    <div class="phone-label">Signature Complete</div>
+  </div>
+
+</div>
+
+<!-- ---- SCREEN SET 3: Backup to USB-C ---- -->
+<h3 style="border-left-color: var(--mail)">5.3 Backup to USB-C Drive</h3>
+
+<div class="phone-row">
+
+  <!-- Phone: Backup Init -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-header">Backup Key Share</div>
+      <p style="font-size:0.68rem; text-align:center; color:var(--muted); margin-bottom:0.5rem">
+        Encrypt your key share using PVE (Publicly Verifiable Encryption)
+      </p>
+      <div class="screen-field-label">Backup Method</div>
+      <button class="screen-btn" style="border-color:var(--mail); text-align:left">
+        &#128268; USB-C DRIVE<br>
+        <small style="font-weight:400; color:var(--muted)">Encrypted file saved to external drive</small>
+      </button>
+      <button class="screen-btn" style="text-align:left">
+        &#9729; ICLOUD KEYCHAIN<br>
+        <small style="font-weight:400; color:var(--muted)">E2E encrypted cloud backup</small>
+      </button>
+      <div class="screen-divider"></div>
+      <div class="screen-field-label">Access Structure (Recovery Policy)</div>
+      <div class="screen-field" style="font-size:0.6rem">
+AND
+  THIS DEVICE (required)
+  THRESHOLD (2/3)
+    Recovery Contact #1
+    Recovery Contact #2
+    Recovery Contact #3</div>
+      <p style="font-size:0.58rem; color:var(--muted); margin-top:0.3rem">
+        To restore: this device + any 2 of 3 contacts must cooperate.
+      </p>
+    </div>
+    <div class="phone-label">Backup Setup</div>
+  </div>
+
+  <!-- Phone: USB-C Connected -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-header">USB-C Backup</div>
+      <div class="screen-icon">&#128268;</div>
+      <div class="screen-status ok">[OK] DRIVE DETECTED</div>
+      <div class="screen-field-label">Drive</div>
+      <div class="screen-field">KINGSTON DT100 — 32GB<br>Available: 28.4GB</div>
+      <div class="screen-field-label">Backup Contents</div>
+      <div class="screen-field" style="font-size:0.6rem">
+vault-backup/
+  encrypted_share.pve     [PVE]
+  public_key.json         [PUB]
+  access_structure.json   [PUB]
+  verification_proof.bin  [PUB]
+  metadata.json           [PUB]</div>
+      <div class="screen-divider"></div>
+      <button class="screen-btn primary">WRITE BACKUP TO DRIVE</button>
+      <p style="font-size:0.58rem; color:var(--muted); margin-top:0.3rem; text-align:center">
+        Only the encrypted share is private. All other files are publicly verifiable.
+      </p>
+    </div>
+    <div class="phone-label">USB-C Connected</div>
+  </div>
+
+  <!-- Phone: Backup Complete -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-header">Backup Complete</div>
+      <div class="screen-status ok">[OK] BACKUP VERIFIED</div>
+      <div class="screen-field-label">PVE Verification</div>
+      <div class="screen-field" style="font-size:0.6rem">
+Encryption:   [OK] AES-256-GCM
+KEM:          [OK] RSA-2048 OAEP
+ZK Proof:     [OK] Backup matches Q_i
+Integrity:    [OK] SHA-256 checksum</div>
+      <div class="screen-field-label">What was saved</div>
+      <div class="screen-field" style="font-size:0.6rem">
+Encrypted key share:  2048 bytes
+Public metadata:      1.2 KB
+Total:                3.2 KB</div>
+      <div class="screen-divider"></div>
+      <div class="callout danger" style="padding:0.4rem 0.6rem; font-size:0.6rem">
+        <strong>IMPORTANT:</strong> Store this drive in a physically secure location. The encrypted share alone is not enough to restore — you also need quorum cooperation.
+      </div>
+      <button class="screen-btn">DONE</button>
+    </div>
+    <div class="phone-label">Backup Verified</div>
+  </div>
+
+</div>
+
+
+<!-- ---- SCREEN SET 4: Restore from USB-C ---- -->
+<h3 style="border-left-color: var(--secret)">5.4 Restore from USB-C Drive</h3>
+
+<div class="phone-row">
+
+  <!-- Phone: Restore Start -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-header">Restore Vault</div>
+      <div class="screen-icon">&#128268;</div>
+      <p style="text-align:center; font-size:0.68rem; color:var(--muted)">
+        Connect your backup USB-C drive
+      </p>
+      <div class="screen-status warn">[...] WAITING FOR DRIVE</div>
+      <div class="screen-divider"></div>
+      <div class="screen-field-label">What you need to restore</div>
+      <div class="screen-field" style="font-size:0.6rem">
+1. USB-C drive with backup file
+2. Quorum of recovery contacts:
+   - This device (you)
+   - 2 of 3 recovery contacts</div>
+      <div class="screen-field-label">Restore process</div>
+      <p style="font-size:0.6rem; color:var(--muted)">
+        Each contact uses their RSA private key to partially decrypt your backup. You collect these partial decryptions and aggregate them to recover your key share.
+      </p>
+    </div>
+    <div class="phone-label">Restore Init</div>
+  </div>
+
+  <!-- Phone: Quorum Collection -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-header">Quorum Collection</div>
+      <div class="screen-field-label">Backup File</div>
+      <div class="screen-status ok">[OK] encrypted_share.pve loaded</div>
+      <div class="screen-field-label">Access Structure</div>
+      <div class="screen-field" style="font-size:0.6rem">
+Required: THIS DEVICE + 2/3 contacts</div>
+      <div class="screen-field-label">Recovery Contacts</div>
+      <div style="margin:0.3rem 0">
+        <div class="screen-share-badge" style="border-color:var(--ok); color:var(--ok)">ALICE [OK]</div>
+        <div class="screen-share-badge" style="border-color:var(--ok); color:var(--ok)">BOB [OK]</div>
+        <div class="screen-share-badge" style="border-color:var(--muted); color:var(--muted)">CAROL [---]</div>
+      </div>
+      <div class="screen-status ok" style="margin-top:0.5rem">[OK] QUORUM MET (2/3)</div>
+      <div class="screen-field-label">Partial Decryptions</div>
+      <div class="screen-field" style="font-size:0.6rem">
+Alice: partial_dec received [OK]
+Bob:   partial_dec received [OK]
+Carol: not needed</div>
+      <div class="screen-divider"></div>
+      <button class="screen-btn primary">AGGREGATE &amp; RESTORE</button>
+    </div>
+    <div class="phone-label">Quorum Status</div>
+  </div>
+
+  <!-- Phone: Restored -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-header">Vault Restored</div>
+      <div class="screen-status ok">[OK] KEY SHARE RECOVERED</div>
+      <div class="screen-field-label">Verification</div>
+      <div class="screen-field" style="font-size:0.6rem">
+x_i matches original:     [OK]
+Q_i = x_i * G matches:    [OK]
+Public key Q unchanged:    [OK]</div>
+      <div class="screen-field-label">Key Share</div>
+      <div class="screen-field">
+<span style="color:var(--ok)">[STORED IN SECURE ENCLAVE]</span>
+Party 0 — Restored
+      </div>
+      <div class="screen-divider"></div>
+      <div class="callout ok" style="padding:0.4rem 0.6rem; font-size:0.6rem">
+        <strong>SUCCESS:</strong> Your vault is fully operational. You can sign transactions immediately. Consider running a key refresh to invalidate the backup shares.
+      </div>
+      <button class="screen-btn" style="background:var(--warn); color:#fff; border-color:var(--warn)">REFRESH KEYS NOW</button>
+      <button class="screen-btn">DONE</button>
+    </div>
+    <div class="phone-label">Restore Complete</div>
+  </div>
+
+</div>
+
+<!-- ---- SCREEN SET 5: Key Refresh ---- -->
+<h3 style="border-left-color: var(--ok)">5.5 Key Refresh</h3>
+
+<div class="phone-row">
+
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-header">Key Refresh</div>
+      <p style="text-align:center; font-size:0.68rem; color:var(--muted); margin-bottom:0.5rem">
+        Re-randomize key shares without changing the public key
+      </p>
+      <div class="screen-field-label">Current State</div>
+      <div class="screen-field" style="font-size:0.6rem">
+Public Key Q:     04f6a3...a17e (unchanged)
+Share x_0:        91c495...d5a8 (current)
+Last Refresh:     2026-02-15
+Refresh Count:    3</div>
+      <div class="screen-divider"></div>
+      <div class="screen-field-label">After Refresh</div>
+      <div class="screen-field" style="font-size:0.6rem">
+Public Key Q:     04f6a3...a17e (SAME)
+Share x_0:        d22214...2fe6 (NEW)
+Old Share:        <span style="color:var(--secret)">[DESTROYED]</span></div>
+      <div class="screen-divider"></div>
+      <button class="screen-btn primary">START REFRESH PROTOCOL</button>
+      <div class="callout info" style="padding:0.4rem 0.6rem; font-size:0.58rem; margin-top:0.5rem">
+        After refresh, any previously leaked or backed-up shares become useless. Refresh regularly for forward security.
+      </div>
+    </div>
+    <div class="phone-label">Key Refresh</div>
+  </div>
+
+  <!-- Phone: Dashboard -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-header">Vault Dashboard</div>
+      <div class="screen-field-label">Active Vault</div>
+      <div class="screen-field" style="font-size:0.6rem">
+Name:    Primary Wallet
+Curve:   secp256k1
+Mode:    ECDSA-2PC
+Status:  <span style="color:var(--ok)">ACTIVE</span></div>
+      <div class="screen-field-label">Public Key</div>
+      <div class="screen-detail">04f6a30309f61ded59...3bdda17e</div>
+      <div class="screen-field-label">Key Share Health</div>
+      <div class="screen-field" style="font-size:0.6rem">
+Secure Enclave:   [OK]
+Last Refresh:     2h ago
+Backup Status:    [OK] USB-C verified
+Counterparty:     [OK] Server online</div>
+      <div class="screen-divider"></div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.3rem">
+        <button class="screen-btn" style="font-size:0.6rem">SIGN TX</button>
+        <button class="screen-btn" style="font-size:0.6rem">REFRESH</button>
+        <button class="screen-btn" style="font-size:0.6rem">BACKUP</button>
+        <button class="screen-btn" style="font-size:0.6rem">HISTORY</button>
+      </div>
+    </div>
+    <div class="phone-label">Dashboard</div>
+  </div>
+
+</div>
+
+
+<!-- ============================================================
+     SECTION 6: SECURITY GUIDELINES
+     ============================================================ -->
+<h2>6. Key Share Security Guidelines</h2>
+
+<div class="card">
+<span class="card-label">Production Checklist</span>
+
+<table class="overview-table">
+  <tr><th>Rule</th><th>Why</th></tr>
+  <tr><td><strong>Never export raw key shares</strong></td><td>Key shares should live in hardware security modules (HSM, Secure Enclave, TEE). If you must export for backup, use PVE.</td></tr>
+  <tr><td><strong>Refresh keys after any suspected compromise</strong></td><td>Key refresh invalidates all previous shares. Even if an attacker captured a share, it becomes useless after refresh.</td></tr>
+  <tr><td><strong>Verify PVE backups before trusting them</strong></td><td>PVE is "publicly verifiable" — any party can check that the encrypted backup actually contains the correct share, without decrypting it.</td></tr>
+  <tr><td><strong>Route partial decryptions carefully</strong></td><td>During PVE restore, each holder's partial decryption must go only to the rightful share owner. Misrouting leaks information.</td></tr>
+  <tr><td><strong>Use access structures for backup policies</strong></td><td>Define who can restore via AND/OR/THRESHOLD trees. Example: "device owner AND 2-of-3 recovery contacts."</td></tr>
+  <tr><td><strong>Bind party identity to key shares</strong></td><td>Use hashes of public keys or similar identifiers — not just indices. This prevents party impersonation.</td></tr>
+  <tr><td><strong>This library is not thread-safe</strong></td><td>Protect all shared objects with mutexes if using multiple threads.</td></tr>
+  <tr><td><strong>Refresh backups after key refresh</strong></td><td>Old backups contain old shares. After refresh, create a new backup and securely delete the old one.</td></tr>
+</table>
+</div>
+
+
+<!-- ============================================================
+     FOOTER
+     ============================================================ -->
+<div class="footer">
+  CB-MPC Visual Guide &amp; Mobile UX Prototype<br>
+  Built from <a href="https://github.com/coinbase/cb-mpc" style="color:var(--party-0)">github.com/coinbase/cb-mpc</a><br>
+  Open in browser or print to PDF (Cmd+P / Ctrl+P)
+</div>
+
+</div><!-- .container -->
+
+<script>
+function toggleTheme() {
+  const body = document.body;
+  const btn = document.getElementById('themeBtn');
+  if (body.getAttribute('data-theme') === 'dark') {
+    body.setAttribute('data-theme', 'light');
+    btn.textContent = '[ DARK ]';
+  } else {
+    body.setAttribute('data-theme', 'dark');
+    btn.textContent = '[ LIGHT ]';
+  }
+}
+
+// Respect system preference on load
+if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+  document.body.setAttribute('data-theme', 'light');
+  document.getElementById('themeBtn').textContent = '[ DARK ]';
+}
+</script>
+
+</body>
+</html>

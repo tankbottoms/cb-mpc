@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MPC Threshold Signing — Visual Guide</title>
+<style>
+  :root {
+    --font-mono: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    --border-w: 3px;
+    --shadow-offset: 5px;
+    --radius: 0;
+    --alice: #6366f1;
+    --bob: #f59e0b;
+    --carol: #10b981;
+    --public: #3b82f6;
+    --private: #ef4444;
+    --mail: #8b5cf6;
+  }
+
+  [data-theme="light"] {
+    --bg: #f5f0e8;
+    --card: #ffffff;
+    --card2: #f0ebe3;
+    --text: #1a1a1a;
+    --muted: #6b7280;
+    --border: #1a1a1a;
+    --shadow-color: #1a1a1a;
+  }
+
+  [data-theme="dark"] {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --card2: #334155;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --border: #475569;
+    --shadow-color: #000000;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font-mono);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, var(--alice), var(--bob), var(--carol));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .subtitle {
+    text-align: center;
+    color: var(--muted);
+    margin-bottom: 0;
+    font-size: 0.9rem;
+  }
+
+  /* Legend */
+  .legend {
+    display: flex;
+    gap: 1.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 3rem;
+    padding: 1rem;
+    background: var(--card);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+  }
+  .legend-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* Step container */
+  .step {
+    margin-bottom: 3rem;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    background: var(--card);
+  }
+
+  .step-header {
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .step-num {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+  }
+
+  .step-title { font-size: 1.1rem; font-weight: 600; }
+  .step-body { padding: 1.5rem; }
+
+  /* Diagram area */
+  .diagram {
+    background: var(--bg);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin: 1rem 0;
+    position: relative;
+    overflow-x: auto;
+  }
+
+  /* Party boxes */
+  .parties {
+    display: flex;
+    justify-content: space-around;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .party {
+    border: 2px solid;
+    border-radius: 12px;
+    padding: 1rem;
+    min-width: 200px;
+    flex: 1;
+    max-width: 280px;
+  }
+
+  .party.alice { border-color: var(--alice); }
+  .party.bob { border-color: var(--bob); }
+  .party.carol { border-color: var(--carol); }
+  .party.inactive { opacity: 0.35; border-style: dashed; }
+
+  .party-name {
+    font-weight: bold;
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .party.alice .party-name { color: var(--alice); }
+  .party.bob .party-name { color: var(--bob); }
+  .party.carol .party-name { color: var(--carol); }
+
+  .var-list { list-style: none; font-size: 0.8rem; }
+  .var-list li {
+    padding: 0.25rem 0.4rem;
+    margin: 0.2rem 0;
+    border-radius: 6px;
+  }
+  .var-list .secret {
+    background: rgba(239, 68, 68, 0.15);
+    border-left: 3px solid var(--private);
+  }
+  .var-list .public-var {
+    background: rgba(59, 130, 246, 0.15);
+    border-left: 3px solid var(--public);
+  }
+
+  .tag {
+    display: inline-block;
+    font-size: 0.65rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+    vertical-align: middle;
+  }
+  .tag.priv { background: var(--private); color: white; }
+  .tag.pub { background: var(--public); color: white; }
+  .tag.mail { background: var(--mail); color: white; }
+
+  /* Public board */
+  .public-board {
+    border: 2px solid var(--public);
+    border-radius: 12px;
+    padding: 1rem;
+    margin: 1rem 0;
+    background: rgba(59, 130, 246, 0.05);
+  }
+  .public-board-title {
+    color: var(--public);
+    font-weight: bold;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .file-list {
+    list-style: none;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .file-list li {
+    padding: 0.2rem 0;
+    font-family: monospace;
+  }
+  .file-list .fname { color: var(--text); }
+
+  /* Private mail */
+  .private-mail {
+    border: 2px dashed var(--mail);
+    border-radius: 12px;
+    padding: 1rem;
+    margin: 1rem 0;
+    background: rgba(139, 92, 246, 0.05);
+  }
+  .private-mail-title {
+    color: var(--mail);
+    font-weight: bold;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+  }
+
+  /* Arrows / flow */
+  .flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 0;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+  .flow .arrow {
+    font-size: 1.5rem;
+    margin: 0 0.5rem;
+  }
+
+  /* Math block */
+  .math {
+    background: var(--card2);
+    border-radius: 8px;
+    padding: 0.8rem 1rem;
+    margin: 0.5rem 0;
+    font-size: 0.85rem;
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  .explanation {
+    color: var(--muted);
+    font-size: 0.82rem;
+    margin: 0.5rem 0;
+    padding: 0.5rem 0.8rem;
+    border-left: 3px solid var(--border);
+  }
+
+  /* Section divider */
+  .phase-divider {
+    text-align: center;
+    padding: 2rem 0;
+    color: var(--muted);
+    font-size: 1.2rem;
+    font-weight: 600;
+    position: relative;
+  }
+  .phase-divider::before,
+  .phase-divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 30%;
+    height: 1px;
+    background: var(--border);
+  }
+  .phase-divider::before { left: 0; }
+  .phase-divider::after { right: 0; }
+
+  /* Overview table */
+  .overview-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    margin: 1rem 0;
+  }
+  .overview-table th {
+    text-align: left;
+    padding: 0.6rem 0.8rem;
+    border-bottom: 2px solid var(--border);
+    color: var(--muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .overview-table td {
+    padding: 0.5rem 0.8rem;
+    border-bottom: 1px solid rgba(71, 85, 105, 0.4);
+    vertical-align: top;
+  }
+
+  /* ---- THEME TOGGLE ---- */
+  .theme-toggle {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 100;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    padding: 0.4rem 0.8rem;
+    background: var(--card);
+    color: var(--text);
+    border: var(--border-w) solid var(--border);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .theme-toggle:hover {
+    background: var(--card2);
+  }
+
+  /* ---- DOC NAV ---- */
+  .doc-nav {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0;
+    border-bottom: var(--border-w) solid var(--border);
+    margin-bottom: 0;
+  }
+  .nav-link {
+    display: inline-block;
+    color: var(--muted);
+    text-decoration: none;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border: var(--border-w) solid transparent;
+    border-bottom: none;
+    margin-bottom: calc(-1 * var(--border-w));
+    transition: color 0.15s, background 0.15s;
+    white-space: nowrap;
+  }
+  .nav-link:hover {
+    color: var(--text);
+    background: var(--card2);
+  }
+  .nav-link.active {
+    color: var(--text);
+    font-weight: bold;
+    background: var(--bg);
+    border-color: var(--border);
+    border-bottom-color: var(--bg);
+  }
+  .page-title {
+    text-align: center;
+    padding: 2rem 1rem 1rem;
+    margin-bottom: 2rem;
+    border: var(--border-w) solid var(--border);
+    border-top: none;
+    background: var(--bg);
+  }
+
+  /* Print styles */
+  @media print {
+    body { background: white; color: #1e293b; padding: 1rem; }
+    .step { break-inside: avoid; border-color: #ccc; background: white; }
+    .diagram { background: #f8fafc; }
+    .party { background: white; }
+    h1 { -webkit-text-fill-color: #1e293b; background: none; }
+    .theme-toggle, .doc-nav { display: none; }
+  }
+
+  .cols-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  @media (max-width: 700px) {
+    .cols-2 { grid-template-columns: 1fr; }
+    .parties { flex-direction: column; align-items: center; }
+  }
+
+  .arrow-row {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    padding: 0.5rem 0;
+    flex-wrap: wrap;
+  }
+  .arrow-item {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.8rem;
+  }
+  .arrow-item .a-from { font-weight: bold; }
+  .arrow-item.alice .a-from { color: var(--alice); }
+  .arrow-item.bob .a-from { color: var(--bob); }
+  .arrow-item.carol .a-from { color: var(--carol); }
+  .a-arrow { color: var(--mail); }
+
+  .verify-box {
+    border: 2px solid var(--carol);
+    border-radius: 12px;
+    padding: 1rem;
+    margin: 1rem 0;
+    text-align: center;
+  }
+  .verify-box.pass { border-color: #22c55e; background: rgba(34, 197, 94, 0.08); }
+  .verify-box.pass .result { color: #22c55e; font-size: 1.3rem; font-weight: bold; }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin: 1rem 0;
+  }
+  .summary-col {
+    border-radius: 12px;
+    padding: 1rem;
+  }
+  .summary-col.pub-col {
+    border: 2px solid var(--public);
+    background: rgba(59, 130, 246, 0.05);
+  }
+  .summary-col.priv-col {
+    border: 2px solid var(--private);
+    background: rgba(239, 68, 68, 0.05);
+  }
+  .summary-col h3 { font-size: 0.9rem; margin-bottom: 0.5rem; }
+  .summary-col.pub-col h3 { color: var(--public); }
+  .summary-col.priv-col h3 { color: var(--private); }
+  .summary-col ul { list-style: none; font-size: 0.82rem; }
+  .summary-col ul li { padding: 0.2rem 0; }
+  .summary-col ul li::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 0.5rem; vertical-align: middle; }
+  .pub-col ul li::before { background: var(--public); }
+  .priv-col ul li::before { background: var(--private); }
+</style>
+<script src="https://fathom-sveltekit.mark-phillips-f7c.workers.dev/api/tracker/abc9c4a5b463d635" defer></script>
+<script src="https://fathom.atsignhandle.xyz/api/tracker/c0903d922ecd08d8" defer></script>
+</head>
+<body data-theme="light">
+
+<button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">[ DARK ]</button>
+
+<nav class="doc-nav">
+  <a href="/index.html" class="nav-link">Demo Guide</a>
+  <a href="/threshold-signing.html" class="nav-link active">Threshold Signing</a>
+  <a href="/dkg-ceremony.html" class="nav-link">DKG Ceremony</a>
+  <a href="/device-to-device.html" class="nav-link">Device-to-Device</a>
+  <a href="/server-architecture.html" class="nav-link">Server Architecture</a>
+</nav>
+
+<div class="page-title">
+  <h1>MPC Threshold Signing</h1>
+  <p class="subtitle">2-of-3 Feldman VSS + Schnorr-like Signing on secp256k1 — Visual Guide</p>
+</div>
+
+<!-- Legend -->
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:var(--alice)"></div> Alice (party #1)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--bob)"></div> Bob (party #2)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--carol)"></div> Carol (party #3)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--private)"></div> Private (secret)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--public)"></div> Public (visible)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--mail)"></div> Private mail (1-to-1)</div>
+</div>
+
+<!-- ============================================================ -->
+<div class="phase-divider">Phase 1: Key Generation (Feldman VSS)</div>
+<!-- ============================================================ -->
+
+<!-- STEP 1 -->
+<div class="step">
+  <div class="step-header" style="background:rgba(99,102,241,0.1)">
+    <div class="step-num" style="background:var(--alice);color:white">1</div>
+    <div class="step-title">Each Friend Picks Their Secret</div>
+  </div>
+  <div class="step-body">
+    <p class="explanation">Each party independently generates a random polynomial <b>f(x) = a0 + a1·x</b>.<br>
+    Degree = threshold−1 = 1. The constant term <b>a0</b> is their secret contribution to the group key.</p>
+
+    <div class="diagram">
+      <div class="parties">
+        <div class="party alice">
+          <div class="party-name">Alice (#1)</div>
+          <ul class="var-list">
+            <li class="secret"><span class="tag priv">secret</span> a0<sub>A</sub> — secret contribution</li>
+            <li class="secret"><span class="tag priv">secret</span> a1<sub>A</sub> — random blinding</li>
+          </ul>
+          <div class="math">f<sub>A</sub>(x) = a0<sub>A</sub> + a1<sub>A</sub>·x</div>
+        </div>
+        <div class="party bob">
+          <div class="party-name">Bob (#2)</div>
+          <ul class="var-list">
+            <li class="secret"><span class="tag priv">secret</span> a0<sub>B</sub></li>
+            <li class="secret"><span class="tag priv">secret</span> a1<sub>B</sub></li>
+          </ul>
+          <div class="math">f<sub>B</sub>(x) = a0<sub>B</sub> + a1<sub>B</sub>·x</div>
+        </div>
+        <div class="party carol">
+          <div class="party-name">Carol (#3)</div>
+          <ul class="var-list">
+            <li class="secret"><span class="tag priv">secret</span> a0<sub>C</sub></li>
+            <li class="secret"><span class="tag priv">secret</span> a1<sub>C</sub></li>
+          </ul>
+          <div class="math">f<sub>C</sub>(x) = a0<sub>C</sub> + a1<sub>C</sub>·x</div>
+        </div>
+      </div>
+    </div>
+
+    <p class="explanation"><b>Nothing is shared yet.</b> Each polynomial lives only on one machine. Files: <code>alice/secrets.json</code>, <code>bob/secrets.json</code>, <code>carol/secrets.json</code></p>
+  </div>
+</div>
+
+<!-- STEP 2 -->
+<div class="step">
+  <div class="step-header" style="background:rgba(59,130,246,0.1)">
+    <div class="step-num" style="background:var(--public);color:white">2</div>
+    <div class="step-title">Post Commitments to the Public Board</div>
+  </div>
+  <div class="step-body">
+    <p class="explanation">Each party multiplies their secret coefficients by the generator point <b>G</b> to create commitments. These go on the public board — everyone sees them, but can't reverse-engineer the secrets (discrete log problem).</p>
+
+    <div class="diagram">
+      <div class="parties">
+        <div class="party alice">
+          <div class="party-name">Alice</div>
+          <div class="math">C0<sub>A</sub> = a0<sub>A</sub> · G
+C1<sub>A</sub> = a1<sub>A</sub> · G</div>
+          <ul class="var-list">
+            <li class="secret"><span class="tag priv">secret</span> a0<sub>A</sub>, a1<sub>A</sub> (kept)</li>
+            <li class="public-var"><span class="tag pub">public</span> C0<sub>A</sub>, C1<sub>A</sub> (posted)</li>
+          </ul>
+        </div>
+        <div class="party bob">
+          <div class="party-name">Bob</div>
+          <div class="math">C0<sub>B</sub> = a0<sub>B</sub> · G
+C1<sub>B</sub> = a1<sub>B</sub> · G</div>
+          <ul class="var-list">
+            <li class="secret"><span class="tag priv">secret</span> a0<sub>B</sub>, a1<sub>B</sub></li>
+            <li class="public-var"><span class="tag pub">public</span> C0<sub>B</sub>, C1<sub>B</sub></li>
+          </ul>
+        </div>
+        <div class="party carol">
+          <div class="party-name">Carol</div>
+          <div class="math">C0<sub>C</sub> = a0<sub>C</sub> · G
+C1<sub>C</sub> = a1<sub>C</sub> · G</div>
+          <ul class="var-list">
+            <li class="secret"><span class="tag priv">secret</span> a0<sub>C</sub>, a1<sub>C</sub></li>
+            <li class="public-var"><span class="tag pub">public</span> C0<sub>C</sub>, C1<sub>C</sub></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="flow"><span class="arrow">⬇</span> all commitments flow down <span class="arrow">⬇</span></div>
+
+      <div class="public-board">
+        <div class="public-board-title">📢 Public Board</div>
+        <ul class="file-list">
+          <li><span class="fname">step2_alice_commit.json</span> — {C0<sub>A</sub>, C1<sub>A</sub>} (elliptic curve points)</li>
+          <li><span class="fname">step2_bob_commit.json</span> — {C0<sub>B</sub>, C1<sub>B</sub>}</li>
+          <li><span class="fname">step2_carol_commit.json</span> — {C0<sub>C</sub>, C1<sub>C</sub>}</li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="explanation"><b>Key idea:</b> C0 = a0·G locks in the secret without revealing it. Later, anyone can verify shares against these commitments.</p>
+  </div>
+</div>
+
+<!-- STEP 3 -->
+<div class="step">
+  <div class="step-header" style="background:rgba(139,92,246,0.1)">
+    <div class="step-num" style="background:var(--mail);color:white">3</div>
+    <div class="step-title">Whisper Secret Shares (Private Mail)</div>
+  </div>
+  <div class="step-body">
+    <p class="explanation">Each party evaluates their polynomial at the other parties' indices and sends the result as a <b>secret share</b> via encrypted private mail. Only the recipient can read it.</p>
+
+    <div class="diagram">
+      <div class="parties">
+        <div class="party alice">
+          <div class="party-name">Alice</div>
+          <div class="math">f<sub>A</sub>(2) → Bob
+f<sub>A</sub>(3) → Carol</div>
+        </div>
+        <div class="party bob">
+          <div class="party-name">Bob</div>
+          <div class="math">f<sub>B</sub>(1) → Alice
+f<sub>B</sub>(3) → Carol</div>
+        </div>
+        <div class="party carol">
+          <div class="party-name">Carol</div>
+          <div class="math">f<sub>C</sub>(1) → Alice
+f<sub>C</sub>(2) → Bob</div>
+        </div>
+      </div>
+
+      <div style="text-align:center;padding:0.8rem 0">
+        <svg width="500" height="80" viewBox="0 0 500 80" style="max-width:100%">
+          <!-- Alice to Bob -->
+          <line x1="100" y1="15" x2="250" y2="35" stroke="#8b5cf6" stroke-width="2" stroke-dasharray="6,3"></line>
+          <polygon points="246,30 254,34 246,38" fill="#8b5cf6"></polygon>
+          <text x="160" y="12" fill="#8b5cf6" font-size="11">f_A(2)</text>
+          <!-- Alice to Carol -->
+          <line x1="100" y1="20" x2="400" y2="35" stroke="#8b5cf6" stroke-width="2" stroke-dasharray="6,3"></line>
+          <polygon points="396,30 404,34 396,38" fill="#8b5cf6"></polygon>
+          <text x="220" y="48" fill="#8b5cf6" font-size="11">f_A(3)</text>
+          <!-- Bob to Alice -->
+          <line x1="250" y1="50" x2="100" y2="65" stroke="#8b5cf6" stroke-width="2" stroke-dasharray="6,3"></line>
+          <polygon points="96,60 104,64 96,68" fill="#8b5cf6"></polygon>
+          <text x="155" y="68" fill="#8b5cf6" font-size="11">f_B(1)</text>
+          <!-- Bob to Carol -->
+          <line x1="250" y1="50" x2="400" y2="65" stroke="#8b5cf6" stroke-width="2" stroke-dasharray="6,3"></line>
+          <polygon points="396,60 404,64 396,68" fill="#8b5cf6"></polygon>
+          <text x="310" y="68" fill="#8b5cf6" font-size="11">f_B(3)</text>
+          <!-- Labels -->
+          <text x="80" y="45" fill="#6366f1" font-size="12" font-weight="bold" text-anchor="middle">Alice</text>
+          <text x="250" y="45" fill="#f59e0b" font-size="12" font-weight="bold" text-anchor="middle">Bob</text>
+          <text x="420" y="45" fill="#10b981" font-size="12" font-weight="bold" text-anchor="middle">Carol</text>
+        </svg>
+      </div>
+
+      <div class="private-mail">
+        <div class="private-mail-title">📬 Private Mail (encrypted, point-to-point)</div>
+        <ul class="file-list">
+          <li><span class="fname">alice_to_bob.json</span> — f<sub>A</sub>(2) = a0<sub>A</sub> + a1<sub>A</sub>·2 <span class="tag mail">only bob reads</span></li>
+          <li><span class="fname">alice_to_carol.json</span> — f<sub>A</sub>(3) = a0<sub>A</sub> + a1<sub>A</sub>·3 <span class="tag mail">only carol reads</span></li>
+          <li><span class="fname">bob_to_alice.json</span> — f<sub>B</sub>(1) <span class="tag mail">only alice reads</span></li>
+          <li><span class="fname">bob_to_carol.json</span> — f<sub>B</sub>(3) <span class="tag mail">only carol reads</span></li>
+          <li><span class="fname">carol_to_alice.json</span> — f<sub>C</sub>(1) <span class="tag mail">only alice reads</span></li>
+          <li><span class="fname">carol_to_bob.json</span> — f<sub>C</sub>(2) <span class="tag mail">only bob reads</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="explanation">Each share is a single scalar (big number). The polynomial evaluation at index <i>i</i> gives that party their piece of the puzzle. <b>Nobody sees anyone else's mail.</b></p>
+  </div>
+</div>
+
+<!-- STEP 4 -->
+<div class="step">
+  <div class="step-header" style="background:rgba(16,185,129,0.1)">
+    <div class="step-num" style="background:var(--carol);color:white">4</div>
+    <div class="step-title">Verify Shares &amp; Discover the Group Key</div>
+  </div>
+  <div class="step-body">
+    <p class="explanation">Each party: (1) verifies received shares using Feldman VSS, (2) combines all shares into their final key share, (3) everyone computes the same group public key.</p>
+
+    <div class="diagram">
+      <div class="parties">
+        <div class="party alice">
+          <div class="party-name">Alice verifies &amp; combines</div>
+          <div class="math" style="font-size:0.75rem"><b>Verify:</b>
+f<sub>B</sub>(1)·G == C0<sub>B</sub> + 1·C1<sub>B</sub> ?  ✅
+f<sub>C</sub>(1)·G == C0<sub>C</sub> + 1·C1<sub>C</sub> ?  ✅
+
+<b>Combine:</b>
+x<sub>A</sub> = f<sub>A</sub>(1) + f<sub>B</sub>(1) + f<sub>C</sub>(1)</div>
+          <ul class="var-list">
+            <li class="secret"><span class="tag priv">secret</span> x<sub>A</sub> — final key share</li>
+          </ul>
+        </div>
+        <div class="party bob">
+          <div class="party-name">Bob verifies &amp; combines</div>
+          <div class="math" style="font-size:0.75rem"><b>Verify:</b>
+f<sub>A</sub>(2)·G == C0<sub>A</sub> + 2·C1<sub>A</sub> ?  ✅
+f<sub>C</sub>(2)·G == C0<sub>C</sub> + 2·C1<sub>C</sub> ?  ✅
+
+<b>Combine:</b>
+x<sub>B</sub> = f<sub>A</sub>(2) + f<sub>B</sub>(2) + f<sub>C</sub>(2)</div>
+          <ul class="var-list">
+            <li class="secret"><span class="tag priv">secret</span> x<sub>B</sub> — final key share</li>
+          </ul>
+        </div>
+        <div class="party carol">
+          <div class="party-name">Carol verifies &amp; combines</div>
+          <div class="math" style="font-size:0.75rem"><b>Verify:</b>
+f<sub>A</sub>(3)·G == C0<sub>A</sub> + 3·C1<sub>A</sub> ?  ✅
+f<sub>C</sub>(3)·G == C0<sub>C</sub> + 3·C1<sub>C</sub> ?  ✅
+
+<b>Combine:</b>
+x<sub>C</sub> = f<sub>A</sub>(3) + f<sub>B</sub>(3) + f<sub>C</sub>(3)</div>
+          <ul class="var-list">
+            <li class="secret"><span class="tag priv">secret</span> x<sub>C</sub> — final key share</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="flow"><span class="arrow">⬇</span> everyone computes the same public key <span class="arrow">⬇</span></div>
+
+      <div class="public-board">
+        <div class="public-board-title">🔐 Group Public Key</div>
+        <div class="math">PK = C0<sub>A</sub> + C0<sub>B</sub> + C0<sub>C</sub> = (a0<sub>A</sub> + a0<sub>B</sub> + a0<sub>C</sub>) · G = x · G
+
+Ethereum address = last 20 bytes of keccak256(PK)
+
+<b style="color:#ef4444">The full private key x = a0<sub>A</sub> + a0<sub>B</sub> + a0<sub>C</sub>  ← NOBODY computes this!</b></div>
+        <ul class="file-list">
+          <li><span class="fname">group_key.json</span> — {public_key, ethereum_address} <span class="tag pub">public</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="explanation"><b>Feldman verification:</b> share·G should equal C0 + index·C1. This catches cheaters without revealing the secret polynomial. If anyone lies about their shares, the check fails and we abort.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<div class="phase-divider">Phase 2: Threshold Signing (2-of-3)</div>
+<!-- ============================================================ -->
+
+<!-- STEP 5 -->
+<div class="step">
+  <div class="step-header" style="background:rgba(245,158,11,0.1)">
+    <div class="step-num" style="background:var(--bob);color:white">5</div>
+    <div class="step-title">Alice &amp; Bob Pick Signing Nonces</div>
+  </div>
+  <div class="step-body">
+    <p class="explanation">Only 2-of-3 needed! Alice and Bob cooperate while Carol is offline. Each picks a random <b>nonce</b> (one-time secret) and publishes the corresponding curve point.</p>
+
+    <div class="diagram">
+      <div class="parties">
+        <div class="party alice">
+          <div class="party-name">Alice (signing)</div>
+          <ul class="var-list">
+            <li class="secret"><span class="tag priv">secret</span> k<sub>A</sub> — random nonce</li>
+            <li class="public-var"><span class="tag pub">public</span> R<sub>A</sub> = k<sub>A</sub>·G</li>
+          </ul>
+        </div>
+        <div class="party bob">
+          <div class="party-name">Bob (signing)</div>
+          <ul class="var-list">
+            <li class="secret"><span class="tag priv">secret</span> k<sub>B</sub> — random nonce</li>
+            <li class="public-var"><span class="tag pub">public</span> R<sub>B</sub> = k<sub>B</sub>·G</li>
+          </ul>
+        </div>
+        <div class="party carol inactive">
+          <div class="party-name">Carol (offline)</div>
+          <p style="font-size:0.8rem;color:var(--muted)">Not needed for 2-of-3</p>
+        </div>
+      </div>
+
+      <div class="flow"><span class="arrow">⬇</span></div>
+
+      <div class="public-board">
+        <div class="public-board-title">📢 Public Board</div>
+        <ul class="file-list">
+          <li><span class="fname">signing_message.json</span> — "Send 1 ETH to 0xd00d" + hash</li>
+          <li><span class="fname">step5_alice_nonce.json</span> — R<sub>A</sub> point (x, y)</li>
+          <li><span class="fname">step5_bob_nonce.json</span> — R<sub>B</sub> point (x, y)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 6 -->
+<div class="step">
+  <div class="step-header" style="background:rgba(239,68,68,0.1)">
+    <div class="step-num" style="background:var(--private);color:white">6</div>
+    <div class="step-title">Compute Partial Signatures</div>
+  </div>
+  <div class="step-body">
+    <p class="explanation">Each signer uses their private nonce, private key share, and the public challenge to compute a partial signature. The math is Schnorr-style.</p>
+
+    <div class="diagram">
+      <!-- Shared computation -->
+      <div style="text-align:center;margin-bottom:1rem">
+        <div class="math" style="display:inline-block;text-align:left">
+<b>Both signers compute (from public data):</b>
+R = R<sub>A</sub> + R<sub>B</sub>                    (combined nonce point)
+e = keccak256(R || message)     (challenge hash)</div>
+      </div>
+
+      <div class="parties" style="margin-bottom:0">
+        <div class="party alice">
+          <div class="party-name">Alice's partial sig</div>
+          <div class="math" style="font-size:0.78rem">λ<sub>A</sub> = Lagrange({1,2}, i=1) = <b>2</b>
+
+s<sub>A</sub> = k<sub>A</sub> - e · λ<sub>A</sub> · x<sub>A</sub>  mod N
+     <span style="color:var(--private)">↑secret ↑secret</span></div>
+          <ul class="var-list">
+            <li class="public-var"><span class="tag pub">public</span> s<sub>A</sub> (partial signature)</li>
+          </ul>
+        </div>
+        <div class="party bob">
+          <div class="party-name">Bob's partial sig</div>
+          <div class="math" style="font-size:0.78rem">λ<sub>B</sub> = Lagrange({1,2}, i=2) = <b>-1</b>
+
+s<sub>B</sub> = k<sub>B</sub> - e · λ<sub>B</sub> · x<sub>B</sub>  mod N
+     <span style="color:var(--private)">↑secret ↑secret</span></div>
+          <ul class="var-list">
+            <li class="public-var"><span class="tag pub">public</span> s<sub>B</sub> (partial signature)</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="flow"><span class="arrow">⬇</span></div>
+
+      <div class="public-board">
+        <div class="public-board-title">📢 Public Board</div>
+        <ul class="file-list">
+          <li><span class="fname">step6_alice_partial.json</span> — s<sub>A</sub> value</li>
+          <li><span class="fname">step6_bob_partial.json</span> — s<sub>B</sub> value</li>
+          <li><span class="fname">step6_challenge.json</span> — R point + e value</li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="explanation"><b>Lagrange coefficients</b> adjust each party's key share for the specific subset signing. For parties {1,2}: λ<sub>1</sub> = 2/(2-1) = 2 and λ<sub>2</sub> = 1/(1-2) = -1. These ensure λ<sub>A</sub>·x<sub>A</sub> + λ<sub>B</sub>·x<sub>B</sub> = x (the full private key), even though nobody computes x directly.</p>
+  </div>
+</div>
+
+<!-- STEP 7 -->
+<div class="step">
+  <div class="step-header" style="background:rgba(59,130,246,0.1)">
+    <div class="step-num" style="background:var(--public);color:white">7</div>
+    <div class="step-title">Combine Partial Signatures</div>
+  </div>
+  <div class="step-body">
+    <p class="explanation">Anyone (even Carol, even a stranger!) can combine the partial signatures. No secrets needed — just addition on the public board.</p>
+
+    <div class="diagram">
+      <div class="math" style="text-align:center;font-size:0.9rem">
+s = s<sub>A</sub> + s<sub>B</sub>  mod N
+
+<span style="color:var(--muted)">Expanding:</span>
+s = (k<sub>A</sub> - e·λ<sub>A</sub>·x<sub>A</sub>) + (k<sub>B</sub> - e·λ<sub>B</sub>·x<sub>B</sub>)
+  = (k<sub>A</sub> + k<sub>B</sub>) - e·(λ<sub>A</sub>·x<sub>A</sub> + λ<sub>B</sub>·x<sub>B</sub>)
+  = <b style="color:var(--alice)">k</b> - e·<b style="color:var(--private)">x</b>
+
+<span style="color:var(--muted)">That's a standard Schnorr signature! 🎉</span>
+<span style="color:var(--muted)">k = combined nonce, x = full private key</span></div>
+
+      <div class="flow"><span class="arrow">⬇</span></div>
+
+      <div class="public-board">
+        <div class="public-board-title">✨ Final Signature</div>
+        <div class="math">signature = (R, s)
+
+R = (x-coord, y-coord)  ← combined nonce point
+s = scalar value         ← combined partial sigs</div>
+        <ul class="file-list">
+          <li><span class="fname">final_signature.json</span></li>
+          <li><span class="fname">signature_details.json</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="explanation">The combined signature is <b>indistinguishable</b> from a single-signer Schnorr signature. The MPC protocol is completely invisible in the output.</p>
+  </div>
+</div>
+
+<!-- STEP 8 -->
+<div class="step">
+  <div class="step-header" style="background:rgba(34,197,94,0.1)">
+    <div class="step-num" style="background:#22c55e;color:white">8</div>
+    <div class="step-title">Anyone Can Verify</div>
+  </div>
+  <div class="step-body">
+    <p class="explanation">Standard Schnorr verification. No MPC knowledge required. The verifier just checks one equation.</p>
+
+    <div class="diagram">
+      <div class="math" style="text-align:center;font-size:0.95rem">
+<b>Schnorr verification equation:</b>
+
+s·G + e·PK  =?  R
+
+<span style="color:var(--muted)">Proof that this works:</span>
+<span style="color:var(--muted)">s·G = (k - e·x)·G = k·G - e·x·G = R - e·PK</span>
+<span style="color:var(--muted)">Therefore: s·G + e·PK = R  ✅</span></div>
+
+      <div class="verify-box pass">
+        <div class="result">✅ SIGNATURE VALID</div>
+        <p style="margin-top:0.5rem;font-size:0.85rem;color:var(--muted)">
+          The blockchain sees a normal signature from one Ethereum address.<br>
+          No idea that 2 people made it together, or that a 3rd person exists.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<div class="phase-divider">Complete Variable Reference</div>
+<!-- ============================================================ -->
+
+<div class="step">
+  <div class="step-header">
+    <div class="step-title">All Variables by Visibility</div>
+  </div>
+  <div class="step-body">
+    <div class="summary-grid">
+      <div class="summary-col pub-col">
+        <h3>📢 PUBLIC (anyone can see)</h3>
+        <table class="overview-table">
+          <tbody><tr><th>Variable</th><th>What it is</th><th>Step</th></tr>
+          <tr><td>C0<sub>i</sub>, C1<sub>i</sub></td><td>Commitment points (a0·G, a1·G)</td><td>2</td></tr>
+          <tr><td>PK</td><td>Group public key = ∑C0<sub>i</sub></td><td>4</td></tr>
+          <tr><td>ETH addr</td><td>keccak256(PK)[12:]</td><td>4</td></tr>
+          <tr><td>R<sub>A</sub>, R<sub>B</sub></td><td>Nonce points (k<sub>i</sub>·G)</td><td>5</td></tr>
+          <tr><td>R</td><td>Combined nonce R<sub>A</sub>+R<sub>B</sub></td><td>6</td></tr>
+          <tr><td>e</td><td>Challenge hash(R || msg)</td><td>6</td></tr>
+          <tr><td>λ<sub>A</sub>, λ<sub>B</sub></td><td>Lagrange coefficients</td><td>6</td></tr>
+          <tr><td>s<sub>A</sub>, s<sub>B</sub></td><td>Partial signatures</td><td>6</td></tr>
+          <tr><td>s</td><td>Combined signature</td><td>7</td></tr>
+        </tbody></table>
+      </div>
+      <div class="summary-col priv-col">
+        <h3>🔒 PRIVATE (only owner knows)</h3>
+        <table class="overview-table">
+          <tbody><tr><th>Variable</th><th>Who</th><th>What it is</th></tr>
+          <tr><td>a0<sub>A</sub>, a1<sub>A</sub></td><td>Alice</td><td>Polynomial coefficients</td></tr>
+          <tr><td>a0<sub>B</sub>, a1<sub>B</sub></td><td>Bob</td><td>Polynomial coefficients</td></tr>
+          <tr><td>a0<sub>C</sub>, a1<sub>C</sub></td><td>Carol</td><td>Polynomial coefficients</td></tr>
+          <tr><td>f<sub>i</sub>(j)</td><td>Receiver j</td><td>Share from party i</td></tr>
+          <tr><td>x<sub>A</sub></td><td>Alice</td><td>Final key share</td></tr>
+          <tr><td>x<sub>B</sub></td><td>Bob</td><td>Final key share</td></tr>
+          <tr><td>x<sub>C</sub></td><td>Carol</td><td>Final key share</td></tr>
+          <tr><td>k<sub>A</sub></td><td>Alice</td><td>Signing nonce</td></tr>
+          <tr><td>k<sub>B</sub></td><td>Bob</td><td>Signing nonce</td></tr>
+          <tr><td style="color:var(--private);font-weight:bold">x</td><td style="color:var(--private);font-weight:bold">NOBODY</td><td style="color:var(--private)">Full private key</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- File system overview -->
+<div class="step">
+  <div class="step-header">
+    <div class="step-title">File System Layout</div>
+  </div>
+  <div class="step-body">
+    <div class="math" style="font-size:0.82rem">playground/
+├── <b style="color:var(--alice)">alice/</b>
+│   └── secrets.json          <span class="tag priv">private</span>  a0, a1, key_share, nonce
+├── <b style="color:var(--bob)">bob/</b>
+│   └── secrets.json          <span class="tag priv">private</span>  a0, a1, key_share, nonce
+├── <b style="color:var(--carol)">carol/</b>
+│   └── secrets.json          <span class="tag priv">private</span>  a0, a1, key_share
+├── <b style="color:var(--public)">public_board/</b>
+│   ├── step2_*_commit.json   <span class="tag pub">public</span>   commitment points
+│   ├── group_key.json        <span class="tag pub">public</span>   group pubkey + ETH address
+│   ├── signing_message.json  <span class="tag pub">public</span>   message + hash
+│   ├── step5_*_nonce.json    <span class="tag pub">public</span>   nonce points
+│   ├── step6_*_partial.json  <span class="tag pub">public</span>   partial signatures
+│   ├── step6_challenge.json  <span class="tag pub">public</span>   R point + challenge e
+│   └── final_signature.json  <span class="tag pub">public</span>   combined (R, s)
+└── <b style="color:var(--mail)">private_mail/</b>
+    ├── alice_to_bob.json     <span class="tag mail">secret</span>  f_A(2) — only Bob reads
+    ├── alice_to_carol.json   <span class="tag mail">secret</span>  f_A(3) — only Carol reads
+    ├── bob_to_alice.json     <span class="tag mail">secret</span>  f_B(1) — only Alice reads
+    ├── bob_to_carol.json     <span class="tag mail">secret</span>  f_B(3) — only Carol reads
+    ├── carol_to_alice.json   <span class="tag mail">secret</span>  f_C(1) — only Alice reads
+    └── carol_to_bob.json     <span class="tag mail">secret</span>  f_C(2) — only Bob reads</div>
+  </div>
+</div>
+
+<!-- Big picture -->
+<div class="step">
+  <div class="step-header">
+    <div class="step-title">The Big Picture</div>
+  </div>
+  <div class="step-body">
+    <div class="diagram">
+      <svg width="100%" viewBox="0 0 900 520" style="max-width:900px;display:block;margin:0 auto">
+        <!-- Background phases -->
+        <rect x="10" y="10" width="430" height="500" rx="16" fill="rgba(99,102,241,0.06)" stroke="var(--alice)" stroke-width="1" stroke-dasharray="4"></rect>
+        <text x="225" y="40" fill="var(--alice)" font-size="14" font-weight="bold" text-anchor="middle">KEY GENERATION</text>
+
+        <rect x="460" y="10" width="430" height="500" rx="16" fill="rgba(245,158,11,0.06)" stroke="var(--bob)" stroke-width="1" stroke-dasharray="4"></rect>
+        <text x="675" y="40" fill="var(--bob)" font-size="14" font-weight="bold" text-anchor="middle">SIGNING (2-of-3)</text>
+
+        <!-- Step boxes - Key Gen -->
+        <rect x="40" y="60" width="170" height="60" rx="8" fill="var(--card)" stroke="var(--alice)" stroke-width="2"></rect>
+        <text x="125" y="85" fill="var(--text)" font-size="12" font-weight="bold" text-anchor="middle">Step 1</text>
+        <text x="125" y="105" fill="var(--muted)" font-size="10" text-anchor="middle">Pick secret polynomials</text>
+
+        <rect x="240" y="60" width="170" height="60" rx="8" fill="var(--card)" stroke="var(--public)" stroke-width="2"></rect>
+        <text x="325" y="85" fill="var(--text)" font-size="12" font-weight="bold" text-anchor="middle">Step 2</text>
+        <text x="325" y="105" fill="var(--muted)" font-size="10" text-anchor="middle">Post commitments</text>
+
+        <!-- Arrow 1->2 -->
+        <line x1="210" y1="90" x2="238" y2="90" stroke="var(--muted)" stroke-width="2" marker-end="url(#arrowhead)"></line>
+
+        <rect x="40" y="150" width="170" height="60" rx="8" fill="var(--card)" stroke="var(--mail)" stroke-width="2"></rect>
+        <text x="125" y="175" fill="var(--text)" font-size="12" font-weight="bold" text-anchor="middle">Step 3</text>
+        <text x="125" y="195" fill="var(--muted)" font-size="10" text-anchor="middle">Whisper shares</text>
+
+        <!-- Arrow 2->3 -->
+        <path d="M325,120 L325,135 L125,135 L125,148" fill="none" stroke="var(--muted)" stroke-width="2" marker-end="url(#arrowhead)"></path>
+
+        <rect x="140" y="240" width="200" height="70" rx="8" fill="var(--card)" stroke="var(--carol)" stroke-width="2"></rect>
+        <text x="240" y="265" fill="var(--text)" font-size="12" font-weight="bold" text-anchor="middle">Step 4</text>
+        <text x="240" y="283" fill="var(--muted)" font-size="10" text-anchor="middle">Verify + combine</text>
+        <text x="240" y="298" fill="var(--muted)" font-size="9" text-anchor="middle">→ group key + key shares</text>
+
+        <!-- Arrow 3->4 -->
+        <line x1="125" y1="210" x2="125" y2="225" stroke="var(--muted)" stroke-width="2"></line>
+        <line x1="125" y1="225" x2="180" y2="238" stroke="var(--muted)" stroke-width="2" marker-end="url(#arrowhead)"></line>
+
+        <!-- Step boxes - Signing -->
+        <rect x="490" y="60" width="170" height="60" rx="8" fill="var(--card)" stroke="var(--bob)" stroke-width="2"></rect>
+        <text x="575" y="85" fill="var(--text)" font-size="12" font-weight="bold" text-anchor="middle">Step 5</text>
+        <text x="575" y="105" fill="var(--muted)" font-size="10" text-anchor="middle">Pick nonces</text>
+
+        <rect x="690" y="60" width="170" height="60" rx="8" fill="var(--card)" stroke="var(--private)" stroke-width="2"></rect>
+        <text x="775" y="85" fill="var(--text)" font-size="12" font-weight="bold" text-anchor="middle">Step 6</text>
+        <text x="775" y="105" fill="var(--muted)" font-size="10" text-anchor="middle">Partial signatures</text>
+
+        <!-- Arrow 5->6 -->
+        <line x1="660" y1="90" x2="688" y2="90" stroke="var(--muted)" stroke-width="2" marker-end="url(#arrowhead)"></line>
+
+        <rect x="590" y="150" width="170" height="60" rx="8" fill="var(--card)" stroke="var(--public)" stroke-width="2"></rect>
+        <text x="675" y="175" fill="var(--text)" font-size="12" font-weight="bold" text-anchor="middle">Step 7</text>
+        <text x="675" y="195" fill="var(--muted)" font-size="10" text-anchor="middle">Combine s = s_A + s_B</text>
+
+        <!-- Arrow 6->7 -->
+        <path d="M775,120 L775,135 L675,135 L675,148" fill="none" stroke="var(--muted)" stroke-width="2" marker-end="url(#arrowhead)"></path>
+
+        <rect x="540" y="240" width="270" height="70" rx="8" fill="rgba(34,197,94,0.15)" stroke="#22c55e" stroke-width="2"></rect>
+        <text x="675" y="265" fill="#22c55e" font-size="12" font-weight="bold" text-anchor="middle">Step 8: Verify</text>
+        <text x="675" y="283" fill="var(--muted)" font-size="10" text-anchor="middle">s·G + e·PK = R ?</text>
+        <text x="675" y="298" fill="#22c55e" font-size="10" text-anchor="middle">✅ Valid signature!</text>
+
+        <!-- Arrow 7->8 -->
+        <line x1="675" y1="210" x2="675" y2="238" stroke="var(--muted)" stroke-width="2" marker-end="url(#arrowhead)"></line>
+
+        <!-- Connection 4->5 -->
+        <path d="M340,275 L440,275 L440,90 L488,90" fill="none" stroke="var(--muted)" stroke-width="2" stroke-dasharray="6,3" marker-end="url(#arrowhead)"></path>
+        <text x="440" y="185" fill="var(--muted)" font-size="9" text-anchor="middle" transform="rotate(-90,440,185)">key shares ready</text>
+
+        <!-- Party indicators at bottom -->
+        <rect x="50" y="360" width="340" height="130" rx="12" fill="rgba(99,102,241,0.08)"></rect>
+        <text x="70" y="385" fill="var(--text)" font-size="11" font-weight="bold">Participants:</text>
+        <circle cx="80" cy="405" r="8" fill="var(--alice)"></circle>
+        <text x="95" y="410" fill="var(--alice)" font-size="11">Alice (#1)</text>
+        <circle cx="80" cy="430" r="8" fill="var(--bob)"></circle>
+        <text x="95" y="435" fill="var(--bob)" font-size="11">Bob (#2)</text>
+        <circle cx="80" cy="455" r="8" fill="var(--carol)"></circle>
+        <text x="95" y="460" fill="var(--carol)" font-size="11">Carol (#3)</text>
+
+        <text x="220" y="400" fill="var(--muted)" font-size="10">All 3 participate</text>
+        <text x="220" y="415" fill="var(--muted)" font-size="10">in key generation</text>
+        <text x="220" y="440" fill="var(--muted)" font-size="10">Result: each gets a</text>
+        <text x="220" y="455" fill="var(--muted)" font-size="10">key share x_i and everyone</text>
+        <text x="220" y="470" fill="var(--muted)" font-size="10">knows the group public key</text>
+
+        <rect x="500" y="360" width="340" height="130" rx="12" fill="rgba(245,158,11,0.08)"></rect>
+        <text x="520" y="385" fill="var(--text)" font-size="11" font-weight="bold">Participants:</text>
+        <circle cx="530" cy="405" r="8" fill="var(--alice)"></circle>
+        <text x="545" y="410" fill="var(--alice)" font-size="11">Alice (#1)</text>
+        <circle cx="530" cy="430" r="8" fill="var(--bob)"></circle>
+        <text x="545" y="435" fill="var(--bob)" font-size="11">Bob (#2)</text>
+        <circle cx="530" cy="455" r="8" fill="var(--border)" stroke="var(--border)"></circle>
+        <text x="545" y="460" fill="var(--border)" font-size="11">Carol (offline)</text>
+
+        <text x="670" y="400" fill="var(--muted)" font-size="10">Only 2-of-3 needed!</text>
+        <text x="670" y="420" fill="var(--muted)" font-size="10">Any 2 can sign.</text>
+        <text x="670" y="445" fill="var(--muted)" font-size="10">Result: one signature</text>
+        <text x="670" y="460" fill="var(--muted)" font-size="10">that looks like it came</text>
+        <text x="670" y="475" fill="var(--muted)" font-size="10">from a single person</text>
+
+        <!-- Arrowhead marker -->
+        <defs>
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="var(--muted)"></polygon>
+          </marker>
+        </defs>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<p style="text-align:center;color:var(--muted);font-size:0.8rem;margin-top:2rem;padding-bottom:2rem">
+  MPC Playground Visual Guide — Open in browser or print to PDF (Cmd+P / Ctrl+P)
+</p>
+
+
+
+<script>
+function toggleTheme() {
+  const body = document.body;
+  const btn = document.getElementById('themeBtn');
+  const newTheme = body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  body.setAttribute('data-theme', newTheme);
+  btn.textContent = newTheme === 'dark' ? '[ LIGHT ]' : '[ DARK ]';
+  localStorage.setItem('cbmpc-theme', newTheme);
+}
+(function() {
+  var saved = localStorage.getItem('cbmpc-theme');
+  if (saved) {
+    document.body.setAttribute('data-theme', saved);
+  } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    document.body.setAttribute('data-theme', 'dark');
+  } else {
+    document.body.setAttribute('data-theme', 'light');
+  }
+  var theme = document.body.getAttribute('data-theme');
+  document.getElementById('themeBtn').textContent = theme === 'dark' ? '[ LIGHT ]' : '[ DARK ]';
+})();
+</script>
+
+</body>
+</html>

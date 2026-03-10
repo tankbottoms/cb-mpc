@@ -1,0 +1,1314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Device-to-Device MPC — Visual Guide</title>
+<style>
+  :root {
+    --font-mono: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    --border-w: 3px;
+    --shadow-offset: 5px;
+    --radius: 0;
+    --device-a: #6366f1;
+    --device-b: #f59e0b;
+    --device-c: #10b981;
+    --public: #3b82f6;
+    --private: #ef4444;
+    --mail: #8b5cf6;
+    --ok: #22c55e;
+    --warn: #f97316;
+    --bt: #f59e0b;
+    --wifi: #10b981;
+  }
+
+  [data-theme="light"] {
+    --bg: #f5f0e8;
+    --card: #ffffff;
+    --card2: #f0ebe3;
+    --text: #1a1a1a;
+    --muted: #6b7280;
+    --border: #1a1a1a;
+    --shadow-color: #1a1a1a;
+  }
+
+  [data-theme="dark"] {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --card2: #334155;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --border: #475569;
+    --shadow-color: #000000;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font-mono);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, var(--device-a), var(--device-b), var(--device-c));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .subtitle {
+    text-align: center;
+    color: var(--muted);
+    margin-bottom: 0;
+    font-size: 0.9rem;
+  }
+
+  /* Legend */
+  .legend {
+    display: flex;
+    gap: 1.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 3rem;
+    padding: 1rem;
+    background: var(--card);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+  }
+  .legend-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* Step container */
+  .step {
+    margin-bottom: 3rem;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    background: var(--card);
+  }
+
+  .step-header {
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .step-num {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+  }
+
+  .step-title { font-size: 1.1rem; font-weight: 600; }
+  .step-body { padding: 1.5rem; }
+
+  /* Diagram area */
+  .diagram {
+    background: var(--bg);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin: 1rem 0;
+    position: relative;
+    overflow-x: auto;
+  }
+
+  /* Party boxes */
+  .parties {
+    display: flex;
+    justify-content: space-around;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .party {
+    border: 2px solid;
+    border-radius: 12px;
+    padding: 1rem;
+    min-width: 200px;
+    flex: 1;
+    max-width: 280px;
+  }
+
+  .party.device-a { border-color: var(--device-a); }
+  .party.device-b { border-color: var(--device-b); }
+  .party.device-c { border-color: var(--device-c); }
+  .party.inactive { opacity: 0.35; border-style: dashed; }
+
+  .party-name {
+    font-weight: bold;
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .party.device-a .party-name { color: var(--device-a); }
+  .party.device-b .party-name { color: var(--device-b); }
+  .party.device-c .party-name { color: var(--device-c); }
+
+  .var-list { list-style: none; font-size: 0.8rem; }
+  .var-list li {
+    padding: 0.25rem 0.4rem;
+    margin: 0.2rem 0;
+    border-radius: 6px;
+  }
+  .var-list .secret {
+    background: rgba(239, 68, 68, 0.15);
+    border-left: 3px solid var(--private);
+  }
+  .var-list .public-var {
+    background: rgba(59, 130, 246, 0.15);
+    border-left: 3px solid var(--public);
+  }
+  .var-list .channel {
+    background: rgba(139, 92, 246, 0.15);
+    border-left: 3px solid var(--mail);
+  }
+  .var-list .bt-var {
+    background: rgba(245, 158, 11, 0.15);
+    border-left: 3px solid var(--bt);
+  }
+
+  .tag {
+    display: inline-block;
+    font-size: 0.65rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+    vertical-align: middle;
+  }
+  .tag.priv { background: var(--private); color: white; }
+  .tag.pub { background: var(--public); color: white; }
+  .tag.mail { background: var(--mail); color: white; }
+  .tag.bt { background: var(--bt); color: white; }
+  .tag.wifi { background: var(--wifi); color: white; }
+
+  /* Public board */
+  .public-board {
+    border: 2px solid var(--public);
+    border-radius: 12px;
+    padding: 1rem;
+    margin: 1rem 0;
+    background: rgba(59, 130, 246, 0.05);
+  }
+  .public-board-title {
+    color: var(--public);
+    font-weight: bold;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Private channel */
+  .private-mail {
+    border: 2px dashed var(--mail);
+    border-radius: 12px;
+    padding: 1rem;
+    margin: 1rem 0;
+    background: rgba(139, 92, 246, 0.05);
+  }
+  .private-mail-title {
+    color: var(--mail);
+    font-weight: bold;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+  }
+
+  /* Arrows / flow */
+  .flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 0;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+  .flow .arrow {
+    font-size: 1.5rem;
+    margin: 0 0.5rem;
+  }
+
+  /* Math block */
+  .math {
+    background: var(--card2);
+    border-radius: 8px;
+    padding: 0.8rem 1rem;
+    margin: 0.5rem 0;
+    font-size: 0.85rem;
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  /* Code block */
+  .code-block {
+    background: var(--card2);
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 0.5rem 0;
+    font-size: 0.8rem;
+    overflow-x: auto;
+    white-space: pre;
+    border-left: 3px solid var(--mail);
+  }
+
+  .explanation {
+    color: var(--muted);
+    font-size: 0.82rem;
+    margin: 0.5rem 0;
+    padding: 0.5rem 0.8rem;
+    border-left: 3px solid var(--border);
+  }
+
+  /* Section divider */
+  .phase-divider {
+    text-align: center;
+    padding: 2rem 0;
+    color: var(--muted);
+    font-size: 1.2rem;
+    font-weight: 600;
+    position: relative;
+  }
+  .phase-divider::before,
+  .phase-divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 30%;
+    height: 1px;
+    background: var(--border);
+  }
+  .phase-divider::before { left: 0; }
+  .phase-divider::after { right: 0; }
+
+  /* Overview table */
+  .overview-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    margin: 1rem 0;
+  }
+  .overview-table th {
+    text-align: left;
+    padding: 0.6rem 0.8rem;
+    border-bottom: 2px solid var(--border);
+    color: var(--muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .overview-table td {
+    padding: 0.5rem 0.8rem;
+    border-bottom: 1px solid rgba(71, 85, 105, 0.4);
+    vertical-align: top;
+  }
+
+  /* ---- THEME TOGGLE ---- */
+  .theme-toggle {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 100;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    padding: 0.4rem 0.8rem;
+    background: var(--card);
+    color: var(--text);
+    border: var(--border-w) solid var(--border);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .theme-toggle:hover {
+    background: var(--card2);
+  }
+
+  /* ---- DOC NAV ---- */
+  .doc-nav {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0;
+    border-bottom: var(--border-w) solid var(--border);
+    margin-bottom: 0;
+  }
+  .nav-link {
+    display: inline-block;
+    color: var(--muted);
+    text-decoration: none;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border: var(--border-w) solid transparent;
+    border-bottom: none;
+    margin-bottom: calc(-1 * var(--border-w));
+    transition: color 0.15s, background 0.15s;
+    white-space: nowrap;
+  }
+  .nav-link:hover {
+    color: var(--text);
+    background: var(--card2);
+  }
+  .nav-link.active {
+    color: var(--text);
+    font-weight: bold;
+    background: var(--bg);
+    border-color: var(--border);
+    border-bottom-color: var(--bg);
+  }
+  .page-title {
+    text-align: center;
+    padding: 2rem 1rem 1rem;
+    margin-bottom: 2rem;
+    border: var(--border-w) solid var(--border);
+    border-top: none;
+    background: var(--bg);
+  }
+
+  /* Sequence diagram */
+  .seq-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.3rem 0;
+    font-size: 0.8rem;
+  }
+  .seq-label {
+    min-width: 100px;
+    text-align: right;
+    font-weight: 600;
+    font-size: 0.75rem;
+  }
+  .seq-arrow {
+    flex: 1;
+    height: 2px;
+    position: relative;
+    margin: 0 0.5rem;
+  }
+  .seq-arrow::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: -4px;
+    border: 5px solid transparent;
+    border-left-color: var(--muted);
+  }
+  .seq-arrow.left::after {
+    right: auto;
+    left: 0;
+    border-left-color: transparent;
+    border-right-color: var(--muted);
+  }
+  .seq-msg {
+    font-size: 0.72rem;
+    color: var(--muted);
+    min-width: 100px;
+  }
+
+  /* Terminal progress */
+  .terminal {
+    background: #0d1117;
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 0.5rem 0;
+    font-size: 0.8rem;
+    color: #c9d1d9;
+    font-family: var(--font-mono);
+    overflow-x: auto;
+  }
+  .terminal .done { color: var(--ok); }
+  .terminal .progress { color: var(--bt); }
+  .terminal .pending { color: var(--muted); }
+
+  /* Phone mockups */
+  .phone-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin: 1rem 0;
+  }
+  @media (max-width: 700px) {
+    .phone-grid { grid-template-columns: 1fr; }
+    .parties { flex-direction: column; align-items: center; }
+  }
+
+  .phone {
+    border: 3px solid var(--border);
+    border-radius: 24px;
+    overflow: hidden;
+    background: var(--card);
+    position: relative;
+  }
+  .phone-notch {
+    width: 120px;
+    height: 24px;
+    background: var(--border);
+    border-radius: 0 0 16px 16px;
+    margin: 0 auto;
+  }
+  .phone-screen {
+    padding: 1rem;
+    min-height: 220px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .phone-title {
+    font-weight: 700;
+    font-size: 0.9rem;
+    text-align: center;
+  }
+  .phone-content {
+    font-size: 0.75rem;
+    color: var(--muted);
+    text-align: center;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+  .phone-btn {
+    display: inline-block;
+    padding: 0.4rem 1.2rem;
+    border: 2px solid var(--device-a);
+    border-radius: 8px;
+    color: var(--device-a);
+    font-weight: 700;
+    font-size: 0.8rem;
+    background: transparent;
+  }
+  .phone-home {
+    width: 40px;
+    height: 5px;
+    background: var(--border);
+    border-radius: 3px;
+    margin: 0.5rem auto 0.8rem;
+  }
+
+  /* Radar pulse animation */
+  .radar-container {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    margin: 0 auto;
+  }
+  .radar-dot {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 12px;
+    height: 12px;
+    background: var(--device-a);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+  }
+  .radar-ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    border: 2px solid var(--device-a);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    animation: radar-pulse 2s ease-out infinite;
+  }
+  .radar-ring:nth-child(2) { animation-delay: 0.6s; }
+  .radar-ring:nth-child(3) { animation-delay: 1.2s; }
+
+  @keyframes radar-pulse {
+    0% {
+      width: 12px;
+      height: 12px;
+      opacity: 0.8;
+    }
+    100% {
+      width: 80px;
+      height: 80px;
+      opacity: 0;
+    }
+  }
+
+  /* Connection quality indicator */
+  .signal-bars {
+    display: inline-flex;
+    gap: 2px;
+    align-items: flex-end;
+    height: 16px;
+  }
+  .signal-bar {
+    width: 4px;
+    background: var(--ok);
+    border-radius: 1px;
+  }
+  .signal-bar:nth-child(1) { height: 4px; }
+  .signal-bar:nth-child(2) { height: 8px; }
+  .signal-bar:nth-child(3) { height: 12px; }
+  .signal-bar:nth-child(4) { height: 16px; }
+
+  /* Green checkmark */
+  .check-circle {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--ok);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin: 0 auto;
+  }
+
+  /* Party badge */
+  .party-badge {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: white;
+  }
+
+  .verify-box {
+    border: 2px solid var(--device-c);
+    border-radius: 12px;
+    padding: 1rem;
+    margin: 1rem 0;
+    text-align: center;
+  }
+  .verify-box.pass { border-color: var(--ok); background: rgba(34, 197, 94, 0.08); }
+  .verify-box.pass .result { color: var(--ok); font-size: 1.3rem; font-weight: bold; }
+
+  .cols-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  @media (max-width: 700px) {
+    .cols-2 { grid-template-columns: 1fr; }
+  }
+
+  .file-list {
+    list-style: none;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .file-list li {
+    padding: 0.2rem 0;
+    font-family: monospace;
+  }
+  .file-list .fname { color: var(--text); }
+
+  /* Print styles */
+  @media print {
+    body { background: white; color: #1e293b; padding: 1rem; }
+    .step { break-inside: avoid; border-color: #ccc; background: white; }
+    .diagram { background: #f8fafc; }
+    .party { background: white; }
+    h1 { -webkit-text-fill-color: #1e293b; background: none; }
+    .theme-toggle, .doc-nav { display: none; }
+    .radar-ring { animation: none; }
+  }
+</style>
+<script src="https://fathom.atsignhandle.xyz/api/tracker/c0903d922ecd08d8" defer></script>
+</head>
+<body data-theme="light">
+
+<button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">[ DARK ]</button>
+
+<nav class="doc-nav">
+  <a href="/index.html" class="nav-link">Demo Guide</a>
+  <a href="/threshold-signing.html" class="nav-link">Threshold Signing</a>
+  <a href="/dkg-ceremony.html" class="nav-link">DKG Ceremony</a>
+  <a href="/device-to-device.html" class="nav-link active">Device-to-Device</a>
+  <a href="/server-architecture.html" class="nav-link">Server Architecture</a>
+</nav>
+
+<div class="page-title">
+  <h1>Device-to-Device MPC</h1>
+  <p class="subtitle">MultipeerConnectivity + QR pairing for threshold operations without a server</p>
+</div>
+
+<!-- Legend -->
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:var(--device-a)"></div> Device A (indigo)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--device-b)"></div> Device B (amber)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--device-c)"></div> Device C (emerald)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#06b6d4"></div> Bluetooth / WiFi</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--mail)"></div> QR Relay</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--private)"></div> Secret</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--public)"></div> Public</div>
+</div>
+
+<!-- ============================================================ -->
+<div class="phase-divider">Discovery &amp; Connection</div>
+<!-- ============================================================ -->
+
+<!-- STEP 1 -->
+<div class="step">
+  <div class="step-header" style="background:rgba(99,102,241,0.1)">
+    <div class="step-num" style="background:var(--device-a);color:white">1</div>
+    <div class="step-title">Peer Discovery (MultipeerConnectivity)</div>
+  </div>
+  <div class="step-body">
+    <p class="explanation">Each device broadcasts its presence on the local network using Apple's MultipeerConnectivity framework with Bonjour service type <b>_cbmpc._tcp</b>. Bluetooth LE handles initial discovery; WiFi Direct takes over for high-bandwidth protocol messages.</p>
+
+    <div class="diagram">
+      <svg width="100%" viewBox="0 0 700 400" style="max-width:700px;display:block;margin:0 auto">
+        <defs>
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="var(--muted)"></polygon>
+          </marker>
+          <marker id="arrow-a" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="var(--device-a)"></polygon>
+          </marker>
+          <marker id="arrow-b" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="var(--device-b)"></polygon>
+          </marker>
+          <marker id="arrow-c" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="var(--device-c)"></polygon>
+          </marker>
+        </defs>
+
+        <!-- Device A (top) -->
+        <rect x="280" y="30" width="140" height="60" rx="12" fill="var(--card)" stroke="var(--device-a)" stroke-width="2"></rect>
+        <text x="350" y="55" fill="var(--device-a)" font-size="12" font-weight="bold" text-anchor="middle" font-family="var(--font-mono)">Device A</text>
+        <text x="350" y="75" fill="var(--muted)" font-size="9" text-anchor="middle" font-family="var(--font-mono)">iPhone 15 Pro</text>
+
+        <!-- Device B (bottom-left) -->
+        <rect x="80" y="260" width="140" height="60" rx="12" fill="var(--card)" stroke="var(--device-b)" stroke-width="2"></rect>
+        <text x="150" y="285" fill="var(--device-b)" font-size="12" font-weight="bold" text-anchor="middle" font-family="var(--font-mono)">Device B</text>
+        <text x="150" y="305" fill="var(--muted)" font-size="9" text-anchor="middle" font-family="var(--font-mono)">iPhone 14 Pro</text>
+
+        <!-- Device C (bottom-right) -->
+        <rect x="480" y="260" width="140" height="60" rx="12" fill="var(--card)" stroke="var(--device-c)" stroke-width="2"></rect>
+        <text x="550" y="285" fill="var(--device-c)" font-size="12" font-weight="bold" text-anchor="middle" font-family="var(--font-mono)">Device C</text>
+        <text x="550" y="305" fill="var(--muted)" font-size="9" text-anchor="middle" font-family="var(--font-mono)">iPad Air</text>
+
+        <!-- mDNS broadcast rings from each device -->
+        <circle cx="350" cy="60" r="30" fill="none" stroke="var(--device-a)" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"></circle>
+        <circle cx="350" cy="60" r="50" fill="none" stroke="var(--device-a)" stroke-width="1" stroke-dasharray="4,4" opacity="0.25"></circle>
+        <circle cx="150" cy="290" r="30" fill="none" stroke="var(--device-b)" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"></circle>
+        <circle cx="150" cy="290" r="50" fill="none" stroke="var(--device-b)" stroke-width="1" stroke-dasharray="4,4" opacity="0.25"></circle>
+        <circle cx="550" cy="290" r="30" fill="none" stroke="var(--device-c)" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"></circle>
+        <circle cx="550" cy="290" r="50" fill="none" stroke="var(--device-c)" stroke-width="1" stroke-dasharray="4,4" opacity="0.25"></circle>
+
+        <!-- Discovery lines (solid = discovered) -->
+        <line x1="315" y1="90" x2="185" y2="260" stroke="var(--muted)" stroke-width="2" marker-end="url(#arrowhead)"></line>
+        <line x1="385" y1="90" x2="515" y2="260" stroke="var(--muted)" stroke-width="2" marker-end="url(#arrowhead)"></line>
+        <line x1="220" y1="290" x2="480" y2="290" stroke="var(--muted)" stroke-width="2" marker-end="url(#arrowhead)"></line>
+
+        <!-- Labels on lines -->
+        <text x="225" y="165" fill="var(--muted)" font-size="9" text-anchor="middle" font-family="var(--font-mono)" transform="rotate(-40,225,165)">BLE discovery</text>
+        <text x="475" y="165" fill="var(--muted)" font-size="9" text-anchor="middle" font-family="var(--font-mono)" transform="rotate(40,475,165)">BLE discovery</text>
+        <text x="350" y="280" fill="var(--muted)" font-size="9" text-anchor="middle" font-family="var(--font-mono)">WiFi Direct</text>
+
+        <!-- Bonjour label -->
+        <rect x="250" y="155" width="200" height="30" rx="6" fill="var(--card2)" stroke="var(--border)" stroke-width="1"></rect>
+        <text x="350" y="175" fill="var(--text)" font-size="10" font-weight="bold" text-anchor="middle" font-family="var(--font-mono)">_cbmpc._tcp (Bonjour)</text>
+
+        <!-- Legend at bottom -->
+        <text x="350" y="365" fill="var(--muted)" font-size="10" text-anchor="middle" font-family="var(--font-mono)">Dashed rings = mDNS broadcast | Solid arrows = discovered peer</text>
+      </svg>
+    </div>
+
+    <p style="font-size:0.85rem;margin:0.5rem 0"><b>What's exchanged during discovery:</b></p>
+    <ul class="var-list">
+      <li class="public-var"><span class="tag pub">public</span> Device name (user-visible label)</li>
+      <li class="public-var"><span class="tag pub">public</span> Capabilities: curves supported (secp256k1, ed25519), max party count</li>
+      <li class="public-var"><span class="tag pub">public</span> Session nonce (random 32 bytes, prevents replay)</li>
+    </ul>
+
+    <p class="explanation">Apple's MultipeerConnectivity uses Bluetooth LE for initial discovery, then upgrades to WiFi Direct for high-bandwidth protocol messages. The framework handles NAT traversal, encryption of the transport layer, and reconnection automatically.</p>
+  </div>
+</div>
+
+<!-- STEP 2 -->
+<div class="step">
+  <div class="step-header" style="background:rgba(59,130,246,0.1)">
+    <div class="step-num" style="background:var(--public);color:white">2</div>
+    <div class="step-title">Mutual Authentication &amp; Role Assignment</div>
+  </div>
+  <div class="step-body">
+    <p class="explanation">Devices exchange ephemeral ECDH keys to establish an encrypted channel, then the user confirms pairing on each device. Party indices are assigned deterministically — no central coordinator required.</p>
+
+    <div class="diagram">
+      <svg width="100%" viewBox="0 0 700 320" style="max-width:700px;display:block;margin:0 auto">
+        <!-- Device A -->
+        <rect x="40" y="40" width="200" height="80" rx="12" fill="var(--card)" stroke="var(--device-a)" stroke-width="2"></rect>
+        <text x="140" y="70" fill="var(--device-a)" font-size="13" font-weight="bold" text-anchor="middle" font-family="var(--font-mono)">Device A</text>
+        <text x="140" y="90" fill="var(--muted)" font-size="9" text-anchor="middle" font-family="var(--font-mono)">PK_A = 02a1b2c3...</text>
+        <text x="140" y="105" fill="var(--ok)" font-size="9" text-anchor="middle" font-family="var(--font-mono)">role: Party 0</text>
+
+        <!-- Device B -->
+        <rect x="460" y="40" width="200" height="80" rx="12" fill="var(--card)" stroke="var(--device-b)" stroke-width="2"></rect>
+        <text x="560" y="70" fill="var(--device-b)" font-size="13" font-weight="bold" text-anchor="middle" font-family="var(--font-mono)">Device B</text>
+        <text x="560" y="90" fill="var(--muted)" font-size="9" text-anchor="middle" font-family="var(--font-mono)">PK_B = 03d4e5f6...</text>
+        <text x="560" y="105" fill="var(--ok)" font-size="9" text-anchor="middle" font-family="var(--font-mono)">role: Party 1</text>
+
+        <!-- Bidirectional arrows -->
+        <line x1="240" y1="65" x2="458" y2="65" stroke="var(--public)" stroke-width="2" marker-end="url(#arrowhead)"></line>
+        <line x1="458" y1="85" x2="240" y2="85" stroke="var(--public)" stroke-width="2" marker-end="url(#arrowhead)"></line>
+
+        <!-- Arrow labels -->
+        <text x="350" y="58" fill="var(--public)" font-size="9" text-anchor="middle" font-family="var(--font-mono)">ECDH ephemeral PK_A</text>
+        <text x="350" y="100" fill="var(--public)" font-size="9" text-anchor="middle" font-family="var(--font-mono)">ECDH ephemeral PK_B</text>
+
+        <!-- Shared secret -->
+        <rect x="250" y="140" width="200" height="35" rx="8" fill="rgba(34,197,94,0.1)" stroke="var(--ok)" stroke-width="1"></rect>
+        <text x="350" y="162" fill="var(--ok)" font-size="10" font-weight="bold" text-anchor="middle" font-family="var(--font-mono)">shared_secret = ECDH(A,B)</text>
+
+        <!-- User confirmation mockup -->
+        <rect x="150" y="200" width="400" height="90" rx="12" fill="var(--card2)" stroke="var(--border)" stroke-width="1"></rect>
+        <text x="350" y="225" fill="var(--text)" font-size="11" font-weight="bold" text-anchor="middle" font-family="var(--font-mono)">Pairing Request</text>
+        <text x="350" y="245" fill="var(--muted)" font-size="9" text-anchor="middle" font-family="var(--font-mono)">"iPhone 14 Pro" wants to connect for MPC</text>
+        <rect x="260" y="255" width="80" height="28" rx="6" fill="var(--ok)" stroke="none"></rect>
+        <text x="300" y="274" fill="white" font-size="10" font-weight="bold" text-anchor="middle" font-family="var(--font-mono)">ACCEPT</text>
+        <rect x="360" y="255" width="80" height="28" rx="6" fill="var(--private)" stroke="none"></rect>
+        <text x="400" y="274" fill="white" font-size="10" font-weight="bold" text-anchor="middle" font-family="var(--font-mono)">REJECT</text>
+      </svg>
+    </div>
+
+    <div class="math">Role assignment (deterministic, no coordinator):
+
+  sorted_keys = sort([PK_A, PK_B, ...])  // lexicographic
+  party_index[device] = sorted_keys.indexOf(device.PK)
+
+  Example: PK_A = 02a1... < PK_B = 03d4...
+    → Device A = Party 0
+    → Device B = Party 1</div>
+
+    <p class="explanation">No trusted third party needed. Roles are deterministic — the device with the "smaller" public key becomes Party 0. This eliminates race conditions and ensures all devices agree on the same assignment without coordination.</p>
+  </div>
+</div>
+
+<!-- STEP 3 -->
+<div class="step">
+  <div class="step-header" style="background:rgba(139,92,246,0.1)">
+    <div class="step-num" style="background:var(--mail);color:white">3</div>
+    <div class="step-title">QR Pairing Fallback</div>
+  </div>
+  <div class="step-body">
+    <p class="explanation">When devices are <b>not</b> on the same local network — different WiFi networks, cellular only, or Bluetooth out of range — QR code pairing provides a fallback path. Device A generates a QR code containing session metadata and its public key. Device B scans it and connects through a relay server.</p>
+
+    <div class="diagram">
+      <svg width="100%" viewBox="0 0 700 380" style="max-width:700px;display:block;margin:0 auto">
+        <!-- Device A (left) -->
+        <rect x="30" y="180" width="160" height="70" rx="12" fill="var(--card)" stroke="var(--device-a)" stroke-width="2"></rect>
+        <text x="110" y="210" fill="var(--device-a)" font-size="12" font-weight="bold" text-anchor="middle" font-family="var(--font-mono)">Device A</text>
+        <text x="110" y="230" fill="var(--muted)" font-size="9" text-anchor="middle" font-family="var(--font-mono)">generates QR</text>
+
+        <!-- QR Code (center) -->
+        <rect x="265" y="155" width="120" height="120" rx="8" fill="var(--card)" stroke="var(--mail)" stroke-width="2"></rect>
+        <!-- QR pattern -->
+        <rect x="280" y="170" width="20" height="20" fill="var(--text)"></rect>
+        <rect x="310" y="170" width="10" height="10" fill="var(--text)"></rect>
+        <rect x="330" y="170" width="10" height="10" fill="var(--text)"></rect>
+        <rect x="350" y="170" width="20" height="20" fill="var(--text)"></rect>
+        <rect x="280" y="200" width="10" height="10" fill="var(--text)"></rect>
+        <rect x="300" y="200" width="10" height="10" fill="var(--text)"></rect>
+        <rect x="320" y="195" width="15" height="15" fill="var(--text)"></rect>
+        <rect x="345" y="200" width="10" height="10" fill="var(--text)"></rect>
+        <rect x="280" y="220" width="10" height="10" fill="var(--text)"></rect>
+        <rect x="310" y="220" width="10" height="10" fill="var(--text)"></rect>
+        <rect x="340" y="220" width="10" height="10" fill="var(--text)"></rect>
+        <rect x="280" y="240" width="20" height="20" fill="var(--text)"></rect>
+        <rect x="320" y="245" width="10" height="10" fill="var(--text)"></rect>
+        <rect x="350" y="240" width="20" height="20" fill="var(--text)"></rect>
+        <text x="325" y="145" fill="var(--mail)" font-size="10" font-weight="bold" text-anchor="middle" font-family="var(--font-mono)">QR Code</text>
+
+        <!-- Device B (right) -->
+        <rect x="510" y="180" width="160" height="70" rx="12" fill="var(--card)" stroke="var(--device-b)" stroke-width="2"></rect>
+        <text x="590" y="210" fill="var(--device-b)" font-size="12" font-weight="bold" text-anchor="middle" font-family="var(--font-mono)">Device B</text>
+        <text x="590" y="230" fill="var(--muted)" font-size="9" text-anchor="middle" font-family="var(--font-mono)">scans QR</text>
+
+        <!-- Arrows from devices to QR -->
+        <line x1="190" y1="215" x2="263" y2="215" stroke="var(--device-a)" stroke-width="2" marker-end="url(#arrow-a)"></line>
+        <line x1="510" y1="215" x2="387" y2="215" stroke="var(--device-b)" stroke-width="2" marker-end="url(#arrow-b)"></line>
+
+        <!-- Relay server (top) -->
+        <rect x="260" y="20" width="180" height="55" rx="12" fill="var(--card)" stroke="var(--border)" stroke-width="2" stroke-dasharray="4"></rect>
+        <text x="350" y="43" fill="var(--muted)" font-size="11" font-weight="bold" text-anchor="middle" font-family="var(--font-mono)">Relay Server</text>
+        <text x="350" y="60" fill="var(--muted)" font-size="8" text-anchor="middle" font-family="var(--font-mono)">(dumb pipe — E2E encrypted)</text>
+
+        <!-- Dashed lines from relay to devices -->
+        <line x1="300" y1="75" x2="130" y2="178" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="6,4"></line>
+        <line x1="400" y1="75" x2="570" y2="178" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="6,4"></line>
+        <text x="195" y="120" fill="var(--muted)" font-size="8" text-anchor="middle" font-family="var(--font-mono)" transform="rotate(-35,195,120)">WebSocket</text>
+        <text x="505" y="120" fill="var(--muted)" font-size="8" text-anchor="middle" font-family="var(--font-mono)" transform="rotate(35,505,120)">WebSocket</text>
+
+        <!-- E2E encryption indicator -->
+        <rect x="215" y="310" width="270" height="40" rx="8" fill="rgba(239,68,68,0.08)" stroke="var(--private)" stroke-width="1"></rect>
+        <text x="350" y="335" fill="var(--private)" font-size="9" font-weight="bold" text-anchor="middle" font-family="var(--font-mono)">E2E Encrypted — relay cannot read messages</text>
+      </svg>
+    </div>
+
+    <p style="font-size:0.85rem;margin:0.5rem 0"><b>QR data structure:</b></p>
+    <div class="code-block">{
+  "sessionId": "a7f3b2c1-...",
+  "relayURL":  "wss://relay.cbmpc.dev/v1",
+  "devicePK":  "02a1b2c3d4e5f6a7b8c9...",
+  "curve":     "secp256k1",
+  "protocol":  "ecdsa-2pc",
+  "version":   1
+}</div>
+
+    <p class="explanation">The relay server is a dumb pipe — all it does is forward bytes between two session IDs. Messages are E2E encrypted with the device keys exchanged via QR. Even if the relay is compromised, an attacker sees only ciphertext. The QR code bootstraps trust: Device B knows Device A's public key from scanning, and Device A authenticates Device B via an ECDH handshake over the relay.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<div class="phase-divider">Cross-Device Key Generation</div>
+<!-- ============================================================ -->
+
+<!-- STEP 4 -->
+<div class="step">
+  <div class="step-header" style="background:rgba(99,102,241,0.1)">
+    <div class="step-num" style="background:var(--device-a);color:white">4</div>
+    <div class="step-title">2-Party DKG over Peer Channel</div>
+  </div>
+  <div class="step-body">
+    <p class="explanation">Same ECDSA-2PC protocol as the server-backed DKG ceremony, but messages travel over MultipeerConnectivity (or the QR relay) instead of WebSocket to a central server. The cryptography is identical — only the transport changes.</p>
+
+    <div class="diagram">
+      <svg width="100%" viewBox="0 0 700 420" style="max-width:700px;display:block;margin:0 auto">
+        <!-- Device A column -->
+        <rect x="40" y="10" width="180" height="40" rx="8" fill="var(--card)" stroke="var(--device-a)" stroke-width="2"></rect>
+        <text x="130" y="35" fill="var(--device-a)" font-size="12" font-weight="bold" text-anchor="middle" font-family="var(--font-mono)">Device A (Party 0)</text>
+
+        <!-- Device B column -->
+        <rect x="480" y="10" width="180" height="40" rx="8" fill="var(--card)" stroke="var(--device-b)" stroke-width="2"></rect>
+        <text x="570" y="35" fill="var(--device-b)" font-size="12" font-weight="bold" text-anchor="middle" font-family="var(--font-mono)">Device B (Party 1)</text>
+
+        <!-- Vertical lines -->
+        <line x1="130" y1="50" x2="130" y2="400" stroke="var(--device-a)" stroke-width="2" stroke-dasharray="4"></line>
+        <line x1="570" y1="50" x2="570" y2="400" stroke="var(--device-b)" stroke-width="2" stroke-dasharray="4"></line>
+
+        <!-- Round 1 -->
+        <rect x="250" y="70" width="200" height="25" rx="4" fill="rgba(99,102,241,0.1)"></rect>
+        <text x="350" y="87" fill="var(--device-a)" font-size="10" font-weight="bold" text-anchor="middle" font-family="var(--font-mono)">Round 1: Commitments</text>
+
+        <line x1="135" y1="110" x2="565" y2="110" stroke="var(--device-a)" stroke-width="1.5" marker-end="url(#arrow-a)"></line>
+        <text x="350" y="105" fill="var(--muted)" font-size="8" text-anchor="middle" font-family="var(--font-mono)">Paillier PK, range proof, commitment_A</text>
+
+        <line x1="565" y1="135" x2="135" y2="135" stroke="var(--device-b)" stroke-width="1.5" marker-end="url(#arrow-b)"></line>
+        <text x="350" y="130" fill="var(--muted)" font-size="8" text-anchor="middle" font-family="var(--font-mono)">Paillier PK, range proof, commitment_B</text>
+
+        <!-- Round 2 -->
+        <rect x="250" y="160" width="200" height="25" rx="4" fill="rgba(245,158,11,0.1)"></rect>
+        <text x="350" y="177" fill="var(--device-b)" font-size="10" font-weight="bold" text-anchor="middle" font-family="var(--font-mono)">Round 2: Key Shares</text>
+
+        <line x1="135" y1="200" x2="565" y2="200" stroke="var(--device-a)" stroke-width="1.5" marker-end="url(#arrow-a)"></line>
+        <text x="350" y="195" fill="var(--muted)" font-size="8" text-anchor="middle" font-family="var(--font-mono)">Enc(share_A), proof_A</text>
+
+        <line x1="565" y1="225" x2="135" y2="225" stroke="var(--device-b)" stroke-width="1.5" marker-end="url(#arrow-b)"></line>
+        <text x="350" y="220" fill="var(--muted)" font-size="8" text-anchor="middle" font-family="var(--font-mono)">Enc(share_B), proof_B</text>
+
+        <!-- Round 3 -->
+        <rect x="250" y="250" width="200" height="25" rx="4" fill="rgba(16,185,129,0.1)"></rect>
+        <text x="350" y="267" fill="var(--device-c)" font-size="10" font-weight="bold" text-anchor="middle" font-family="var(--font-mono)">Round 3: Finalization</text>
+
+        <line x1="135" y1="290" x2="565" y2="290" stroke="var(--device-a)" stroke-width="1.5" marker-end="url(#arrow-a)"></line>
+        <text x="350" y="285" fill="var(--muted)" font-size="8" text-anchor="middle" font-family="var(--font-mono)">decommitment_A, Q_A = share_A * G</text>
+
+        <line x1="565" y1="315" x2="135" y2="315" stroke="var(--device-b)" stroke-width="1.5" marker-end="url(#arrow-b)"></line>
+        <text x="350" y="310" fill="var(--muted)" font-size="8" text-anchor="middle" font-family="var(--font-mono)">decommitment_B, Q_B = share_B * G</text>
+
+        <!-- Result -->
+        <rect x="200" y="345" width="300" height="45" rx="8" fill="rgba(34,197,94,0.1)" stroke="var(--ok)" stroke-width="1.5"></rect>
+        <text x="350" y="365" fill="var(--ok)" font-size="11" font-weight="bold" text-anchor="middle" font-family="var(--font-mono)">Joint Public Key: Q = Q_A + Q_B</text>
+        <text x="350" y="382" fill="var(--muted)" font-size="9" text-anchor="middle" font-family="var(--font-mono)">Both devices store their share in Secure Enclave</text>
+      </svg>
+    </div>
+
+    <div class="cols-2">
+      <div>
+        <ul class="var-list">
+          <li class="secret"><span class="tag priv">secret</span> share_A — Device A's key share</li>
+          <li class="secret"><span class="tag priv">secret</span> Paillier secret key (Device A)</li>
+        </ul>
+      </div>
+      <div>
+        <ul class="var-list">
+          <li class="secret"><span class="tag priv">secret</span> share_B — Device B's key share</li>
+          <li class="secret"><span class="tag priv">secret</span> Paillier secret key (Device B)</li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="explanation">Identical cryptography to the server-backed flow — only the transport changes. Your key share never leaves your device. Each share is stored in the Secure Enclave (or the iOS Keychain with biometric protection), meaning even a device backup won't expose the raw key material.</p>
+  </div>
+</div>
+
+<!-- STEP 5 -->
+<div class="step">
+  <div class="step-header" style="background:rgba(16,185,129,0.1)">
+    <div class="step-num" style="background:var(--device-c);color:white">5</div>
+    <div class="step-title">N-Party DKG (3+ Devices)</div>
+  </div>
+  <div class="step-body">
+    <p class="explanation">For threshold setups with 3 or more devices, the protocol uses Feldman VSS — each device generates a random polynomial, publishes commitments, and privately whispers shares to every other device. See the <a href="/threshold-signing.html" style="color:var(--device-a)">Threshold Signing guide</a> for the full Feldman VSS math.</p>
+
+    <div class="diagram">
+      <svg width="100%" viewBox="0 0 700 350" style="max-width:700px;display:block;margin:0 auto">
+        <!-- Device A (top) -->
+        <rect x="280" y="20" width="140" height="50" rx="12" fill="var(--card)" stroke="var(--device-a)" stroke-width="2"></rect>
+        <text x="350" y="50" fill="var(--device-a)" font-size="11" font-weight="bold" text-anchor="middle" font-family="var(--font-mono)">Device A</text>
+
+        <!-- Device B (bottom-left) -->
+        <rect x="80" y="200" width="140" height="50" rx="12" fill="var(--card)" stroke="var(--device-b)" stroke-width="2"></rect>
+        <text x="150" y="230" fill="var(--device-b)" font-size="11" font-weight="bold" text-anchor="middle" font-family="var(--font-mono)">Device B</text>
+
+        <!-- Device C (bottom-right) -->
+        <rect x="480" y="200" width="140" height="50" rx="12" fill="var(--card)" stroke="var(--device-c)" stroke-width="2"></rect>
+        <text x="550" y="230" fill="var(--device-c)" font-size="11" font-weight="bold" text-anchor="middle" font-family="var(--font-mono)">Device C</text>
+
+        <!-- Directed arrows: A->B, A->C -->
+        <line x1="305" y1="70" x2="195" y2="198" stroke="var(--device-a)" stroke-width="1.5" marker-end="url(#arrow-a)"></line>
+        <line x1="395" y1="70" x2="505" y2="198" stroke="var(--device-a)" stroke-width="1.5" marker-end="url(#arrow-a)"></line>
+
+        <!-- B->A, B->C -->
+        <line x1="175" y1="198" x2="300" y2="72" stroke="var(--device-b)" stroke-width="1.5" marker-end="url(#arrow-b)"></line>
+        <line x1="220" y1="225" x2="478" y2="225" stroke="var(--device-b)" stroke-width="1.5" marker-end="url(#arrow-b)"></line>
+
+        <!-- C->A, C->B -->
+        <line x1="525" y1="198" x2="400" y2="72" stroke="var(--device-c)" stroke-width="1.5" marker-end="url(#arrow-c)"></line>
+        <line x1="478" y1="225" x2="222" y2="225" stroke="var(--device-c)" stroke-width="1.5" marker-end="url(#arrow-c)"></line>
+
+        <!-- Labels -->
+        <text x="220" y="125" fill="var(--device-a)" font-size="8" text-anchor="middle" font-family="var(--font-mono)" transform="rotate(-42,220,125)">f_A(2)</text>
+        <text x="480" y="125" fill="var(--device-a)" font-size="8" text-anchor="middle" font-family="var(--font-mono)" transform="rotate(42,480,125)">f_A(3)</text>
+        <text x="220" y="142" fill="var(--device-b)" font-size="8" text-anchor="middle" font-family="var(--font-mono)" transform="rotate(-42,220,142)">f_B(1)</text>
+        <text x="350" y="215" fill="var(--device-b)" font-size="8" text-anchor="middle" font-family="var(--font-mono)">f_B(3) →</text>
+        <text x="480" y="142" fill="var(--device-c)" font-size="8" text-anchor="middle" font-family="var(--font-mono)" transform="rotate(42,480,142)">f_C(1)</text>
+        <text x="350" y="240" fill="var(--device-c)" font-size="8" text-anchor="middle" font-family="var(--font-mono)">← f_C(2)</text>
+      </svg>
+    </div>
+
+    <p style="font-size:0.85rem;margin:0.5rem 0"><b>Message count scaling:</b></p>
+    <table class="overview-table">
+      <thead>
+        <tr><th>Devices (N)</th><th>Messages per Round</th><th>Total (3 rounds)</th><th>Topology</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>2</td><td>2</td><td>6</td><td>Direct peer</td></tr>
+        <tr><td>3</td><td>6</td><td>18</td><td>Direct peer</td></tr>
+        <tr><td>4</td><td>12</td><td>36</td><td>Direct peer</td></tr>
+        <tr><td>5</td><td>20</td><td>60</td><td>Star recommended</td></tr>
+        <tr><td style="color:var(--warn)">N</td><td style="color:var(--warn)">N*(N-1)</td><td style="color:var(--warn)">3*N*(N-1)</td><td style="color:var(--warn)">Star for N > 5</td></tr>
+      </tbody>
+    </table>
+
+    <p class="explanation">Message count grows quadratically. For 3 devices this is fine over MultipeerConnectivity. Beyond 5 devices, consider a star topology with a coordinator device that relays messages — reducing each device's connections from N-1 to 1, at the cost of trusting the coordinator with message routing (but not with secrets).</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<div class="phase-divider">Cross-Device Signing</div>
+<!-- ============================================================ -->
+
+<!-- STEP 6 -->
+<div class="step">
+  <div class="step-header" style="background:rgba(245,158,11,0.1)">
+    <div class="step-num" style="background:var(--device-b);color:white">6</div>
+    <div class="step-title">Collaborative Signing</div>
+  </div>
+  <div class="step-body">
+    <p class="explanation">Device A has a message or transaction to sign. It broadcasts a signing request to all connected peers. Only the required threshold of devices need to participate — for a 2-of-3 setup, any two devices can complete the signature while the third stays offline.</p>
+
+    <div class="diagram">
+      <svg width="100%" viewBox="0 0 700 500" style="max-width:700px;display:block;margin:0 auto">
+        <!-- Device A column -->
+        <rect x="30" y="10" width="140" height="35" rx="8" fill="var(--card)" stroke="var(--device-a)" stroke-width="2"></rect>
+        <text x="100" y="33" fill="var(--device-a)" font-size="11" font-weight="bold" text-anchor="middle" font-family="var(--font-mono)">Device A</text>
+
+        <!-- Device B column -->
+        <rect x="280" y="10" width="140" height="35" rx="8" fill="var(--card)" stroke="var(--device-b)" stroke-width="2"></rect>
+        <text x="350" y="33" fill="var(--device-b)" font-size="11" font-weight="bold" text-anchor="middle" font-family="var(--font-mono)">Device B</text>
+
+        <!-- Device C column (inactive) -->
+        <rect x="530" y="10" width="140" height="35" rx="8" fill="var(--card)" stroke="var(--device-c)" stroke-width="2" stroke-dasharray="4" opacity="0.4"></rect>
+        <text x="600" y="33" fill="var(--device-c)" font-size="11" font-weight="bold" text-anchor="middle" font-family="var(--font-mono)" opacity="0.4">Device C</text>
+        <text x="600" y="60" fill="var(--muted)" font-size="8" text-anchor="middle" font-family="var(--font-mono)" opacity="0.5">(offline)</text>
+
+        <!-- Vertical lifelines -->
+        <line x1="100" y1="45" x2="100" y2="460" stroke="var(--device-a)" stroke-width="2" stroke-dasharray="4"></line>
+        <line x1="350" y1="45" x2="350" y2="460" stroke="var(--device-b)" stroke-width="2" stroke-dasharray="4"></line>
+        <line x1="600" y1="45" x2="600" y2="80" stroke="var(--device-c)" stroke-width="1" stroke-dasharray="4" opacity="0.3"></line>
+
+        <!-- Sign request -->
+        <line x1="105" y1="90" x2="345" y2="90" stroke="var(--device-a)" stroke-width="1.5" marker-end="url(#arrow-a)"></line>
+        <text x="225" y="83" fill="var(--device-a)" font-size="9" font-weight="bold" text-anchor="middle" font-family="var(--font-mono)">SIGN_REQUEST</text>
+        <text x="225" y="108" fill="var(--muted)" font-size="8" text-anchor="middle" font-family="var(--font-mono)">{message, hash, threshold: 2}</text>
+
+        <!-- Nonce commitments -->
+        <rect x="145" y="130" width="210" height="20" rx="3" fill="rgba(59,130,246,0.1)"></rect>
+        <text x="250" y="144" fill="var(--public)" font-size="9" font-weight="bold" text-anchor="middle" font-family="var(--font-mono)">Nonce Commitments</text>
+
+        <line x1="105" y1="165" x2="345" y2="165" stroke="var(--device-a)" stroke-width="1.5" marker-end="url(#arrow-a)"></line>
+        <text x="225" y="160" fill="var(--muted)" font-size="8" text-anchor="middle" font-family="var(--font-mono)">commit(R_A) = H(R_A)</text>
+
+        <line x1="345" y1="185" x2="105" y2="185" stroke="var(--device-b)" stroke-width="1.5" marker-end="url(#arrow-b)"></line>
+        <text x="225" y="180" fill="var(--muted)" font-size="8" text-anchor="middle" font-family="var(--font-mono)">commit(R_B) = H(R_B)</text>
+
+        <!-- Nonce reveals -->
+        <line x1="105" y1="215" x2="345" y2="215" stroke="var(--device-a)" stroke-width="1.5" marker-end="url(#arrow-a)"></line>
+        <text x="225" y="210" fill="var(--muted)" font-size="8" text-anchor="middle" font-family="var(--font-mono)">R_A = k_A * G</text>
+
+        <line x1="345" y1="235" x2="105" y2="235" stroke="var(--device-b)" stroke-width="1.5" marker-end="url(#arrow-b)"></line>
+        <text x="225" y="230" fill="var(--muted)" font-size="8" text-anchor="middle" font-family="var(--font-mono)">R_B = k_B * G</text>
+
+        <!-- Combined R -->
+        <rect x="145" y="255" width="210" height="20" rx="3" fill="rgba(16,185,129,0.1)"></rect>
+        <text x="250" y="269" fill="var(--device-c)" font-size="9" font-weight="bold" text-anchor="middle" font-family="var(--font-mono)">R = R_A + R_B</text>
+
+        <!-- Partial signatures -->
+        <rect x="145" y="290" width="210" height="20" rx="3" fill="rgba(239,68,68,0.1)"></rect>
+        <text x="250" y="304" fill="var(--private)" font-size="9" font-weight="bold" text-anchor="middle" font-family="var(--font-mono)">Partial Signatures</text>
+
+        <line x1="105" y1="325" x2="345" y2="325" stroke="var(--device-a)" stroke-width="1.5" marker-end="url(#arrow-a)"></line>
+        <text x="225" y="320" fill="var(--muted)" font-size="8" text-anchor="middle" font-family="var(--font-mono)">s_A = k_A - e * x_A * lambda_A</text>
+
+        <line x1="345" y1="345" x2="105" y2="345" stroke="var(--device-b)" stroke-width="1.5" marker-end="url(#arrow-b)"></line>
+        <text x="225" y="340" fill="var(--muted)" font-size="8" text-anchor="middle" font-family="var(--font-mono)">s_B = k_B - e * x_B * lambda_B</text>
+
+        <!-- Assembly -->
+        <rect x="145" y="370" width="210" height="20" rx="3" fill="rgba(34,197,94,0.1)"></rect>
+        <text x="250" y="384" fill="var(--ok)" font-size="9" font-weight="bold" text-anchor="middle" font-family="var(--font-mono)">Assembly</text>
+
+        <rect x="125" y="400" width="250" height="50" rx="8" fill="rgba(34,197,94,0.08)" stroke="var(--ok)" stroke-width="1.5"></rect>
+        <text x="250" y="420" fill="var(--ok)" font-size="11" font-weight="bold" text-anchor="middle" font-family="var(--font-mono)">s = s_A + s_B</text>
+        <text x="250" y="440" fill="var(--ok)" font-size="10" text-anchor="middle" font-family="var(--font-mono)">signature = (R, s)</text>
+      </svg>
+    </div>
+
+    <div class="cols-2">
+      <div class="terminal">
+<span style="color:var(--device-a)">Device A</span>
+<span class="done">[1/3] Nonce commitment ........... [DONE]</span>
+<span class="done">[2/3] Partial signature .......... [DONE]</span>
+<span class="done">[3/3] Assembly ................... [DONE]</span>
+<span class="done">Signature: (R, s) = 0x3045...</span>
+      </div>
+      <div class="terminal">
+<span style="color:var(--device-b)">Device B</span>
+<span class="done">[1/3] Nonce commitment ........... [DONE]</span>
+<span class="done">[2/3] Partial signature .......... [DONE]</span>
+<span class="done">[3/3] Assembly ................... [DONE]</span>
+<span class="done">Signature verified locally</span>
+      </div>
+    </div>
+
+    <p class="explanation">Any 2-of-3 devices can sign. The third device can be offline. The resulting signature is indistinguishable from a single-signer signature — a blockchain verifier has no way to know that two separate devices collaborated to produce it.</p>
+  </div>
+</div>
+
+<!-- STEP 7 -->
+<div class="step">
+  <div class="step-header" style="background:rgba(34,197,94,0.1)">
+    <div class="step-num" style="background:var(--ok);color:white">7</div>
+    <div class="step-title">Audit &amp; Verification</div>
+  </div>
+  <div class="step-body">
+    <p class="explanation">All participating devices log the signing event. Any device — or any external verifier — can verify the resulting signature using standard ECDSA verification. No MPC knowledge is required.</p>
+
+    <div class="diagram">
+      <div class="cols-2">
+        <div>
+          <p style="font-size:0.85rem;font-weight:bold;margin-bottom:0.5rem">Signing Event Log (each device stores)</p>
+          <div class="math">timestamp:  2025-01-15T14:23:07Z
+msg_hash:   0x7f83b1657ff1fc...
+parties:    [Device A, Device B]
+threshold:  2-of-3
+signature:  0x3045022100...
+pubkey:     02a1b2c3d4e5f6...</div>
+        </div>
+        <div>
+          <p style="font-size:0.85rem;font-weight:bold;margin-bottom:0.5rem">Verification Equation</p>
+          <div class="math" style="text-align:center;font-size:0.95rem">
+<b>ECDSA verification:</b>
+
+ECDSA_verify(Q, message, (r, s))
+
+u1 = hash(msg) * s^(-1) mod n
+u2 = r * s^(-1) mod n
+R' = u1*G + u2*Q
+valid = (R'.x mod n) == r</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="verify-box pass">
+      <div class="result">SIGNATURE VALID</div>
+      <p style="margin-top:0.5rem;font-size:0.85rem;color:var(--muted)">
+        Standard ECDSA signature. Any wallet, blockchain node, or <code>openssl</code> can verify it.<br>
+        The multi-device origin is invisible in the output.
+      </p>
+    </div>
+
+    <p class="explanation">Every device keeps an immutable audit log. The signature is a standard ECDSA signature — any wallet or blockchain can verify it. There is no way for a verifier to distinguish it from a signature produced by a single key on a single device.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<div class="phase-divider">iOS UX Mockups</div>
+<!-- ============================================================ -->
+
+<!-- STEP 8 -->
+<div class="step">
+  <div class="step-header" style="background:rgba(99,102,241,0.1)">
+    <div class="step-num" style="background:var(--device-a);color:white">8</div>
+    <div class="step-title">iOS App Flow</div>
+  </div>
+  <div class="step-body">
+    <p class="explanation">The CB-MPC iOS app guides users through peer discovery, pairing, key generation, and signing — all without leaving the device. Below are the four key screens of the device-to-device flow.</p>
+
+    <div class="phone-grid">
+      <!-- Phone 1: Searching for Peers -->
+      <div class="phone">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="phone-title" style="color:var(--device-a)">Searching for Peers</div>
+          <div class="phone-content">
+            <div class="radar-container">
+              <div class="radar-ring"></div>
+              <div class="radar-ring"></div>
+              <div class="radar-ring"></div>
+              <div class="radar-dot"></div>
+            </div>
+            <div style="font-size:0.8rem;color:var(--muted)">Looking for nearby CB-MPC devices...</div>
+            <div style="font-size:0.75rem;color:var(--muted);margin-top:0.25rem">Service: _cbmpc._tcp</div>
+            <div style="font-size:0.85rem;color:var(--border);margin-top:0.5rem">Found 0 peers</div>
+          </div>
+        </div>
+        <div class="phone-home"></div>
+      </div>
+
+      <!-- Phone 2: Peer Found -->
+      <div class="phone">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="phone-title" style="color:var(--device-b)">Peer Found</div>
+          <div class="phone-content">
+            <div style="width:48px;height:48px;border-radius:12px;background:rgba(245,158,11,0.15);border:2px solid var(--device-b);display:flex;align-items:center;justify-content:center;font-size:1.2rem">B</div>
+            <div style="font-size:0.9rem;font-weight:bold;color:var(--text)">iPhone 15 Pro Max</div>
+            <div style="font-size:0.72rem;color:var(--muted)">PK: 03d4e5f6...a7b8</div>
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.25rem">
+              <span style="font-size:0.72rem;color:var(--muted)">Signal:</span>
+              <span class="signal-bars">
+                <span class="signal-bar"></span>
+                <span class="signal-bar"></span>
+                <span class="signal-bar"></span>
+                <span class="signal-bar"></span>
+              </span>
+              <span style="font-size:0.72rem;color:var(--ok)">Excellent</span>
+            </div>
+            <div class="phone-btn" style="margin-top:0.5rem">INVITE</div>
+          </div>
+        </div>
+        <div class="phone-home"></div>
+      </div>
+
+      <!-- Phone 3: DKG in Progress -->
+      <div class="phone">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="phone-title" style="color:var(--public)">DKG in Progress</div>
+          <div class="phone-content" style="gap:0.3rem">
+            <div style="display:flex;align-items:center;gap:1rem;margin:0.5rem 0">
+              <div style="width:32px;height:32px;border-radius:50%;background:var(--device-a);display:flex;align-items:center;justify-content:center;color:white;font-size:0.8rem;font-weight:bold">A</div>
+              <div style="width:60px;height:3px;background:var(--ok);border-radius:2px"></div>
+              <div style="width:32px;height:32px;border-radius:50%;background:var(--device-b);display:flex;align-items:center;justify-content:center;color:white;font-size:0.8rem;font-weight:bold">B</div>
+            </div>
+            <div style="text-align:left;width:100%;padding:0 0.5rem;font-size:0.72rem">
+              <div style="color:var(--ok)">[1/3] Commitments.... <b>[DONE]</b></div>
+              <div style="color:var(--bt)">[2/3] Shares......... <b>[...]</b></div>
+              <div style="color:var(--muted)">[3/3] Finalize....... [&nbsp;&nbsp;&nbsp;&nbsp;]</div>
+            </div>
+            <div style="font-size:0.7rem;color:var(--muted);margin-top:0.25rem">Round 2 of 3 — exchanging encrypted shares</div>
+          </div>
+        </div>
+        <div class="phone-home"></div>
+      </div>
+
+      <!-- Phone 4: Key Shared -->
+      <div class="phone">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="phone-title" style="color:var(--ok)">Key Shared</div>
+          <div class="phone-content">
+            <div class="check-circle">&#10003;</div>
+            <div style="font-size:0.9rem;font-weight:bold;color:var(--ok)">2-of-2 Key Created</div>
+            <div style="font-size:0.68rem;color:var(--muted);word-break:break-all;padding:0 0.5rem">Q = 02a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8</div>
+            <div style="font-size:0.75rem;color:var(--muted)">Both devices hold key shares</div>
+            <div style="display:flex;gap:0.5rem;margin-top:0.25rem">
+              <span class="party-badge" style="background:var(--device-a)">Party 0</span>
+              <span class="party-badge" style="background:var(--device-b)">Party 1</span>
+            </div>
+          </div>
+        </div>
+        <div class="phone-home"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p style="text-align:center;color:var(--muted);font-size:0.8rem;margin-top:2rem;padding-bottom:2rem">
+  CB-MPC Visual Guide — Device-to-Device Protocol
+</p>
+
+<script>
+function toggleTheme() {
+  const body = document.body;
+  const btn = document.getElementById('themeBtn');
+  const newTheme = body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  body.setAttribute('data-theme', newTheme);
+  btn.textContent = newTheme === 'dark' ? '[ LIGHT ]' : '[ DARK ]';
+  localStorage.setItem('cbmpc-theme', newTheme);
+}
+(function() {
+  var saved = localStorage.getItem('cbmpc-theme');
+  if (saved) {
+    document.body.setAttribute('data-theme', saved);
+  } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    document.body.setAttribute('data-theme', 'dark');
+  } else {
+    document.body.setAttribute('data-theme', 'light');
+  }
+  var theme = document.body.getAttribute('data-theme');
+  document.getElementById('themeBtn').textContent = theme === 'dark' ? '[ LIGHT ]' : '[ DARK ]';
+})();
+</script>
+
+</body>
+</html>

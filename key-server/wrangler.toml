@@ -1,0 +1,23 @@
+name = "cb-mpc-key-server"
+main = "src/index.ts"
+compatibility_date = "2026-03-01"
+account_id = "e8d1f015160adf1c0096e901915764e0"
+
+[vars]
+VERSION = "0.1.0"
+
+[[durable_objects.bindings]]
+name = "DEVICE_REGISTRY"
+class_name = "DeviceRegistry"
+
+[[durable_objects.bindings]]
+name = "DKG_SESSION"
+class_name = "DKGSession"
+
+[[durable_objects.bindings]]
+name = "KEY_VAULT"
+class_name = "KeyVault"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["DeviceRegistry", "DKGSession", "KeyVault"]

@@ -1,0 +1,165 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <!-- Colored node gradients -->
+    <radialGradient id="nodeA" cx="45%" cy="35%" r="55%">
+      <stop offset="0%" stop-color="#42A5F5"/>
+      <stop offset="100%" stop-color="#1565C0"/>
+    </radialGradient>
+    <radialGradient id="nodeB" cx="45%" cy="35%" r="55%">
+      <stop offset="0%" stop-color="#AB47BC"/>
+      <stop offset="100%" stop-color="#7B1FA2"/>
+    </radialGradient>
+    <radialGradient id="nodeC" cx="45%" cy="35%" r="55%">
+      <stop offset="0%" stop-color="#66BB6A"/>
+      <stop offset="100%" stop-color="#2E7D32"/>
+    </radialGradient>
+    <radialGradient id="nodeD" cx="45%" cy="35%" r="55%">
+      <stop offset="0%" stop-color="#FFA726"/>
+      <stop offset="100%" stop-color="#E65100"/>
+    </radialGradient>
+    <radialGradient id="nodeE" cx="45%" cy="35%" r="55%">
+      <stop offset="0%" stop-color="#EF5350"/>
+      <stop offset="100%" stop-color="#C62828"/>
+    </radialGradient>
+    <radialGradient id="nodeF" cx="45%" cy="35%" r="55%">
+      <stop offset="0%" stop-color="#26C6DA"/>
+      <stop offset="100%" stop-color="#00838F"/>
+    </radialGradient>
+    <radialGradient id="nodeG" cx="45%" cy="35%" r="55%">
+      <stop offset="0%" stop-color="#FFEE58"/>
+      <stop offset="100%" stop-color="#F9A825"/>
+    </radialGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- ============================================ -->
+  <!-- GEOMETRIC MESH  (Hyperledger-inspired)       -->
+  <!-- ============================================ -->
+
+  <!-- Outer mesh lines -->
+  <g stroke="#FFFFFF" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.25">
+    <!-- Outer hexagon -->
+    <line x1="512" y1="88"  x2="730" y2="214"/>
+    <line x1="730" y1="214" x2="730" y2="466"/>
+    <line x1="730" y1="466" x2="512" y2="592"/>
+    <line x1="512" y1="592" x2="294" y2="466"/>
+    <line x1="294" y1="466" x2="294" y2="214"/>
+    <line x1="294" y1="214" x2="512" y2="88"/>
+
+    <!-- Inner triangulation: top to center -->
+    <line x1="512" y1="88"  x2="512" y2="340"/>
+    <line x1="730" y1="214" x2="512" y2="340"/>
+    <line x1="294" y1="214" x2="512" y2="340"/>
+
+    <!-- Inner triangulation: bottom to center -->
+    <line x1="512" y1="592" x2="512" y2="340"/>
+    <line x1="730" y1="466" x2="512" y2="340"/>
+    <line x1="294" y1="466" x2="512" y2="340"/>
+
+    <!-- Cross diagonals for faceted look -->
+    <line x1="512" y1="88"  x2="730" y2="466"/>
+    <line x1="512" y1="88"  x2="294" y2="466"/>
+    <line x1="730" y1="214" x2="294" y2="466"/>
+    <line x1="294" y1="214" x2="730" y2="466"/>
+    <line x1="730" y1="214" x2="512" y2="592"/>
+    <line x1="294" y1="214" x2="512" y2="592"/>
+
+    <!-- Mid-edge structural lines -->
+    <line x1="621" y1="151" x2="512" y2="340"/>
+    <line x1="403" y1="151" x2="512" y2="340"/>
+    <line x1="730" y1="340" x2="512" y2="340"/>
+    <line x1="294" y1="340" x2="512" y2="340"/>
+    <line x1="621" y1="529" x2="512" y2="340"/>
+    <line x1="403" y1="529" x2="512" y2="340"/>
+
+    <!-- Outer mid-edge to mid-edge connections -->
+    <line x1="621" y1="151" x2="730" y2="340"/>
+    <line x1="403" y1="151" x2="294" y2="340"/>
+    <line x1="730" y1="340" x2="621" y2="529"/>
+    <line x1="294" y1="340" x2="403" y2="529"/>
+    <line x1="621" y1="151" x2="403" y2="151"/>
+    <line x1="621" y1="529" x2="403" y2="529"/>
+
+    <!-- Additional facets -->
+    <line x1="621" y1="151" x2="294" y2="340"/>
+    <line x1="403" y1="151" x2="730" y2="340"/>
+    <line x1="621" y1="529" x2="294" y2="340"/>
+    <line x1="403" y1="529" x2="730" y2="340"/>
+  </g>
+
+  <!-- Active threshold links -->
+  <g stroke="#FFFFFF" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.6">
+    <line x1="512" y1="88"  x2="730" y2="214"/>
+    <line x1="512" y1="88"  x2="294" y2="214"/>
+    <line x1="730" y1="214" x2="294" y2="214"/>
+    <line x1="512" y1="88"  x2="512" y2="340"/>
+    <line x1="730" y1="214" x2="512" y2="340"/>
+    <line x1="294" y1="214" x2="512" y2="340"/>
+  </g>
+
+  <!-- Small structural intersection dots -->
+  <g fill="#FFFFFF" opacity="0.3">
+    <circle cx="621" cy="151" r="5"/>
+    <circle cx="403" cy="151" r="5"/>
+    <circle cx="730" cy="340" r="5"/>
+    <circle cx="294" cy="340" r="5"/>
+    <circle cx="621" cy="529" r="5"/>
+    <circle cx="403" cy="529" r="5"/>
+  </g>
+
+  <!-- ============================================ -->
+  <!-- LABELED NODES (each a distinct color)        -->
+  <!-- ============================================ -->
+
+  <!-- Node A (top) - Blue -->
+  <circle cx="512" cy="88"  r="38" fill="url(#nodeA)" filter="url(#glow)"/>
+  <text x="512" y="102" text-anchor="middle" font-family="'SF Mono','Menlo','Courier New',monospace" font-size="34" font-weight="700" fill="#FFF">A</text>
+
+  <!-- Node B (upper-right) - Purple -->
+  <circle cx="730" cy="214" r="38" fill="url(#nodeB)" filter="url(#glow)"/>
+  <text x="730" y="228" text-anchor="middle" font-family="'SF Mono','Menlo','Courier New',monospace" font-size="34" font-weight="700" fill="#FFF">B</text>
+
+  <!-- Node C (lower-right) - Green -->
+  <circle cx="730" cy="466" r="38" fill="url(#nodeC)" filter="url(#glow)"/>
+  <text x="730" y="480" text-anchor="middle" font-family="'SF Mono','Menlo','Courier New',monospace" font-size="34" font-weight="700" fill="#FFF">C</text>
+
+  <!-- Node D (bottom) - Orange -->
+  <circle cx="512" cy="592" r="38" fill="url(#nodeD)" filter="url(#glow)"/>
+  <text x="512" y="606" text-anchor="middle" font-family="'SF Mono','Menlo','Courier New',monospace" font-size="34" font-weight="700" fill="#FFF">D</text>
+
+  <!-- Node E (lower-left) - Red -->
+  <circle cx="294" cy="466" r="38" fill="url(#nodeE)" filter="url(#glow)"/>
+  <text x="294" y="480" text-anchor="middle" font-family="'SF Mono','Menlo','Courier New',monospace" font-size="34" font-weight="700" fill="#FFF">E</text>
+
+  <!-- Node F (upper-left) - Cyan -->
+  <circle cx="294" cy="214" r="38" fill="url(#nodeF)" filter="url(#glow)"/>
+  <text x="294" y="228" text-anchor="middle" font-family="'SF Mono','Menlo','Courier New',monospace" font-size="34" font-weight="700" fill="#FFF">F</text>
+
+  <!-- Center node G - Yellow -->
+  <circle cx="512" cy="340" r="32" fill="url(#nodeG)" filter="url(#glow)"/>
+  <text x="512" y="353" text-anchor="middle" font-family="'SF Mono','Menlo','Courier New',monospace" font-size="28" font-weight="700" fill="#FFF">G</text>
+
+  <!-- ============================================ -->
+  <!-- EQUATION: Schnorr verification               -->
+  <!-- s·G + e·PK =? R  (tighter spacing)          -->
+  <!-- ============================================ -->
+
+  <text x="512" y="700" text-anchor="middle" font-family="'SF Mono','Menlo','Courier New',monospace" font-size="40" font-weight="500" fill="#FFFFFF">
+    <tspan font-style="italic">s</tspan><tspan fill="rgba(255,255,255,0.55)">·</tspan><tspan font-style="italic">G</tspan><tspan fill="rgba(255,255,255,0.55)" dx="2"> + </tspan><tspan font-style="italic" dx="2">e</tspan><tspan fill="rgba(255,255,255,0.55)">·</tspan><tspan font-weight="700">PK</tspan><tspan fill="rgba(255,255,255,0.55)" dx="4"> =</tspan><tspan fill="rgba(255,255,255,0.85)" font-size="28" dy="-5">?</tspan><tspan font-style="italic" dx="3" dy="5"> R</tspan>
+  </text>
+
+  <!-- ============================================ -->
+  <!-- TEXT: MPC + Multi-Party Computation           -->
+  <!-- Extra bold terminal font, white              -->
+  <!-- ============================================ -->
+
+  <text x="512" y="798" text-anchor="middle" font-family="'SF Mono','Menlo','Courier New',monospace" font-size="86" font-weight="900" fill="#FFFFFF" letter-spacing="14">MPC</text>
+
+  <text x="512" y="870" text-anchor="middle" font-family="'SF Mono','Menlo','Courier New',monospace" font-size="40" font-weight="900" fill="#FFFFFF" letter-spacing="12.5">Multi-Party</text>
+
+  <text x="512" y="920" text-anchor="middle" font-family="'SF Mono','Menlo','Courier New',monospace" font-size="40" font-weight="900" fill="#FFFFFF" letter-spacing="4.2">Computation</text>
+
+</svg>
