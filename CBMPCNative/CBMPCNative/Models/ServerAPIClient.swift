@@ -166,6 +166,7 @@ actor ServerAPIClient {
     struct KeyVaultResponse: Decodable {
         let public_key: String
         let curve_code: Int?
+        let server_share: String?  // base64-encoded server share
         let participant_devices: [String]?
         let created_at: Int?
         let last_used_at: Int?
