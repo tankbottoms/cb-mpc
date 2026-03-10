@@ -1,12 +1,13 @@
 import Foundation
+import CryptoKit
 
 /// Orchestrates server-backed signing.
 ///
-/// Interim approach (until server has WASM): The server's KeyVault has the
-/// Party 1 share, but cannot execute MPC locally. So we run both parties
-/// on-device using the device share for Party 0, and a locally-reconstructed
-/// "full" key (both shares packed). The server's sign session records the
-/// audit trail (sign_count, last_used_at).
+/// Interim approach (until server has WASM): Download the server's Party 1
+/// share from KeyVault, pack both shares locally as
+/// [4-byte k0 length][k0 bytes][k1 bytes], then sign with CBMPCCryptoEngine.
+///
+/// The server's sign session records the audit trail (sign_count, last_used_at).
 ///
 /// When server WASM lands, this will use WebSocket transport to sign with
 /// the server holding its own share.
@@ -20,55 +21,57 @@ class ServerSigningCoordinator {
         serverURL: URL,
         publicKey: String
     ) async throws -> Data {
+        let startTime = Date()
+        print("[ServerSign] START — server=\(serverURL.host ?? "?"), pubKey=\(String(publicKey.prefix(16)))...")
+
         let client = ServerAPIClient(baseURL: serverURL)
 
         guard await client.isAuthenticated else {
+            print("[ServerSign] ERROR: Not authenticated")
             throw CBMPCError.authFailed
         }
 
         // Create sign session on server for audit trail
         let messageHashHex = message.map { String(format: "%02x", $0) }.joined()
         let sessionId = UUID().uuidString
-        let signSession = try await client.createSignSession(
+        print("[ServerSign] Creating sign session \(String(sessionId.prefix(8)))...")
+        _ = try await client.createSignSession(
             sessionId: sessionId,
             publicKey: publicKey,
             messageHash: messageHashHex
         )
 
-        // Interim approach: We need both shares to sign locally.
-        // The device has Party 0 share. For now, we generate a temporary
-        // "signing key" by running DKG locally and using only the device share.
-        // This is a placeholder — the real implementation will use WebSocket
-        // transport to coordinate with the server's WASM MPC party.
+        // Download server share from KeyVault
+        print("[ServerSign] Downloading server share from KeyVault...")
+        let keyInfo = try await client.getKey(publicKey: publicKey)
+        guard let serverShareB64 = keyInfo.server_share,
+              let serverShare = Data(base64Encoded: serverShareB64) else {
+            print("[ServerSign] ERROR: Server did not return key share (server_share=\(keyInfo.server_share == nil ? "nil" : "present but invalid"))")
+            throw CBMPCError.transportError("Server did not return key share")
+        }
+        print("[ServerSign] Server share downloaded: \(serverShare.count) bytes")
 
-        // For the interim, we reconstruct the full key from the device share
-        // by generating a fresh Party 1 share and using LocalTwoPartyRunner.
-        // Note: This means the interim signing uses a LOCAL-only approach
-        // that doesn't actually involve the server in computation.
-        // The server's sign_count is still updated via the session creation above.
+        // Pack shares: [4-byte k0 length][k0 bytes][k1 bytes]
+        var packed = Data()
+        var k0Len = UInt32(deviceShare.count).littleEndian
+        packed.append(Data(bytes: &k0Len, count: 4))
+        packed.append(deviceShare)
+        packed.append(serverShare)
+        print("[ServerSign] Packed key: device=\(deviceShare.count) + server=\(serverShare.count) = \(packed.count) bytes")
+
+        // SHA-256 pre-hash if message is not already 32 bytes (raw message from caller)
+        let hashData: Data
+        if message.count == 32 {
+            hashData = message  // Already hashed by caller
+        } else {
+            let digest = SHA256.hash(data: message)
+            hashData = Data(digest)
+        }
 
         let engine = CBMPCCryptoEngine()
-
-        // The device share for a server-backed key is a single serialized share (not packed).
-        // We need to reconstruct a full two-party signing.
-        // Since we can't sign with just one share, and the server can't compute yet,
-        // we need to download the server's share temporarily for signing.
-
-        // Download server share from KeyVault
-        let keyInfo = try await client.getKey(publicKey: publicKey)
-
-        // For now, attempt to sign with just the device share.
-        // This requires the device share to be a full packed key (both shares).
-        // If generateServerKey stored only Party 0 share, we need to fetch Party 1.
-        // Let's check if the key data is packed or single:
-
-        // Try unpacking as a full key first (backwards compat with local keys)
-        do {
-            let sigData = try engine.signMessage(message, keyData: deviceShare, curveCode: curveCode)
-            return sigData
-        } catch {
-            // Single share — can't sign without server WASM support
-            throw CBMPCError.transportError("Server WASM not yet available. Cannot sign with single share.")
-        }
+        let sigData = try engine.signMessage(hashData, keyData: packed, curveCode: curveCode)
+        let duration = Date().timeIntervalSince(startTime)
+        print("[ServerSign] DONE in \(String(format: "%.2f", duration))s — signature=\(sigData.count) bytes")
+        return sigData
     }
 }

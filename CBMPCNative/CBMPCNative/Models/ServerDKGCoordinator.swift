@@ -24,28 +24,37 @@ class ServerDKGCoordinator {
         let client = ServerAPIClient(baseURL: serverURL)
 
         // Verify server is reachable and we're authenticated
+        print("[ServerDKG] Checking server auth at \(serverURL.absoluteString)...")
         guard await client.isAuthenticated else {
+            print("[ServerDKG] ERROR: Not authenticated with server")
             throw CBMPCError.authFailed
         }
+        print("[ServerDKG] Authenticated. Creating DKG session...")
 
         // Create DKG session on server (for audit trail)
         let dkgSession = try await client.createDKGSession(curveCode: curveCode)
+        print("[ServerDKG] DKG session created: \(dkgSession.session_id), status=\(dkgSession.status)")
 
         // Generate both shares locally
+        print("[ServerDKG] Generating 2-party key shares locally (curve=\(curveCode))...")
         let (publicKey, k0Data, k1Data) = try generateBothSharesLocally(curveCode: curveCode)
+        let publicKeyHex = publicKey.map { String(format: "%02x", $0) }.joined()
+        print("[ServerDKG] Shares generated — Party0=\(k0Data.count) bytes, Party1=\(k1Data.count) bytes, pubKey=\(String(publicKeyHex.prefix(16)))...")
 
         // Upload Party 1 share to KeyVault
-        let publicKeyHex = publicKey.map { String(format: "%02x", $0) }.joined()
         guard let deviceId = await client.currentDeviceId else {
+            print("[ServerDKG] ERROR: No device ID available")
             throw CBMPCError.authFailed
         }
 
+        print("[ServerDKG] Uploading Party1 share to KeyVault (deviceId=\(deviceId))...")
         try await client.storeKeyShare(
             publicKey: publicKeyHex,
             curveCode: curveCode,
             serverShare: k1Data,
             participantDevices: [deviceId, "server"]
         )
+        print("[ServerDKG] Party1 share uploaded to server successfully")
 
         return DKGResult(
             publicKey: publicKey,

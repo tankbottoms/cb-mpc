@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 /// Wrapper around cbmpc_job2p_t for 2-party MPC operations
 class CBMPCJob {
@@ -200,5 +201,56 @@ extension TransportOrigin {
 
     static func save(_ origin: TransportOrigin, for keyId: UUID) {
         UserDefaults.standard.set(origin.rawValue, forKey: key(for: keyId))
+    }
+
+    /// Load the co-signer reference (server URL or peer device UUID)
+    static func coSignerRef(for keyId: UUID) -> String? {
+        UserDefaults.standard.string(forKey: "key_\(keyId.uuidString)_cosigner")
+    }
+
+    /// Save the co-signer reference
+    static func saveCoSigner(_ ref: String, for keyId: UUID) {
+        UserDefaults.standard.set(ref, forKey: "key_\(keyId.uuidString)_cosigner")
+    }
+
+    /// Human-readable badge text
+    var badgeText: String {
+        switch self {
+        case .local: return "2-PARTY LOCAL"
+        case .server: return "2-PARTY SERVER"
+        case .peer: return "2-PARTY PEER"
+        }
+    }
+
+    /// Description of where shares are stored
+    var shareDescription: String {
+        switch self {
+        case .local: return "Both key shares stored on this device"
+        case .server: return "Device + server each hold one share"
+        case .peer: return "Each paired device holds one share"
+        }
+    }
+
+    /// Badge color
+    var badgeColor: Color {
+        switch self {
+        case .local: return .orange
+        case .server: return .green
+        case .peer: return .green
+        }
+    }
+
+    /// Shield icon
+    var shieldIcon: String {
+        switch self {
+        case .local: return "shield.lefthalf.filled"
+        case .server: return "shield.checkered"
+        case .peer: return "shield.checkered"
+        }
+    }
+
+    /// Find all keys that share a specific co-signer reference
+    static func keysWithCoSigner(_ ref: String, in keys: [ManagedKey]) -> [ManagedKey] {
+        keys.filter { coSignerRef(for: $0.id) == ref }
     }
 }

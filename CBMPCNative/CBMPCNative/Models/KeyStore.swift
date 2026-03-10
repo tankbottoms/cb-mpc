@@ -1,6 +1,7 @@
 import Foundation
 import CoreData
 import SwiftUI
+import CryptoKit
 
 @MainActor
 class KeyStore: NSObject, ObservableObject {
@@ -244,6 +245,7 @@ class KeyStore: NSObject, ObservableObject {
             recordEntity.setValue(record.signature, forKey: "signature")
             recordEntity.setValue(record.timestamp, forKey: "timestamp")
             recordEntity.setValue(record.verified, forKey: "verified")
+            recordEntity.setValue(record.transportInfo, forKey: "transportInfo")
             recordEntity.setValue(keyEntity, forKey: "managedKey")
 
             // Update lastUsedAt on the key
@@ -322,6 +324,22 @@ class KeyStore: NSObject, ObservableObject {
         )
 
         UserDefaults.standard.set(serializedKey, forKey: "key_\(childKey.id.uuidString)")
+
+        // Propagate transport origin from parent to child (for display badge)
+        let parentOrigin = TransportOrigin.load(for: masterKey.id)
+        TransportOrigin.save(parentOrigin, for: childKey.id)
+        if let parentCoSigner = TransportOrigin.coSignerRef(for: masterKey.id) {
+            TransportOrigin.saveCoSigner(parentCoSigner, for: childKey.id)
+        }
+        // Propagate server URL if parent is server-backed
+        if let serverURL = UserDefaults.standard.string(forKey: "key_\(masterKey.id.uuidString)_server") {
+            UserDefaults.standard.set(serverURL, forKey: "key_\(childKey.id.uuidString)_server")
+        }
+        // Mark as locally-derived (both shares on device even though badge shows server/peer)
+        UserDefaults.standard.set(true, forKey: "key_\(childKey.id.uuidString)_localDerived")
+
+        print("[KeyStore] Derived HD-child '\(name)' from parent \(masterKey.name), origin=\(parentOrigin.rawValue), localDerived=true")
+
         addKey(childKey)
         return childKey
     }
@@ -413,9 +431,15 @@ class KeyStore: NSObject, ObservableObject {
     /// Generate a server-backed key (device share local, server share remote)
     func generateServerKey(name: String, keyType: KeyType, serverURL: URL) async throws -> ManagedKey {
         let curveCode = 714
+        let startTime = Date()
+
+        print("[KeyStore] generateServerKey: START — name='\(name)', type=\(keyType.rawValue), server=\(serverURL.absoluteString)")
 
         let (publicKey, deviceShare) = try await cryptoEngine.generateKeyRemote(serverURL: serverURL, curveCode: curveCode)
         let publicKeyHex = publicKey.map { String(format: "%02x", $0) }.joined()
+        let duration = Date().timeIntervalSince(startTime)
+
+        print("[KeyStore] generateServerKey: DKG complete in \(String(format: "%.2f", duration))s — pubKey=\(String(publicKeyHex.prefix(16)))..., deviceShare=\(deviceShare.count) bytes")
 
         let derivationPath: String? = (keyType == .hdMaster) ? "m" : nil
 
@@ -437,12 +461,30 @@ class KeyStore: NSObject, ObservableObject {
         // Store only the device share (not the full two-share pack)
         UserDefaults.standard.set(deviceShare, forKey: "key_\(managedKey.id.uuidString)")
         TransportOrigin.save(.server, for: managedKey.id)
+        TransportOrigin.saveCoSigner(serverURL.absoluteString, for: managedKey.id)
 
         // Store server URL for this key
         UserDefaults.standard.set(serverURL.absoluteString, forKey: "key_\(managedKey.id.uuidString)_server")
 
+        print("[KeyStore] generateServerKey: DONE — key stored with server origin, serverURL saved")
+
         addKey(managedKey)
         return managedKey
+    }
+
+    /// Check if stored key data is a packed 2-share key (both shares on device)
+    /// Packed format: [4-byte k0 length LE][k0 bytes][k1 bytes]
+    private func isPackedKeyData(for keyId: UUID) -> Bool {
+        // Explicit flag from deriveChildKey
+        if UserDefaults.standard.bool(forKey: "key_\(keyId.uuidString)_localDerived") {
+            return true
+        }
+        guard let data = UserDefaults.standard.data(forKey: "key_\(keyId.uuidString)"),
+              data.count > 4 else { return false }
+        let k0Size = data.withUnsafeBytes { $0.load(as: UInt32.self) }
+        let k0End = 4 + Int(k0Size)
+        // k0 must be non-empty, k1 must be non-empty, total must match
+        return k0Size > 0 && k0End < data.count
     }
 
     /// Sign a message with a stored key, routing based on transport origin
@@ -453,21 +495,26 @@ class KeyStore: NSObject, ObservableObject {
 
         let origin = TransportOrigin.load(for: key.id)
 
+        // SHA-256 pre-hash: C-level MPC sign expects a 32-byte hash
+        let messageData = message.data(using: .utf8) ?? Data()
+        let messageHash = SHA256.hash(data: messageData)
+        let hashData = Data(messageHash)
+
         switch origin {
         case .local:
             // Both shares on device — existing path
-            let messageData = message.data(using: .utf8) ?? Data()
-            let signatureData = try cryptoEngine.signMessage(messageData, keyData: keyData, curveCode: Int(key.curveCode))
+            let signatureData = try cryptoEngine.signMessage(hashData, keyData: keyData, curveCode: Int(key.curveCode))
             return CBMPCCryptoEngine.formatSignature(signatureData)
 
-        case .server:
-            // Server-backed key — need async path, throw for sync callers
-            // Use signMessageAsync for server keys
-            throw CBMPCError.transportError("Use signMessageAsync for server-backed keys")
-
-        case .peer:
-            // Peer key — both shares distributed, need peer transport
-            throw CBMPCError.transportError("Use signMessageAsync for peer-backed keys")
+        case .server, .peer:
+            // Check if both shares are on device (e.g., HD-child derived from server/peer parent)
+            if isPackedKeyData(for: key.id) {
+                print("[KeyStore] signMessage: key \(key.name) has \(origin.rawValue) origin but both shares on device — signing locally")
+                let signatureData = try cryptoEngine.signMessage(hashData, keyData: keyData, curveCode: Int(key.curveCode))
+                return CBMPCCryptoEngine.formatSignature(signatureData)
+            }
+            // Single share only — need async path
+            throw CBMPCError.transportError("Use signMessageAsync for \(origin.rawValue)-backed keys")
         }
     }
 
@@ -479,21 +526,32 @@ class KeyStore: NSObject, ObservableObject {
 
         let origin = TransportOrigin.load(for: key.id)
 
+        // SHA-256 pre-hash: C-level MPC sign expects a 32-byte hash
+        let messageData = message.data(using: .utf8) ?? Data()
+        let messageHash = SHA256.hash(data: messageData)
+        let hashData = Data(messageHash)
+
         switch origin {
         case .local:
             // Local keys can use sync path
-            let messageData = message.data(using: .utf8) ?? Data()
-            let signatureData = try cryptoEngine.signMessage(messageData, keyData: keyData, curveCode: Int(key.curveCode))
+            let signatureData = try cryptoEngine.signMessage(hashData, keyData: keyData, curveCode: Int(key.curveCode))
             return CBMPCCryptoEngine.formatSignature(signatureData)
 
         case .server:
+            // Check if both shares are on device (HD-child derived from server parent)
+            if isPackedKeyData(for: key.id) {
+                print("[KeyStore] signMessageAsync: key \(key.name) is locally-derived from server parent — signing with local shares")
+                let signatureData = try cryptoEngine.signMessage(hashData, keyData: keyData, curveCode: Int(key.curveCode))
+                return CBMPCCryptoEngine.formatSignature(signatureData)
+            }
+            // Single share — need server
             guard let serverURLString = UserDefaults.standard.string(forKey: "key_\(key.id.uuidString)_server"),
                   let serverURL = URL(string: serverURLString) else {
                 throw CBMPCError.serverUnreachable
             }
-            let messageData = message.data(using: .utf8) ?? Data()
+            print("[KeyStore] signMessageAsync: key \(key.name) — downloading server share from \(serverURL.host ?? "?")")
             let signatureData = try await cryptoEngine.signMessageRemote(
-                messageData,
+                hashData,
                 deviceShare: keyData,
                 curveCode: Int(key.curveCode),
                 serverURL: serverURL,
@@ -502,6 +560,12 @@ class KeyStore: NSObject, ObservableObject {
             return CBMPCCryptoEngine.formatSignature(signatureData)
 
         case .peer:
+            // Check if both shares are on device (HD-child derived from peer parent)
+            if isPackedKeyData(for: key.id) {
+                print("[KeyStore] signMessageAsync: key \(key.name) is locally-derived from peer parent — signing with local shares")
+                let signatureData = try cryptoEngine.signMessage(hashData, keyData: keyData, curveCode: Int(key.curveCode))
+                return CBMPCCryptoEngine.formatSignature(signatureData)
+            }
             throw CBMPCError.transportError("Peer signing requires both devices online")
         }
     }

@@ -107,6 +107,7 @@ struct SigningRecord: Identifiable {
     let timestamp: Date
     let verified: Bool
     var keyId: UUID?
+    var transportInfo: String?
 
     var messageHashDisplay: String {
         String(messageHash.prefix(16)) + "..."
@@ -157,7 +158,8 @@ func signingRecordToModel(_ object: NSManagedObject) -> SigningRecord {
         messageHash: object.value(forKey: "messageHash") as? String ?? "",
         signature: object.value(forKey: "signature") as? String ?? "",
         timestamp: object.value(forKey: "timestamp") as? Date ?? Date(),
-        verified: object.value(forKey: "verified") as? Bool ?? false
+        verified: object.value(forKey: "verified") as? Bool ?? false,
+        transportInfo: object.value(forKey: "transportInfo") as? String
     )
 }
 
@@ -188,4 +190,5 @@ func saveRecordToEntity(_ record: SigningRecord, in context: NSManagedObjectCont
     entity.setValue(record.signature, forKey: "signature")
     entity.setValue(record.timestamp, forKey: "timestamp")
     entity.setValue(record.verified, forKey: "verified")
+    entity.setValue(record.transportInfo, forKey: "transportInfo")
 }
