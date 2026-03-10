@@ -5,6 +5,97 @@ import CryptoKit
 import UIKit
 #endif
 
+// MARK: - CeremonyMessage
+
+/// Messages exchanged between peers during DKG and signing ceremonies.
+enum CeremonyMessage: Codable {
+    case ceremonyInit(CeremonySession)
+    case dkgCommitments(Data)
+    case dkgContribution(Data)
+    case signingRequest(Data)
+    case signingResponse(Data)
+    case error(String)
+
+    // MARK: - Custom Codable conformance
+
+    private enum CodingKeys: String, CodingKey {
+        case type
+        case payload
+    }
+
+    private enum MessageType: String, Codable {
+        case ceremonyInit
+        case dkgCommitments
+        case dkgContribution
+        case signingRequest
+        case signingResponse
+        case error
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let messageType = try container.decode(MessageType.self, forKey: .type)
+
+        switch messageType {
+        case .ceremonyInit:
+            let session = try container.decode(CeremonySession.self, forKey: .payload)
+            self = .ceremonyInit(session)
+        case .dkgCommitments:
+            let base64 = try container.decode(String.self, forKey: .payload)
+            guard let data = Data(base64Encoded: base64) else {
+                throw DecodingError.dataCorruptedError(forKey: .payload, in: container, debugDescription: "Invalid base64 data")
+            }
+            self = .dkgCommitments(data)
+        case .dkgContribution:
+            let base64 = try container.decode(String.self, forKey: .payload)
+            guard let data = Data(base64Encoded: base64) else {
+                throw DecodingError.dataCorruptedError(forKey: .payload, in: container, debugDescription: "Invalid base64 data")
+            }
+            self = .dkgContribution(data)
+        case .signingRequest:
+            let base64 = try container.decode(String.self, forKey: .payload)
+            guard let data = Data(base64Encoded: base64) else {
+                throw DecodingError.dataCorruptedError(forKey: .payload, in: container, debugDescription: "Invalid base64 data")
+            }
+            self = .signingRequest(data)
+        case .signingResponse:
+            let base64 = try container.decode(String.self, forKey: .payload)
+            guard let data = Data(base64Encoded: base64) else {
+                throw DecodingError.dataCorruptedError(forKey: .payload, in: container, debugDescription: "Invalid base64 data")
+            }
+            self = .signingResponse(data)
+        case .error:
+            let message = try container.decode(String.self, forKey: .payload)
+            self = .error(message)
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+
+        switch self {
+        case .ceremonyInit(let session):
+            try container.encode(MessageType.ceremonyInit, forKey: .type)
+            try container.encode(session, forKey: .payload)
+        case .dkgCommitments(let data):
+            try container.encode(MessageType.dkgCommitments, forKey: .type)
+            try container.encode(data.base64EncodedString(), forKey: .payload)
+        case .dkgContribution(let data):
+            try container.encode(MessageType.dkgContribution, forKey: .type)
+            try container.encode(data.base64EncodedString(), forKey: .payload)
+        case .signingRequest(let data):
+            try container.encode(MessageType.signingRequest, forKey: .type)
+            try container.encode(data.base64EncodedString(), forKey: .payload)
+        case .signingResponse(let data):
+            try container.encode(MessageType.signingResponse, forKey: .type)
+            try container.encode(data.base64EncodedString(), forKey: .payload)
+        case .error(let message):
+            try container.encode(MessageType.error, forKey: .type)
+            try container.encode(message, forKey: .payload)
+        }
+    }
+}
+
 /// Manages MultipeerConnectivity session establishment after QR pairing ceremony.
 /// Uses a token derived from the ECDH shared secret (or session ID) so only the paired device connects.
 class PeerConnectionManager: NSObject, ObservableObject {
@@ -18,6 +109,7 @@ class PeerConnectionManager: NSObject, ObservableObject {
     @Published var connectedAt: Date?
     var onStateChange: ((ConnectionState) -> Void)?
     var onDataReceived: ((Data, MCPeerID) -> Void)?
+    var onCeremonyMessageReceived: ((CeremonyMessage) -> Void)?
 
     enum ConnectionState: Equatable {
         case disconnected
@@ -115,6 +207,12 @@ class PeerConnectionManager: NSObject, ObservableObject {
         try mcSession.send(data, toPeers: [peer], with: .reliable)
     }
 
+    /// Encode and send a ceremony message to the connected peer
+    func sendCeremonyMessage(_ message: CeremonyMessage) throws {
+        let encoded = try JSONEncoder().encode(message)
+        try sendData(encoded)
+    }
+
     func stop() {
         advertiser?.stopAdvertisingPeer()
         browser?.stopBrowsingForPeers()
@@ -157,7 +255,11 @@ extension PeerConnectionManager: MCSessionDelegate {
 
     func session(_ session: MCSession, didReceive data: Data, fromPeer peerID: MCPeerID) {
         DispatchQueue.main.async {
-            self.onDataReceived?(data, peerID)
+            if let message = try? JSONDecoder().decode(CeremonyMessage.self, from: data) {
+                self.onCeremonyMessageReceived?(message)
+            } else {
+                self.onDataReceived?(data, peerID)
+            }
         }
     }
 
