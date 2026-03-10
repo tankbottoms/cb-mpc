@@ -180,6 +180,9 @@
 		FF17000100000000000000A2 /* KeyShareManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Models/KeyShareManager.swift; sourceTree = SOURCE_ROOT; };
 		FF17000200000000000000A2 /* KeyShareManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF17000100000000000000A2 /* KeyShareManager.swift */; };
 		FF17000300000000000000A2 /* KeyShareManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF17000100000000000000A2 /* KeyShareManager.swift */; };
+		FF17000100000000000000A3 /* CeremonyCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Models/CeremonyCoordinator.swift; sourceTree = SOURCE_ROOT; };
+		FF17000200000000000000A3 /* CeremonyCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF17000100000000000000A3 /* CeremonyCoordinator.swift */; };
+		FF17000300000000000000A3 /* CeremonyCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF17000100000000000000A3 /* CeremonyCoordinator.swift */; };
 
 /* v0.14.0 network view */
 		FF14000100000000000000A1 /* NetworkView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Views/NetworkView.swift; sourceTree = SOURCE_ROOT; };
@@ -323,6 +326,7 @@
 				FF16000200000000000000A9 /* PeerConnectionManager.swift in Sources */,
 				FF17000200000000000000A1 /* CeremonySession.swift in Sources */,
 				FF17000200000000000000A2 /* KeyShareManager.swift in Sources */,
+				FF17000200000000000000A3 /* CeremonyCoordinator.swift in Sources */,
 				A1E5F40C2D5E4A1B00C8F3E2 /* CBMPCNative.xcdatamodeld in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -418,6 +422,7 @@
 				FF16000300000000000000A9 /* PeerConnectionManager.swift in Sources */,
 				FF17000300000000000000A1 /* CeremonySession.swift in Sources */,
 				FF17000300000000000000A2 /* KeyShareManager.swift in Sources */,
+				FF17000300000000000000A3 /* CeremonyCoordinator.swift in Sources */,
 				AA00000100000000000000C4 /* CBMPCNative.xcdatamodeld in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
