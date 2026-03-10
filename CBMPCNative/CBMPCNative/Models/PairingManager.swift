@@ -16,6 +16,7 @@ struct PairedDevice: Codable, Identifiable {
     var lastSeenAt: Date?
     var isOnline: Bool
     var shareCount: Int
+    var discoveryToken: String?   // MC reconnection token derived from session
 }
 
 // MARK: - MPC Server Model
@@ -37,7 +38,7 @@ struct MPCServer: Codable, Identifiable {
 // MARK: - Pairing Session
 
 struct PairingSession {
-    let sessionId: UUID
+    var sessionId: UUID
     let localKeyPair: Curve25519.KeyAgreement.PrivateKey
     let role: PairingRole
     var remotePublicKey: Curve25519.KeyAgreement.PublicKey?
@@ -56,7 +57,8 @@ struct PairingSession {
         self.role = role
     }
 
-    /// QR payload for initiator (Device A shows this)
+    /// QR payload v2 for initiator (Device A shows this)
+    /// Format: sessionId(16) + pubkey(32) + nameLen(2 BE) + deviceName(UTF8) + deviceModel(UTF8)
     var initiatorQRPayload: Data {
         var payload = Data()
         // Session ID (16 bytes)
@@ -64,13 +66,14 @@ struct PairingSession {
         payload.append(uuidBytes)
         // Public key (32 bytes)
         payload.append(localKeyPair.publicKey.rawRepresentation)
-        // Device name (variable, UTF-8)
-        #if os(iOS)
-        let deviceName = UIDevice.current.name
-        #else
-        let deviceName = Host.current().localizedName ?? "Mac"
-        #endif
-        payload.append(Data(deviceName.utf8))
+        // Device name with length prefix
+        let deviceName = DeviceInfo.deviceName
+        let deviceModel = DeviceInfo.modelName
+        let nameData = Data(deviceName.utf8)
+        var nameLen = UInt16(nameData.count).bigEndian
+        payload.append(Data(bytes: &nameLen, count: 2))
+        payload.append(nameData)
+        payload.append(Data(deviceModel.utf8))
         return payload
     }
 
@@ -109,6 +112,7 @@ class PairingManager: ObservableObject {
 
     @Published var pairedDevices: [PairedDevice] = []
     @Published var servers: [MPCServer] = []
+    @Published var activeConnections: [UUID: PeerConnectionManager] = [:]
 
     private let devicesKey = "xyz.atsignhandle.cb-mpc.paired-devices"
     private let serversKey = "xyz.atsignhandle.cb-mpc.mpc-servers"
@@ -141,8 +145,48 @@ class PairingManager: ObservableObject {
     }
 
     func removePairedDevice(_ device: PairedDevice) {
+        activeConnections[device.id]?.stop()
+        activeConnections.removeValue(forKey: device.id)
         pairedDevices.removeAll { $0.id == device.id }
         savePairedDevices()
+    }
+
+    // MARK: - Connection Registry
+
+    func registerConnection(_ connection: PeerConnectionManager, for deviceId: UUID) {
+        activeConnections[deviceId] = connection
+    }
+
+    func disconnectDevice(_ deviceId: UUID) {
+        activeConnections[deviceId]?.stop()
+        activeConnections.removeValue(forKey: deviceId)
+    }
+
+    func connectionState(for deviceId: UUID) -> PeerConnectionManager.ConnectionState {
+        activeConnections[deviceId]?.connectionState ?? .disconnected
+    }
+
+    // MARK: - Reconnection
+
+    /// Reconnect to a previously paired device using stored discovery token
+    func reconnect(to device: PairedDevice) {
+        guard let token = device.discoveryToken else {
+            print("[PairingManager] No discovery token for device \(device.name)")
+            return
+        }
+        // Stop any existing connection
+        activeConnections[device.id]?.stop()
+        let connection = PeerConnectionManager(sessionToken: token, role: .initiator)
+        registerConnection(connection, for: device.id)
+        connection.startSearching()
+        print("[PairingManager] Reconnecting to \(device.name) with stored token")
+    }
+
+    /// Reconnect to all paired devices that have discovery tokens
+    func reconnectAll() {
+        for device in pairedDevices {
+            reconnect(to: device)
+        }
     }
 
     // MARK: - MPC Servers
@@ -168,6 +212,8 @@ class PairingManager: ObservableObject {
     }
 
     func removeServer(_ server: MPCServer) {
+        ServerAuthKeychain.deleteToken(for: server.url)
+        ServerAuthKeychain.deleteToken(for: "\(server.url)::device_id")
         servers.removeAll { $0.id == server.id }
         saveServers()
     }
