@@ -8,16 +8,7 @@ import Darwin
 
 // MARK: - MPC Models
 
-struct KeyShare: Codable, Identifiable {
-    let id: String
-    let publicKey: String
-    let shareData: Data
-    let createdAt: Date
-
-    var publicKeyDisplay: String {
-        String(publicKey.prefix(16)) + "..."
-    }
-}
+// KeyShare struct is defined in CeremonySession.swift
 
 struct MPCKey {
     let id: UUID
