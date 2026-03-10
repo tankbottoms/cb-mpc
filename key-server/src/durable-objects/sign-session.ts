@@ -10,12 +10,11 @@ interface Participant {
   ws: WebSocket | null;
 }
 
-export class DKGSession extends DurableObject<Env> {
+export class SignSession extends DurableObject<Env> {
   private sql: SqlStorage;
   private participants: Map<number, Participant> = new Map();
   private sessionId: string = "";
   private status: "pending" | "active" | "complete" | "failed" = "pending";
-  private curveCode: number = 714;
   private sessionPrefix: Uint8Array = new Uint8Array(4);
 
   constructor(ctx: DurableObjectState, env: Env) {
@@ -45,18 +44,18 @@ export class DKGSession extends DurableObject<Env> {
     const method = request.method;
     const parts = path.split("/").filter(Boolean);
 
-    // POST /sessions/dkg -- create session
-    if (parts[1] === "dkg" && method === "POST") {
+    // POST /sessions/:id/sign -- create signing session
+    if (parts.length === 3 && parts[2] === "sign" && method === "POST") {
       return this.createSession(request);
     }
 
-    // GET /sessions/:id -- status
-    if (parts.length === 2 && method === "GET") {
+    // GET /sessions/:id/sign -- status
+    if (parts.length === 3 && parts[2] === "sign" && method === "GET") {
       return this.getStatus();
     }
 
-    // GET /sessions/:id/ws -- WebSocket upgrade
-    if (parts.length === 3 && parts[2] === "ws") {
+    // GET /sessions/:id/sign/ws -- WebSocket upgrade
+    if (parts.length === 4 && parts[2] === "sign" && parts[3] === "ws") {
       return this.handleWebSocket(request, url);
     }
 
@@ -65,14 +64,20 @@ export class DKGSession extends DurableObject<Env> {
 
   private async createSession(request: Request): Promise<Response> {
     const body = await request.json<{
-      curve_code?: number;
+      public_key: string;
+      message_hash: string;
       device_id: string;
-      party_count?: number;
     }>();
+
+    if (!body.public_key || !body.message_hash || !body.device_id) {
+      return Response.json(
+        { error: "Missing required fields: public_key, message_hash, device_id" },
+        { status: 400 }
+      );
+    }
 
     this.sessionId =
       request.headers.get("X-Session-Id") || crypto.randomUUID();
-    this.curveCode = body.curve_code || 714;
     this.status = "pending";
 
     const idBytes = new TextEncoder().encode(this.sessionId);
@@ -81,7 +86,8 @@ export class DKGSession extends DurableObject<Env> {
 
     this.setState("session_id", this.sessionId);
     this.setState("status", this.status);
-    this.setState("curve_code", String(this.curveCode));
+    this.setState("public_key", body.public_key);
+    this.setState("message_hash", body.message_hash);
     this.setState("created_at", String(Date.now()));
     this.setState("creator_device", body.device_id);
 
@@ -92,8 +98,9 @@ export class DKGSession extends DurableObject<Env> {
       {
         session_id: this.sessionId,
         status: this.status,
-        curve_code: this.curveCode,
-        ws_url: `/sessions/${this.sessionId}/ws`,
+        public_key: body.public_key,
+        message_hash: body.message_hash,
+        ws_url: `/sessions/${this.sessionId}/sign/ws`,
       },
       { status: 201 }
     );
@@ -102,11 +109,12 @@ export class DKGSession extends DurableObject<Env> {
   private getStatus(): Response {
     const status = this.getState("status") || "unknown";
     const publicKey = this.getState("public_key");
+    const messageHash = this.getState("message_hash");
     return Response.json({
       session_id: this.getState("session_id"),
       status,
-      curve_code: Number(this.getState("curve_code") || 714),
       public_key: publicKey,
+      message_hash: messageHash,
       participant_count: this.participants.size,
     });
   }
@@ -171,42 +179,8 @@ export class DKGSession extends DurableObject<Env> {
       Date.now()
     );
 
-    // Handle DKG_COMPLETE: extract public key, store server share in KeyVault
-    if (decoded.type === MSG_TYPE.DKG_COMPLETE) {
-      // Payload format: [pubkey_len:2][pubkey:N][share:M]
-      const payloadView = new DataView(
-        decoded.payload.buffer,
-        decoded.payload.byteOffset,
-        decoded.payload.byteLength
-      );
-      const pubkeyLen = payloadView.getUint16(0, false);
-      const pubkeyBytes = decoded.payload.slice(2, 2 + pubkeyLen);
-      const shareBytes = decoded.payload.slice(2 + pubkeyLen);
-
-      // Hex-encode the public key
-      const publicKey = Array.from(pubkeyBytes)
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("");
-
-      this.setState("public_key", publicKey);
-
-      // Collect participant device IDs
-      const participantDevices: string[] = [];
-      for (const [, p] of this.participants) {
-        participantDevices.push(p.deviceId);
-      }
-
-      // Store server share in KeyVault
-      const vaultId = this.env.KEY_VAULT.idFromName(publicKey);
-      const vault = this.env.KEY_VAULT.get(vaultId);
-      await (vault as any).storeShare(
-        publicKey,
-        this.curveCode,
-        shareBytes.buffer,
-        participantDevices
-      );
-
-      // Transition to complete
+    // Handle SIGN_COMPLETE
+    if (decoded.type === MSG_TYPE.SIGN_COMPLETE) {
       this.status = "complete";
       this.setState("status", "complete");
 
@@ -232,9 +206,6 @@ export class DKGSession extends DurableObject<Env> {
         target.ws.send(message);
       }
     }
-
-    // TODO: When WASM is integrated (Chunk 3), the server party
-    // processes messages here via cbmpc WASM and generates responses
   }
 
   async webSocketClose(ws: WebSocket, _code: number): Promise<void> {

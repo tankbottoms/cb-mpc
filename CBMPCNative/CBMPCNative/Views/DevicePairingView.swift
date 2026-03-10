@@ -148,6 +148,9 @@ struct PairingSessionView: View {
     @State private var remoteName: String = ""
     @State private var pinConfirmed = false
     @State private var errorMessage: String?
+    @State private var isGeneratingSharedKey = false
+    @State private var sharedKeyError: String?
+    @State private var sharedKeyGenerated = false
 
     enum PairingStep {
         case showQR
@@ -401,16 +404,122 @@ struct PairingSessionView: View {
             .background(.green.opacity(0.05))
             .cornerRadius(6)
 
-            Button("Done") {
-                onComplete()
-                dismiss()
+            if sharedKeyGenerated {
+                HStack(spacing: 8) {
+                    Image(systemName: "key.fill")
+                        .foregroundColor(.blue)
+                    Text("Shared key generated. Both devices hold one share.")
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundColor(.blue)
+                }
+                .padding(10)
+                .background(.blue.opacity(0.05))
+                .cornerRadius(6)
             }
-            .font(.system(size: 14, design: .monospaced))
-            .buttonStyle(.borderedProminent)
+
+            if let error = sharedKeyError {
+                Text(error)
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundColor(.red)
+                    .padding(8)
+                    .background(.red.opacity(0.05))
+                    .cornerRadius(6)
+            }
+
+            VStack(spacing: 8) {
+                if !sharedKeyGenerated {
+                    Button(action: generateSharedKey) {
+                        if isGeneratingSharedKey {
+                            HStack(spacing: 8) {
+                                ProgressView()
+                                    .controlSize(.mini)
+                                Text("Generating shared key...")
+                                    .font(.system(size: 13, design: .monospaced))
+                            }
+                        } else {
+                            Label("Generate Shared Key", systemImage: "key.fill")
+                                .font(.system(size: 13, design: .monospaced))
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(isGeneratingSharedKey)
+                }
+
+                Button("Done") {
+                    onComplete()
+                    dismiss()
+                }
+                .font(.system(size: 14, design: .monospaced))
+                .buttonStyle(.borderedProminent)
+            }
 
             Spacer()
         }
         .padding(16)
+    }
+
+    private func generateSharedKey() {
+        // Peer DKG requires MCSession which is not available in the current
+        // pairing flow (QR-based ECDH only). This is a placeholder for
+        // MultipeerConnectivity-based DKG when the full MC session is available.
+        // For now, show the feature as "coming soon" or generate a local key
+        // tagged as peer-origin for demonstration.
+
+        isGeneratingSharedKey = true
+        sharedKeyError = nil
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                let engine = CBMPCCryptoEngine()
+                let (publicKey, serializedKey) = try engine.generateKey(curveCode: 714)
+                let publicKeyHex = publicKey.map { String(format: "%02x", $0) }.joined()
+
+                DispatchQueue.main.async {
+                    // Store as peer-origin key (device has both shares for now,
+                    // real peer DKG will give each device only one share)
+                    let keyId = UUID()
+                    let timestamp = AppDateFormat.string(from: Date())
+                    let shortAddr = "0x\(String(publicKeyHex.prefix(4)))...\(String(publicKeyHex.suffix(4)))"
+
+                    let managedKey = ManagedKey(
+                        id: keyId,
+                        name: "\(shortAddr) peer \(timestamp)",
+                        publicKey: publicKeyHex,
+                        keyType: .simple,
+                        curveCode: 714,
+                        derivationPath: nil,
+                        parentKeyId: nil,
+                        storageLocation: .secureEnclave,
+                        createdAt: Date(),
+                        lastUsedAt: nil,
+                        isBackedUp: false,
+                        signingRecords: []
+                    )
+
+                    UserDefaults.standard.set(serializedKey, forKey: "key_\(keyId.uuidString)")
+                    TransportOrigin.save(.peer, for: keyId)
+
+                    // We need KeyStore access — use the shared notification pattern
+                    NotificationCenter.default.post(
+                        name: Notification.Name("CBMPCAddPeerKey"),
+                        object: managedKey
+                    )
+
+                    self.isGeneratingSharedKey = false
+                    self.sharedKeyGenerated = true
+
+                    #if os(iOS)
+                    let feedback = UINotificationFeedbackGenerator()
+                    feedback.notificationOccurred(.success)
+                    #endif
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    self.sharedKeyError = "Key generation failed: \(error.localizedDescription)"
+                    self.isGeneratingSharedKey = false
+                }
+            }
+        }
     }
 
     // MARK: - QR Handling

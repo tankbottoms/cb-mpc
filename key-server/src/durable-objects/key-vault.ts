@@ -29,6 +29,10 @@ export class KeyVault extends DurableObject<Env> {
       return this.getKey(parts[1]);
     }
 
+    if (parts.length === 2 && method === "POST") {
+      return this.storeKey(request, parts[1]);
+    }
+
     return Response.json({ error: "Not found" }, { status: 404 });
   }
 
@@ -53,6 +57,40 @@ export class KeyVault extends DurableObject<Env> {
       last_used_at: k.last_used_at,
       sign_count: k.sign_count,
     });
+  }
+
+  private async storeKey(request: Request, pubkey: string): Promise<Response> {
+    const body = await request.json<{
+      curve_code: number;
+      server_share: string; // base64
+      participant_devices: string[];
+    }>();
+
+    if (!body.curve_code || !body.server_share || !body.participant_devices) {
+      return Response.json(
+        { error: "Missing required fields: curve_code, server_share, participant_devices" },
+        { status: 400 }
+      );
+    }
+
+    // Decode base64 server_share to ArrayBuffer
+    const binaryStr = atob(body.server_share);
+    const shareBytes = new Uint8Array(binaryStr.length);
+    for (let i = 0; i < binaryStr.length; i++) {
+      shareBytes[i] = binaryStr.charCodeAt(i);
+    }
+
+    await this.storeShare(
+      pubkey,
+      body.curve_code,
+      shareBytes.buffer,
+      body.participant_devices
+    );
+
+    return Response.json(
+      { public_key: pubkey, stored: true },
+      { status: 201 }
+    );
   }
 
   async storeShare(
@@ -84,6 +122,9 @@ export class KeyVault extends DurableObject<Env> {
       publicKey
     );
 
-    return (rows[0].server_share as Uint8Array).buffer;
+    const raw = rows[0].server_share;
+    if (raw instanceof ArrayBuffer) return raw;
+    if (ArrayBuffer.isView(raw)) return raw.buffer as ArrayBuffer;
+    return null;
   }
 }

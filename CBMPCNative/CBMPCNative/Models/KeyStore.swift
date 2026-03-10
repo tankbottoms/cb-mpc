@@ -374,7 +374,7 @@ class KeyStore: NSObject, ObservableObject {
 
     // MARK: - Cryptographic Operations
 
-    /// Generate a real cryptographic key using DKG
+    /// Generate a real cryptographic key using DKG (local, both shares on device)
     func generateCryptographicKey(name: String, keyType: KeyType) throws -> ManagedKey {
         let curveCode = 714 // secp256k1
 
@@ -400,6 +400,7 @@ class KeyStore: NSObject, ObservableObject {
             )
 
             UserDefaults.standard.set(serializedKey, forKey: "key_\(managedKey.id.uuidString)")
+            TransportOrigin.save(.local, for: managedKey.id)
 
             addKey(managedKey)
             return managedKey
@@ -409,18 +410,99 @@ class KeyStore: NSObject, ObservableObject {
         }
     }
 
-    /// Sign a message with a stored key
+    /// Generate a server-backed key (device share local, server share remote)
+    func generateServerKey(name: String, keyType: KeyType, serverURL: URL) async throws -> ManagedKey {
+        let curveCode = 714
+
+        let (publicKey, deviceShare) = try await cryptoEngine.generateKeyRemote(serverURL: serverURL, curveCode: curveCode)
+        let publicKeyHex = publicKey.map { String(format: "%02x", $0) }.joined()
+
+        let derivationPath: String? = (keyType == .hdMaster) ? "m" : nil
+
+        let managedKey = ManagedKey(
+            id: UUID(),
+            name: name,
+            publicKey: publicKeyHex,
+            keyType: keyType,
+            curveCode: Int32(curveCode),
+            derivationPath: derivationPath,
+            parentKeyId: nil,
+            storageLocation: .secureEnclave,
+            createdAt: Date(),
+            lastUsedAt: nil,
+            isBackedUp: false,
+            signingRecords: []
+        )
+
+        // Store only the device share (not the full two-share pack)
+        UserDefaults.standard.set(deviceShare, forKey: "key_\(managedKey.id.uuidString)")
+        TransportOrigin.save(.server, for: managedKey.id)
+
+        // Store server URL for this key
+        UserDefaults.standard.set(serverURL.absoluteString, forKey: "key_\(managedKey.id.uuidString)_server")
+
+        addKey(managedKey)
+        return managedKey
+    }
+
+    /// Sign a message with a stored key, routing based on transport origin
     func signMessage(_ message: String, with key: ManagedKey) throws -> String {
         guard let keyData = UserDefaults.standard.data(forKey: "key_\(key.id.uuidString)") else {
             throw CBMPCError.invalidKeyData
         }
 
-        do {
+        let origin = TransportOrigin.load(for: key.id)
+
+        switch origin {
+        case .local:
+            // Both shares on device — existing path
             let messageData = message.data(using: .utf8) ?? Data()
             let signatureData = try cryptoEngine.signMessage(messageData, keyData: keyData, curveCode: Int(key.curveCode))
             return CBMPCCryptoEngine.formatSignature(signatureData)
-        } catch {
-            throw error
+
+        case .server:
+            // Server-backed key — need async path, throw for sync callers
+            // Use signMessageAsync for server keys
+            throw CBMPCError.transportError("Use signMessageAsync for server-backed keys")
+
+        case .peer:
+            // Peer key — both shares distributed, need peer transport
+            throw CBMPCError.transportError("Use signMessageAsync for peer-backed keys")
+        }
+    }
+
+    /// Async sign for server-backed and peer-backed keys
+    func signMessageAsync(_ message: String, with key: ManagedKey) async throws -> String {
+        guard let keyData = UserDefaults.standard.data(forKey: "key_\(key.id.uuidString)") else {
+            throw CBMPCError.invalidKeyData
+        }
+
+        let origin = TransportOrigin.load(for: key.id)
+
+        switch origin {
+        case .local:
+            // Local keys can use sync path
+            let messageData = message.data(using: .utf8) ?? Data()
+            let signatureData = try cryptoEngine.signMessage(messageData, keyData: keyData, curveCode: Int(key.curveCode))
+            return CBMPCCryptoEngine.formatSignature(signatureData)
+
+        case .server:
+            guard let serverURLString = UserDefaults.standard.string(forKey: "key_\(key.id.uuidString)_server"),
+                  let serverURL = URL(string: serverURLString) else {
+                throw CBMPCError.serverUnreachable
+            }
+            let messageData = message.data(using: .utf8) ?? Data()
+            let signatureData = try await cryptoEngine.signMessageRemote(
+                messageData,
+                deviceShare: keyData,
+                curveCode: Int(key.curveCode),
+                serverURL: serverURL,
+                publicKey: key.publicKey
+            )
+            return CBMPCCryptoEngine.formatSignature(signatureData)
+
+        case .peer:
+            throw CBMPCError.transportError("Peer signing requires both devices online")
         }
     }
 }

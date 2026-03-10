@@ -3,12 +3,20 @@ import SwiftUI
 struct AppNavigation: View {
     @StateObject var keyStore: KeyStore = KeyStore()
     @SceneStorage("selectedTab") private var selectedTab = 0
+    @AppStorage("hasSeenVaultWelcome") private var hasSeenVaultWelcome = false
     @State private var tabBarHidden = false
 
     #if os(iOS)
     var body: some View {
-        iPhoneNavigationView()
-            .environmentObject(keyStore)
+        Group {
+            if !hasSeenVaultWelcome && keyStore.keys.isEmpty {
+                WelcomeView(hasCompletedOnboarding: $hasSeenVaultWelcome)
+                    .environmentObject(keyStore)
+            } else {
+                iPhoneNavigationView()
+                    .environmentObject(keyStore)
+            }
+        }
     }
 
     @ViewBuilder
@@ -152,26 +160,11 @@ struct NetworkPlaceholderView: View {
 struct TransactionsPlaceholderView: View {
     var body: some View {
         NavigationStack {
-            VStack(spacing: 16) {
-                Image(systemName: "arrow.left.arrow.right")
-                    .font(.system(size: 48))
-                    .foregroundColor(.secondary.opacity(0.5))
-                Text("Transactions")
-                    .font(.system(size: 18, weight: .bold, design: .monospaced))
-                Text("Contract interaction, ABI search, and transaction broadcasting.")
-                    .font(.system(size: 12, design: .monospaced))
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 40)
-                Text("COMING SOON")
-                    .font(.system(size: 10, weight: .medium, design: .monospaced))
-                    .foregroundColor(.blue)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(.blue.opacity(0.1))
-                    .cornerRadius(4)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            PlaceholderScreen(
+                icon: "arrow.left.arrow.right",
+                title: "Transactions",
+                description: "Contract interaction, ABI search, and transaction broadcasting."
+            )
             .navigationTitle("Transactions")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)

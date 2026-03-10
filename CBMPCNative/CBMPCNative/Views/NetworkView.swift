@@ -17,8 +17,7 @@ struct NetworkView: View {
         NavigationStack {
             List {
                 Section(header: Text("NODES"), footer:
-                    Text("All locations where key shares and keystore data are stored. Tap a node to see details.")
-                        .font(.system(size: 10, design: .monospaced))
+                    SectionFooterText(text: "All locations where key shares and keystore data are stored. Tap a node to see details.")
                 ) {
                     ForEach(nodes) { node in
                         NavigationLink(destination: NodeDetailView(node: node, keyStore: keyStore)) {
@@ -114,22 +113,51 @@ struct NetworkView: View {
             ))
         }
 
-        // Add servers
-        for server in pairingManager.servers {
+        // Add servers with async health check
+        for (index, server) in pairingManager.servers.enumerated() {
+            let serverStatus: NetworkNode.NodeStatus
+            if server.isRegistered {
+                serverStatus = server.isOnline ? .active : .offline
+            } else {
+                serverStatus = .empty // unregistered
+            }
+
             allNodes.append(NetworkNode(
                 id: server.id.uuidString,
                 name: server.name,
                 icon: "server.rack",
                 nodeType: .server,
-                status: server.isOnline ? .active : .offline,
+                status: serverStatus,
                 shareCount: server.shareCount,
                 keychainItems: 0,
                 keychainBytes: 0,
                 userDefaultsEntries: 0,
                 userDefaultsBytes: 0,
                 deviceModel: server.url,
-                lastSeen: server.lastSeenAt
+                lastSeen: server.lastSeenAt,
+                isRegistered: server.isRegistered
             ))
+
+            // Async health check for each server
+            if let baseURL = URL(string: server.url) {
+                let serverIndex = index
+                Task {
+                    let client = ServerAPIClient(baseURL: baseURL)
+                    do {
+                        _ = try await client.health()
+                        await MainActor.run {
+                            pairingManager.servers[serverIndex].isOnline = true
+                            pairingManager.servers[serverIndex].lastSeenAt = Date()
+                            pairingManager.saveServers()
+                        }
+                    } catch {
+                        await MainActor.run {
+                            pairingManager.servers[serverIndex].isOnline = false
+                            pairingManager.saveServers()
+                        }
+                    }
+                }
+            }
         }
 
         nodes = allNodes
@@ -245,6 +273,7 @@ struct NetworkNode: Identifiable {
     let userDefaultsBytes: Int
     let deviceModel: String?
     let lastSeen: Date?
+    var isRegistered: Bool = false
 
     var totalBytes: Int { keychainBytes + userDefaultsBytes }
 
@@ -290,26 +319,26 @@ struct NodeRow: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     Text(node.name)
-                        .font(.system(size: 13, weight: .medium, design: .monospaced))
-                    Circle()
-                        .fill(node.status.color)
-                        .frame(width: 6, height: 6)
+                        .font(CBStyle.Fonts.bodyMedium)
+                    NodeStatusDot(color: node.status.color)
                 }
 
                 HStack(spacing: 8) {
-                    Text(node.status.rawValue)
-                        .font(.system(size: 10, design: .monospaced))
-                        .foregroundColor(node.status.color)
+                    TagBadge(text: node.status.rawValue, color: node.status.color)
+
+                    if node.nodeType == .server && node.isRegistered {
+                        TagBadge(text: "Registered", color: .blue)
+                    }
 
                     if node.shareCount > 0 {
                         Text("\(node.shareCount) key\(node.shareCount == 1 ? "" : "s")")
-                            .font(.system(size: 10, design: .monospaced))
+                            .font(CBStyle.Fonts.caption)
                             .foregroundColor(.secondary)
                     }
 
                     if node.totalBytes > 0 {
                         Text(node.totalBytesDisplay)
-                            .font(.system(size: 10, design: .monospaced))
+                            .font(CBStyle.Fonts.caption)
                             .foregroundColor(.secondary)
                     }
                 }
@@ -330,25 +359,29 @@ struct NodeDetailView: View {
     var body: some View {
         List {
             Section(header: Text("NODE INFO")) {
-                infoRow("Name", node.name)
-                infoRow("Type", nodeTypeLabel)
-                infoRow("Status", node.status.rawValue)
+                InfoRow(label: "Name", value: node.name)
+                InfoRow(label: "Type", value: nodeTypeLabel)
+                InfoRow(label: "Status", value: node.status.rawValue)
                 if let model = node.deviceModel {
-                    infoRow("Device", model)
+                    InfoRow(label: "Device", value: model)
                 }
                 if let seen = node.lastSeen {
-                    infoRow("Last Seen", formatDate(seen))
+                    InfoRow(label: "Last Seen", value: formatDate(seen))
                 }
             }
 
             Section(header: Text("STORAGE")) {
                 if node.nodeType == .thisDevice {
-                    infoRow("Device Keychain", "\(node.keychainItems) item\(node.keychainItems == 1 ? "" : "s") (\(formatBytes(node.keychainBytes)))")
-                    infoRow("UserDefaults", "\(node.userDefaultsEntries) entr\(node.userDefaultsEntries == 1 ? "y" : "ies") (\(formatBytes(node.userDefaultsBytes)))")
-                    infoRow("Total", node.totalBytesDisplay)
+                    InfoRow(label: "Device Keychain", value: "\(node.keychainItems) item\(node.keychainItems == 1 ? "" : "s") (\(formatBytes(node.keychainBytes)))")
+                    InfoRow(label: "UserDefaults", value: "\(node.userDefaultsEntries) entr\(node.userDefaultsEntries == 1 ? "y" : "ies") (\(formatBytes(node.userDefaultsBytes)))")
+                    InfoRow(label: "Total", value: node.totalBytesDisplay)
                 } else if node.nodeType == .icloud {
-                    infoRow("Synced Items", "\(node.keychainItems) item\(node.keychainItems == 1 ? "" : "s")")
-                    infoRow("Size", formatBytes(node.keychainBytes))
+                    InfoRow(label: "Synced Items", value: "\(node.keychainItems) item\(node.keychainItems == 1 ? "" : "s")")
+                    InfoRow(label: "Size", value: formatBytes(node.keychainBytes))
+                } else if node.nodeType == .server {
+                    InfoRow(label: "Shares", value: "\(node.shareCount) key\(node.shareCount == 1 ? "" : "s")")
+                } else if node.nodeType == .pairedDevice {
+                    InfoRow(label: "Shares", value: "\(node.shareCount) key\(node.shareCount == 1 ? "" : "s")")
                 }
             }
 
@@ -359,52 +392,46 @@ struct NodeDetailView: View {
                             KeyOnNodeRow(key: key)
                         }
                     } else if node.nodeType == .icloud {
-                        // Show keys that have been synced to iCloud
                         ForEach(keyStore.keys.filter { keySyncedToICloud($0) }) { key in
                             KeyOnNodeRow(key: key)
                         }
                         if keyStore.keys.filter({ keySyncedToICloud($0) }).isEmpty {
                             Text("No keys synced to iCloud Keychain")
-                                .font(.system(size: 11, design: .monospaced))
+                                .font(CBStyle.Fonts.crypto)
                                 .foregroundColor(.secondary)
                         }
                     }
                 }
             }
 
-            if node.nodeType == .thisDevice {
-                Section(header: Text("SECURITY")) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Device Keychain")
-                            .font(.system(size: 11, weight: .medium, design: .monospaced))
-                        Text("AES-256 encrypted at rest by iOS data protection. Tied to device hardware UID. Never leaves this device. Requires unlock (passcode/Face ID).")
-                            .font(.system(size: 10, design: .monospaced))
-                            .foregroundColor(.secondary)
-                    }
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("UserDefaults")
-                            .font(.system(size: 11, weight: .medium, design: .monospaced))
-                        Text("Local app storage for key share data. Protected by iOS app sandbox and device-level encryption (NSFileProtectionComplete).")
-                            .font(.system(size: 10, design: .monospaced))
-                            .foregroundColor(.secondary)
-                    }
-                }
-            } else if node.nodeType == .icloud {
-                Section(header: Text("SECURITY")) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("iCloud Keychain")
-                            .font(.system(size: 11, weight: .medium, design: .monospaced))
-                        Text("Apple end-to-end encrypted. Syncs across devices signed into same Apple ID. Protected by device passcode + Apple ID password. AES-256-GCM in transit, HSM-backed escrow keys at rest.")
-                            .font(.system(size: 10, design: .monospaced))
-                            .foregroundColor(.secondary)
-                    }
-                }
+            Section(header: Text("SECURITY")) {
+                securityDescription
             }
         }
         .navigationTitle(node.name)
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
+    }
+
+    @ViewBuilder
+    private var securityDescription: some View {
+        switch node.nodeType {
+        case .thisDevice:
+            SecurityRow(title: "Device Keychain",
+                        description: "AES-256 encrypted at rest by iOS data protection. Tied to device hardware UID. Never leaves this device. Requires unlock (passcode/Face ID).")
+            SecurityRow(title: "UserDefaults",
+                        description: "Local app storage for key share data. Protected by iOS app sandbox and device-level encryption (NSFileProtectionComplete).")
+        case .icloud:
+            SecurityRow(title: "iCloud Keychain",
+                        description: "Apple end-to-end encrypted. Syncs across devices signed into same Apple ID. Protected by device passcode + Apple ID password. AES-256-GCM in transit, HSM-backed escrow keys at rest.")
+        case .pairedDevice:
+            SecurityRow(title: "Paired Device",
+                        description: "Share transmitted via AES-256 encrypted channel after QR + 6-digit PIN pairing ceremony. Share stored in the paired device's Device Keychain.")
+        case .server:
+            SecurityRow(title: "MPC Server",
+                        description: "Server holds one key share. Authenticated via mTLS client certificates exchanged during server registration. Server cannot sign alone (requires quorum).")
+        }
     }
 
     private var nodeTypeLabel: String {
@@ -420,18 +447,6 @@ struct NodeDetailView: View {
         KeychainSyncManager.load(keyId: key.id) != nil
     }
 
-    @ViewBuilder
-    private func infoRow(_ label: String, _ value: String) -> some View {
-        HStack {
-            Text(label)
-                .font(.system(size: 11, design: .monospaced))
-                .foregroundColor(.secondary)
-            Spacer()
-            Text(value)
-                .font(.system(size: 11, design: .monospaced))
-        }
-    }
-
     private func formatDate(_ date: Date) -> String {
         let f = RelativeDateTimeFormatter()
         f.unitsStyle = .abbreviated
@@ -442,6 +457,21 @@ struct NodeDetailView: View {
         let kb = Double(bytes) / 1024.0
         if kb < 1 { return "\(bytes) B" }
         return String(format: "%.1f KB", kb)
+    }
+}
+
+struct SecurityRow: View {
+    let title: String
+    let description: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(CBStyle.Fonts.cryptoMedium)
+            Text(description)
+                .font(CBStyle.Fonts.caption)
+                .foregroundColor(.secondary)
+        }
     }
 }
 
@@ -458,20 +488,14 @@ struct KeyOnNodeRow: View {
                 .frame(width: 20)
             VStack(alignment: .leading, spacing: 2) {
                 Text(key.name)
-                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                    .font(CBStyle.Fonts.cryptoMedium)
                     .lineLimit(1)
                 Text(key.shortAddress)
-                    .font(.system(size: 9, design: .monospaced))
+                    .font(CBStyle.Fonts.badge)
                     .foregroundColor(.secondary)
             }
             Spacer()
-            Text(key.displayKeyType)
-                .font(.system(size: 9, design: .monospaced))
-                .foregroundColor(.secondary)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background(.gray.opacity(0.15))
-                .cornerRadius(3)
+            TagBadge(text: key.displayKeyType)
         }
     }
 }
@@ -486,11 +510,11 @@ struct KeyDistributionRow: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
                 Text(key.name)
-                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                    .font(CBStyle.Fonts.cryptoMedium)
                     .lineLimit(1)
                 Spacer()
                 Text(key.shortAddress)
-                    .font(.system(size: 9, design: .monospaced))
+                    .font(CBStyle.Fonts.badge)
                     .foregroundColor(.secondary)
             }
 
@@ -499,15 +523,14 @@ struct KeyDistributionRow: View {
                     if nodeHasKey(node, key) {
                         HStack(spacing: 3) {
                             Image(systemName: node.icon)
-                                .font(.system(size: 8))
+                                .font(CBStyle.Fonts.tiny)
                             Text(shortNodeName(node))
-                                .font(.system(size: 8, design: .monospaced))
+                                .font(CBStyle.Fonts.tinyMedium)
                         }
                         .foregroundColor(node.status.color)
                         .padding(.horizontal, 5)
                         .padding(.vertical, 2)
                         .background(node.status.color.opacity(0.1))
-                        .cornerRadius(3)
                     }
                 }
             }
@@ -518,7 +541,7 @@ struct KeyDistributionRow: View {
     private func nodeHasKey(_ node: NetworkNode, _ key: ManagedKey) -> Bool {
         switch node.nodeType {
         case .thisDevice:
-            return true // All keys exist on this device (UserDefaults)
+            return true
         case .icloud:
             return KeychainSyncManager.load(keyId: key.id) != nil
         default:

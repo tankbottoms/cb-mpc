@@ -150,6 +150,10 @@ enum CBMPCError: Error, Equatable {
     case refreshFailed
     case verificationFailed
     case transportError(String)
+    case serverUnreachable
+    case authFailed
+    case sessionTimeout
+    case protocolMismatch
 
     static func == (lhs: CBMPCError, rhs: CBMPCError) -> Bool {
         switch (lhs, rhs) {
@@ -159,12 +163,42 @@ enum CBMPCError: Error, Equatable {
              (.keySerializationFailed, .keySerializationFailed),
              (.invalidKeyData, .invalidKeyData),
              (.refreshFailed, .refreshFailed),
-             (.verificationFailed, .verificationFailed):
+             (.verificationFailed, .verificationFailed),
+             (.serverUnreachable, .serverUnreachable),
+             (.authFailed, .authFailed),
+             (.sessionTimeout, .sessionTimeout),
+             (.protocolMismatch, .protocolMismatch):
             return true
         case (.transportError(let a), .transportError(let b)):
             return a == b
         default:
             return false
         }
+    }
+}
+
+/// Transport origin for keys — where the key shares are distributed
+enum TransportOrigin: String, Codable {
+    case local   // Both shares on this device (default)
+    case server  // Device share local, server share remote
+    case peer    // Device share local, peer device has other share
+}
+
+extension TransportOrigin {
+    /// UserDefaults key for storing transport origin alongside key data
+    static func key(for keyId: UUID) -> String {
+        "key_\(keyId.uuidString)_origin"
+    }
+
+    static func load(for keyId: UUID) -> TransportOrigin {
+        guard let raw = UserDefaults.standard.string(forKey: key(for: keyId)),
+              let origin = TransportOrigin(rawValue: raw) else {
+            return .local
+        }
+        return origin
+    }
+
+    static func save(_ origin: TransportOrigin, for keyId: UUID) {
+        UserDefaults.standard.set(origin.rawValue, forKey: key(for: keyId))
     }
 }

@@ -4,6 +4,7 @@ import { extractToken, validateToken } from "./auth";
 export { DeviceRegistry } from "./durable-objects/device-registry";
 export { DKGSession } from "./durable-objects/dkg-session";
 export { KeyVault } from "./durable-objects/key-vault";
+export { SignSession } from "./durable-objects/sign-session";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -80,7 +81,22 @@ async function route(url: URL, request: Request, env: Env): Promise<Response> {
       return env.DKG_SESSION.get(doId).fetch(newReq);
     }
 
-    // /sessions/:id, /sessions/:id/ws, /sessions/:id/sign
+    // /sessions/:id/sign, /sessions/:id/sign/ws -- signing session
+    if (parts.length >= 3 && parts[2] === "sign") {
+      const sessionId = parts[1];
+      const signId = `sign-${sessionId}`;
+      const doId = env.SIGN_SESSION.idFromName(signId);
+      const newHeaders = new Headers(request.headers);
+      newHeaders.set("X-Session-Id", signId);
+      const newReq = new Request(request.url, {
+        method: request.method,
+        headers: newHeaders,
+        body: request.body,
+      });
+      return env.SIGN_SESSION.get(doId).fetch(newReq);
+    }
+
+    // /sessions/:id, /sessions/:id/ws -- DKG session
     if (parts.length >= 2) {
       const sessionId = parts[1];
       const doId = env.DKG_SESSION.idFromName(sessionId);

@@ -133,6 +133,40 @@
 		FF14000200000000000000B3 /* ServerRegistrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF14000100000000000000B3 /* ServerRegistrationView.swift */; };
 		FF14000300000000000000B3 /* ServerRegistrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF14000100000000000000B3 /* ServerRegistrationView.swift */; };
 
+/* v0.15.0 design system + welcome */
+		FF15000100000000000000A1 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Views/DesignSystem.swift; sourceTree = SOURCE_ROOT; };
+		FF15000200000000000000A1 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF15000100000000000000A1 /* DesignSystem.swift */; };
+		FF15000300000000000000A1 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF15000100000000000000A1 /* DesignSystem.swift */; };
+		FF15000100000000000000A2 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Views/WelcomeView.swift; sourceTree = SOURCE_ROOT; };
+		FF15000200000000000000A2 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF15000100000000000000A2 /* WelcomeView.swift */; };
+		FF15000300000000000000A2 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF15000100000000000000A2 /* WelcomeView.swift */; };
+
+/* v0.16.0 server auth, MPC protocol, transports, coordinators */
+		FF16000100000000000000A1 /* ServerAuthKeychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Models/ServerAuthKeychain.swift; sourceTree = SOURCE_ROOT; };
+		FF16000200000000000000A1 /* ServerAuthKeychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF16000100000000000000A1 /* ServerAuthKeychain.swift */; };
+		FF16000300000000000000A1 /* ServerAuthKeychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF16000100000000000000A1 /* ServerAuthKeychain.swift */; };
+		FF16000100000000000000A2 /* MPCProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Models/MPCProtocol.swift; sourceTree = SOURCE_ROOT; };
+		FF16000200000000000000A2 /* MPCProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF16000100000000000000A2 /* MPCProtocol.swift */; };
+		FF16000300000000000000A2 /* MPCProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF16000100000000000000A2 /* MPCProtocol.swift */; };
+		FF16000100000000000000A3 /* ServerAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Models/ServerAPIClient.swift; sourceTree = SOURCE_ROOT; };
+		FF16000200000000000000A3 /* ServerAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF16000100000000000000A3 /* ServerAPIClient.swift */; };
+		FF16000300000000000000A3 /* ServerAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF16000100000000000000A3 /* ServerAPIClient.swift */; };
+		FF16000100000000000000A4 /* WebSocketTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Models/WebSocketTransport.swift; sourceTree = SOURCE_ROOT; };
+		FF16000200000000000000A4 /* WebSocketTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF16000100000000000000A4 /* WebSocketTransport.swift */; };
+		FF16000300000000000000A4 /* WebSocketTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF16000100000000000000A4 /* WebSocketTransport.swift */; };
+		FF16000100000000000000A5 /* ServerDKGCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Models/ServerDKGCoordinator.swift; sourceTree = SOURCE_ROOT; };
+		FF16000200000000000000A5 /* ServerDKGCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF16000100000000000000A5 /* ServerDKGCoordinator.swift */; };
+		FF16000300000000000000A5 /* ServerDKGCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF16000100000000000000A5 /* ServerDKGCoordinator.swift */; };
+		FF16000100000000000000A6 /* ServerSigningCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Models/ServerSigningCoordinator.swift; sourceTree = SOURCE_ROOT; };
+		FF16000200000000000000A6 /* ServerSigningCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF16000100000000000000A6 /* ServerSigningCoordinator.swift */; };
+		FF16000300000000000000A6 /* ServerSigningCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF16000100000000000000A6 /* ServerSigningCoordinator.swift */; };
+		FF16000100000000000000A7 /* MultipeerTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Models/MultipeerTransport.swift; sourceTree = SOURCE_ROOT; };
+		FF16000200000000000000A7 /* MultipeerTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF16000100000000000000A7 /* MultipeerTransport.swift */; };
+		FF16000300000000000000A7 /* MultipeerTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF16000100000000000000A7 /* MultipeerTransport.swift */; };
+		FF16000100000000000000A8 /* PeerDKGCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Models/PeerDKGCoordinator.swift; sourceTree = SOURCE_ROOT; };
+		FF16000200000000000000A8 /* PeerDKGCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF16000100000000000000A8 /* PeerDKGCoordinator.swift */; };
+		FF16000300000000000000A8 /* PeerDKGCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF16000100000000000000A8 /* PeerDKGCoordinator.swift */; };
+
 /* v0.14.0 network view */
 		FF14000100000000000000A1 /* NetworkView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Views/NetworkView.swift; sourceTree = SOURCE_ROOT; };
 		FF14000200000000000000A1 /* NetworkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF14000100000000000000A1 /* NetworkView.swift */; };
@@ -261,6 +295,16 @@
 				FF14000200000000000000B1 /* PairingManager.swift in Sources */,
 				FF14000200000000000000B2 /* DevicePairingView.swift in Sources */,
 				FF14000200000000000000B3 /* ServerRegistrationView.swift in Sources */,
+				FF15000200000000000000A1 /* DesignSystem.swift in Sources */,
+				FF15000200000000000000A2 /* WelcomeView.swift in Sources */,
+				FF16000200000000000000A1 /* ServerAuthKeychain.swift in Sources */,
+				FF16000200000000000000A2 /* MPCProtocol.swift in Sources */,
+				FF16000200000000000000A3 /* ServerAPIClient.swift in Sources */,
+				FF16000200000000000000A4 /* WebSocketTransport.swift in Sources */,
+				FF16000200000000000000A5 /* ServerDKGCoordinator.swift in Sources */,
+				FF16000200000000000000A6 /* ServerSigningCoordinator.swift in Sources */,
+				FF16000200000000000000A7 /* MultipeerTransport.swift in Sources */,
+				FF16000200000000000000A8 /* PeerDKGCoordinator.swift in Sources */,
 				A1E5F40C2D5E4A1B00C8F3E2 /* CBMPCNative.xcdatamodeld in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -342,6 +386,16 @@
 				FF14000300000000000000B1 /* PairingManager.swift in Sources */,
 				FF14000300000000000000B2 /* DevicePairingView.swift in Sources */,
 				FF14000300000000000000B3 /* ServerRegistrationView.swift in Sources */,
+				FF15000300000000000000A1 /* DesignSystem.swift in Sources */,
+				FF15000300000000000000A2 /* WelcomeView.swift in Sources */,
+				FF16000300000000000000A1 /* ServerAuthKeychain.swift in Sources */,
+				FF16000300000000000000A2 /* MPCProtocol.swift in Sources */,
+				FF16000300000000000000A3 /* ServerAPIClient.swift in Sources */,
+				FF16000300000000000000A4 /* WebSocketTransport.swift in Sources */,
+				FF16000300000000000000A5 /* ServerDKGCoordinator.swift in Sources */,
+				FF16000300000000000000A6 /* ServerSigningCoordinator.swift in Sources */,
+				FF16000300000000000000A7 /* MultipeerTransport.swift in Sources */,
+				FF16000300000000000000A8 /* PeerDKGCoordinator.swift in Sources */,
 				AA00000100000000000000C4 /* CBMPCNative.xcdatamodeld in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -411,7 +465,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = CBMPCNative/CBMPCNative.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 60;
+				CURRENT_PROJECT_VERSION = 62;
 				DEVELOPMENT_TEAM = YT6VJY3L35;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -424,7 +478,7 @@
 				);
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				SDKROOT = iphoneos;
-				MARKETING_VERSION = 0.14.1;
+				MARKETING_VERSION = 0.16.0;
 				"OTHER_LDFLAGS[sdk=iphonesimulator*]" = (
 					"$(SRCROOT)/../cbmpc.xcframework/ios-arm64-simulator/libcbmpc.a",
 					"$(SRCROOT)/../openssl-ios/iossimulator-arm64/lib/libssl.a",
@@ -451,7 +505,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = CBMPCNative/CBMPCNative.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 60;
+				CURRENT_PROJECT_VERSION = 62;
 				DEVELOPMENT_TEAM = YT6VJY3L35;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -464,7 +518,7 @@
 				);
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				SDKROOT = iphoneos;
-				MARKETING_VERSION = 0.14.1;
+				MARKETING_VERSION = 0.16.0;
 				"OTHER_LDFLAGS[sdk=iphonesimulator*]" = (
 					"$(SRCROOT)/../cbmpc.xcframework/ios-arm64-simulator/libcbmpc.a",
 					"$(SRCROOT)/../openssl-ios/iossimulator-arm64/lib/libssl.a",
@@ -502,7 +556,7 @@
 			buildSettings = {
 				ARCHS = arm64;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 60;
+				CURRENT_PROJECT_VERSION = 62;
 				DEVELOPMENT_TEAM = YT6VJY3L35;
 				INFOPLIST_FILE = CBMPCNative/Info.plist;
 				HEADER_SEARCH_PATHS = (
@@ -511,7 +565,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				SDKROOT = macosx;
-				MARKETING_VERSION = 0.14.1;
+				MARKETING_VERSION = 0.16.0;
 				OTHER_LDFLAGS = (
 					"$(SRCROOT)/../cbmpc.xcframework/macos-arm64/libcbmpc.a",
 					"/usr/local/opt/openssl@3.2.0/lib/libssl.a",
@@ -530,7 +584,7 @@
 			buildSettings = {
 				ARCHS = arm64;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 60;
+				CURRENT_PROJECT_VERSION = 62;
 				DEVELOPMENT_TEAM = YT6VJY3L35;
 				INFOPLIST_FILE = CBMPCNative/Info.plist;
 				HEADER_SEARCH_PATHS = (
@@ -539,7 +593,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				SDKROOT = macosx;
-				MARKETING_VERSION = 0.14.1;
+				MARKETING_VERSION = 0.16.0;
 				OTHER_LDFLAGS = (
 					"$(SRCROOT)/../cbmpc.xcframework/macos-arm64/libcbmpc.a",
 					"/usr/local/opt/openssl@3.2.0/lib/libssl.a",

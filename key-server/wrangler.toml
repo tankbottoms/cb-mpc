@@ -18,6 +18,14 @@ class_name = "DKGSession"
 name = "KEY_VAULT"
 class_name = "KeyVault"
 
+[[durable_objects.bindings]]
+name = "SIGN_SESSION"
+class_name = "SignSession"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["DeviceRegistry", "DKGSession", "KeyVault"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["SignSession"]

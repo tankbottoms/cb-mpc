@@ -82,6 +82,13 @@ struct CreateKeySheetView: View {
     @State private var batchChildCount = 1
     @State private var vanityPrefix = ""
     @State private var vanitySuffix = ""
+    @State private var selectedCustody: CustodyMode = .local
+    @State private var selectedServerURL: URL?
+
+    enum CustodyMode: String, CaseIterable {
+        case local = "This Device Only"
+        case server = "Server-Backed (2-of-2)"
+    }
     @State private var seedWordCount = 24
     @State private var isSeedRevealed = false
     @State private var showExportSeedSheet = false
@@ -242,12 +249,70 @@ struct CreateKeySheetView: View {
                             .cornerRadius(4)
                         }
 
+                        // Custody mode picker
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Key Custody")
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundColor(.secondary)
+
+                            VStack(spacing: 0) {
+                                Button(action: { selectedCustody = .local; selectedServerURL = nil }) {
+                                    HStack(spacing: 10) {
+                                        Image(systemName: selectedCustody == .local ? "checkmark.circle.fill" : "circle")
+                                            .foregroundColor(selectedCustody == .local ? .blue : .secondary)
+                                            .font(.system(size: 16))
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("This Device Only")
+                                                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                                            Text("Both key shares stored locally. No server required.")
+                                                .font(.system(size: 9, design: .monospaced))
+                                                .foregroundColor(.secondary)
+                                        }
+                                        Spacer()
+                                    }
+                                    .padding(10)
+                                }
+                                .buttonStyle(.plain)
+
+                                if !PairingManager.shared.servers.filter({ $0.isRegistered }).isEmpty {
+                                    Divider()
+
+                                    ForEach(PairingManager.shared.servers.filter({ $0.isRegistered })) { server in
+                                        Button(action: {
+                                            selectedCustody = .server
+                                            selectedServerURL = URL(string: server.url)
+                                        }) {
+                                            HStack(spacing: 10) {
+                                                Image(systemName: selectedCustody == .server && selectedServerURL?.absoluteString == server.url ? "checkmark.circle.fill" : "circle")
+                                                    .foregroundColor(selectedCustody == .server && selectedServerURL?.absoluteString == server.url ? .blue : .secondary)
+                                                    .font(.system(size: 16))
+                                                VStack(alignment: .leading, spacing: 2) {
+                                                    Text("Server: \(server.name)")
+                                                        .font(.system(size: 12, weight: .medium, design: .monospaced))
+                                                    Text("2-of-2 threshold: device + server must cooperate to sign.")
+                                                        .font(.system(size: 9, design: .monospaced))
+                                                        .foregroundColor(.secondary)
+                                                }
+                                                Spacer()
+                                            }
+                                            .padding(10)
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                            }
+                            .background(.gray.opacity(0.1))
+                            .cornerRadius(4)
+                        }
+
                         // Storage notice
                         HStack(alignment: .top, spacing: 8) {
                             Image(systemName: "shield.lefthalf.filled")
                                 .foregroundColor(.orange)
                                 .font(.system(size: 12))
-                            Text("This will generate a private key using 2-party DKG. Both key shares are stored locally on this device. The complete private key never exists in memory.")
+                            Text(selectedCustody == .local
+                                ? "This will generate a private key using 2-party DKG. Both key shares are stored locally on this device. The complete private key never exists in memory."
+                                : "This will generate a 2-of-2 threshold key. Your device holds one share, the server holds the other. Neither party can sign alone.")
                                 .font(.system(size: 9, design: .monospaced))
                                 .foregroundColor(.secondary)
                         }
@@ -1332,6 +1397,33 @@ struct CreateKeySheetView: View {
             vanityAttempts = 0
             searchStartTime = Date()
             currentSearchAddress = ""
+        }
+
+        // Server-backed key generation path
+        if selectedCustody == .server, let serverURL = selectedServerURL, creationMode == .generate {
+            Task {
+                do {
+                    let managedKey = try await keyStore.generateServerKey(
+                        name: userProvidedName ?? "Server Key \(AppDateFormat.string(from: Date()))",
+                        keyType: effectiveKeyType,
+                        serverURL: serverURL
+                    )
+                    await MainActor.run {
+                        #if os(iOS)
+                        let feedback = UINotificationFeedbackGenerator()
+                        feedback.notificationOccurred(.success)
+                        #endif
+                        isCreating = false
+                        dismiss()
+                    }
+                } catch {
+                    await MainActor.run {
+                        errorMessage = "Server key generation failed: \(error.localizedDescription)"
+                        isCreating = false
+                    }
+                }
+            }
+            return
         }
 
         DispatchQueue.global(qos: .userInitiated).async {

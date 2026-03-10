@@ -29,6 +29,9 @@ struct MPCServer: Codable, Identifiable {
     var isOnline: Bool
     var shareCount: Int
     var apiVersion: String?
+    var authToken: String?       // Bearer token from /devices/register
+    var serverDeviceId: String?  // Device ID assigned by server
+    var isRegistered: Bool { authToken != nil }
 }
 
 // MARK: - Pairing Session

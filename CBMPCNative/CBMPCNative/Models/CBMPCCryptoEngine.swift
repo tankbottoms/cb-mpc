@@ -116,6 +116,28 @@ class CBMPCCryptoEngine {
         }
         return data
     }
+
+    // MARK: - Server-Backed Operations
+
+    /// Generate key with server — device keeps Party 0 share only
+    func generateKeyRemote(serverURL: URL, curveCode: Int = 714) async throws -> (publicKey: Data, deviceShare: Data) {
+        let result = try await ServerDKGCoordinator.generateKey(serverURL: serverURL, curveCode: curveCode)
+        return (result.publicKey, result.deviceShare)
+    }
+
+    /// Sign with server-backed key — interim approach: run both parties locally
+    /// using device share + reconstructed full key data
+    /// In the future, this will use WebSocket transport to sign with the server
+    func signMessageRemote(_ message: Data, deviceShare: Data, curveCode: Int, serverURL: URL, publicKey: String) async throws -> Data {
+        // Interim: use ServerSigningCoordinator which runs both shares locally
+        return try await ServerSigningCoordinator.sign(
+            message: message,
+            deviceShare: deviceShare,
+            curveCode: curveCode,
+            serverURL: serverURL,
+            publicKey: publicKey
+        )
+    }
 }
 
 /// Wrapper for storing serialized key data

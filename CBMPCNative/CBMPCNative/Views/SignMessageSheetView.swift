@@ -127,12 +127,24 @@ struct SignMessageSheetView: View {
               // Sign Button — always visible above keyboard
               VStack {
                 if signature == nil {
+                    // Show transport origin for non-local keys
+                    if TransportOrigin.load(for: key.id) != .local {
+                        HStack(spacing: 6) {
+                            Image(systemName: TransportOrigin.load(for: key.id) == .server ? "server.rack" : "iphone.gen2")
+                                .font(.system(size: 10))
+                            Text(TransportOrigin.load(for: key.id) == .server ? "Server-backed signing" : "Peer-backed signing")
+                                .font(.system(size: 9, design: .monospaced))
+                        }
+                        .foregroundColor(.blue)
+                        .padding(.bottom, 4)
+                    }
+
                     Button(action: signMessage) {
                         if isSigning {
                             HStack(spacing: 8) {
                                 ProgressView()
                                     .scaleEffect(0.8)
-                                Text("Signing...")
+                                Text(TransportOrigin.load(for: key.id) == .local ? "Signing..." : "Signing with server...")
                             }
                         } else {
                             Label("Sign Message", systemImage: "checkmark.circle.fill")
@@ -232,6 +244,17 @@ struct SignMessageSheetView: View {
         signError = nil
 
         let messageWithNonce = "\(message)|\(nonce)"
+        let origin = TransportOrigin.load(for: key.id)
+
+        switch origin {
+        case .local:
+            signLocal(messageWithNonce: messageWithNonce)
+        case .server, .peer:
+            signAsync(messageWithNonce: messageWithNonce)
+        }
+    }
+
+    private func signLocal(messageWithNonce: String) {
         let keyId = key.id
         let curveCode = Int(key.curveCode)
 
@@ -247,25 +270,7 @@ struct SignMessageSheetView: View {
                 let sigHex = sigData.map { String(format: "%02X", $0) }.joined()
                 let hashHex = messageHash.map { String(format: "%02X", $0) }.joined()
                 DispatchQueue.main.async {
-                    self.signature = sigHex
-                    self.isSigning = false
-
-                    // Auto-copy signature to clipboard with haptic
-                    #if os(iOS)
-                    UIPasteboard.general.string = sigHex
-                    let feedback = UINotificationFeedbackGenerator()
-                    feedback.notificationOccurred(.success)
-                    #endif
-
-                    // Record signing in key history
-                    let record = SigningRecord(
-                        id: UUID(),
-                        messageHash: hashHex,
-                        signature: sigHex,
-                        timestamp: Date(),
-                        verified: true
-                    )
-                    self.keyStore.addSigningRecord(record, to: self.key.id)
+                    self.handleSigningSuccess(sigHex: sigHex, hashHex: hashHex)
                 }
             } catch {
                 DispatchQueue.main.async {
@@ -274,6 +279,45 @@ struct SignMessageSheetView: View {
                 }
             }
         }
+    }
+
+    private func signAsync(messageWithNonce: String) {
+        Task {
+            do {
+                let sigHex = try await keyStore.signMessageAsync(messageWithNonce, with: key)
+                let messageData = messageWithNonce.data(using: .utf8) ?? Data()
+                let messageHash = sha256(messageData)
+                let hashHex = messageHash.map { String(format: "%02X", $0) }.joined()
+                await MainActor.run {
+                    self.handleSigningSuccess(sigHex: sigHex, hashHex: hashHex)
+                }
+            } catch {
+                await MainActor.run {
+                    self.signError = "Signing failed: \(error.localizedDescription)"
+                    self.isSigning = false
+                }
+            }
+        }
+    }
+
+    private func handleSigningSuccess(sigHex: String, hashHex: String) {
+        self.signature = sigHex
+        self.isSigning = false
+
+        #if os(iOS)
+        UIPasteboard.general.string = sigHex
+        let feedback = UINotificationFeedbackGenerator()
+        feedback.notificationOccurred(.success)
+        #endif
+
+        let record = SigningRecord(
+            id: UUID(),
+            messageHash: hashHex,
+            signature: sigHex,
+            timestamp: Date(),
+            verified: true
+        )
+        self.keyStore.addSigningRecord(record, to: self.key.id)
     }
 }
 

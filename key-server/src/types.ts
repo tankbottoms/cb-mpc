@@ -2,6 +2,7 @@ export interface Env {
   DEVICE_REGISTRY: DurableObjectNamespace;
   DKG_SESSION: DurableObjectNamespace;
   KEY_VAULT: DurableObjectNamespace;
+  SIGN_SESSION: DurableObjectNamespace;
   SERVER_SECRET: string;
   VERSION: string;
 }
@@ -46,6 +47,15 @@ export const MSG_TYPE = {
   SIGN_COMPLETE: 0x05,
   ERROR: 0xff,
 } as const;
+
+export interface SignSessionState {
+  id: string;
+  status: "pending" | "active" | "complete" | "failed";
+  publicKey: string;
+  messageHash: string;
+  participants: string[];
+  createdAt: number;
+}
 
 // Binary message header: [type:1][session_prefix:4][sender:2][receiver:2][payload_len:4][payload:N]
 export const MSG_HEADER_SIZE = 13;
