@@ -15,12 +15,15 @@ struct KeyDashboardView: View {
                             Text("Keys are generated using distributed key generation (DKG) with two MPC shares. The private key never exists in a single location. Use Standard ECDSA for general signing, HD Master to create a key hierarchy, or HD Child for derived wallet addresses.")
                                 .font(.system(size: 10, design: .monospaced))
                                 .foregroundColor(.secondary)
+                                .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
                         } else {
                             Text("Tap + to create a new key. Swipe left to delete.")
                                 .font(.system(size: 10, design: .monospaced))
                                 .foregroundColor(.secondary)
+                                .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
                         }
                     }
+                    .listSectionSpacing(.compact)
                 }
 
                 if keyStore.keys.isEmpty {
@@ -47,7 +50,7 @@ struct KeyDashboardView: View {
                 } else {
                     ForEach(keyStore.keys) { key in
                         NavigationLink(destination: KeyDetailView(key: key)) {
-                            KeyListItemView(key: key)
+                            KeyListItemView(key: key, isNew: key.id == keyStore.recentlyAddedKeyId)
                         }
                     }
                     .onDelete { indexSet in
@@ -55,6 +58,9 @@ struct KeyDashboardView: View {
                             let key = keyStore.keys[index]
                             keyStore.deleteKey(key.id)
                         }
+                    }
+                    .onMove { source, destination in
+                        keyStore.moveKeys(from: source, to: destination)
                     }
                 }
             }
@@ -76,6 +82,9 @@ struct KeyDashboardView: View {
 
 struct KeyListItemView: View {
     let key: ManagedKey
+    var isNew: Bool = false
+
+    @State private var highlightVisible = true
 
     private var hasKeyData: Bool {
         UserDefaults.standard.data(forKey: "key_\(key.id.uuidString)") != nil
@@ -87,8 +96,13 @@ struct KeyListItemView: View {
             HStack(spacing: 8) {
                 Text(key.name)
                     .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                    .foregroundColor(isNew && highlightVisible ? .blue : .primary)
 
                 Spacer()
+
+                Image(systemName: "shield.lefthalf.filled")
+                    .font(.system(size: 10))
+                    .foregroundColor(.orange)
 
                 if hasKeyData {
                     Image(systemName: "checkmark.circle.fill")
@@ -105,17 +119,26 @@ struct KeyListItemView: View {
             HStack(spacing: 12) {
                 Text(key.publicKey.prefix(32).map { String($0) }.joined() + "...")
                     .font(.system(size: 10, design: .monospaced))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(isNew && highlightVisible ? .blue.opacity(0.7) : .secondary)
                     .lineLimit(1)
 
                 Spacer()
 
                 Text(key.displayKeyType)
                     .font(.system(size: 10, design: .monospaced))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(isNew && highlightVisible ? .blue.opacity(0.7) : .secondary)
             }
         }
         .padding(.vertical, 2)
+        .background(isNew && highlightVisible ? Color.blue.opacity(0.08) : Color.clear)
+        .animation(.easeInOut(duration: 0.6).repeatCount(5, autoreverses: true), value: highlightVisible)
+        .onAppear {
+            if isNew {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    highlightVisible = false
+                }
+            }
+        }
     }
 }
 

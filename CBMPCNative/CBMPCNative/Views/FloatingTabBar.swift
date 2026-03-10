@@ -30,11 +30,13 @@ struct FloatingTabBar: View {
                     .transition(.move(edge: .trailing).combined(with: .opacity))
                 } else {
                     // Expanded tab bar
-                    HStack(spacing: 20) {
+                    HStack(spacing: 14) {
                         TabBarButton(icon: "key.fill", isSelected: selection == 0) { selection = 0 }
-                        TabBarButton(icon: "clock.fill", isSelected: selection == 1) { selection = 1 }
-                        TabBarButton(icon: "play.circle.fill", isSelected: selection == 2) { selection = 2 }
-                        TabBarButton(icon: "gearshape.fill", isSelected: selection == 3) { selection = 3 }
+                        TabBarButton(icon: "antenna.radiowaves.left.and.right", isSelected: selection == 1) { selection = 1 }
+                        TabBarButton(icon: "clock.fill", isSelected: selection == 2) { selection = 2 }
+                        TabBarButton(icon: "arrow.left.arrow.right", isSelected: selection == 3) { selection = 3 }
+                        TabBarButton(icon: "play.circle.fill", isSelected: selection == 4) { selection = 4 }
+                        TabBarButton(icon: "gearshape.fill", isSelected: selection == 5) { selection = 5 }
 
                         Button {
                             withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
@@ -71,7 +73,7 @@ struct TabBarButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: icon)
-                .font(.system(size: 20))
+                .font(.system(size: 18))
                 .foregroundColor(isSelected ? .white : .gray)
         }
     }

@@ -63,3 +63,4 @@ cmake_test_discovery_*.json
 .DS_Store
 .omc/
 .claude/
+build/

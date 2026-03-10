@@ -272,6 +272,10 @@ struct VerifySignatureSheetView: View {
             DispatchQueue.main.async {
                 verifyResult = result
                 isVerifying = false
+                #if os(iOS)
+                let feedback = UINotificationFeedbackGenerator()
+                feedback.notificationOccurred(result ? .success : .error)
+                #endif
             }
         }
     }
@@ -316,6 +320,10 @@ struct VerifySignatureSheetView: View {
             DispatchQueue.main.async {
                 verifyResult = result
                 isVerifying = false
+                #if os(iOS)
+                let feedback = UINotificationFeedbackGenerator()
+                feedback.notificationOccurred(result ? .success : .error)
+                #endif
             }
         }
     }

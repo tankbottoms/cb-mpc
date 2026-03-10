@@ -80,5 +80,7 @@
 	<true/>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Unlock CB-MPC to access your cryptographic keys.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>CB-MPC uses the camera to scan QR codes for key transfer between devices.</string>
 </dict>
 </plist>

@@ -6,6 +6,7 @@ import SwiftUI
 class KeyStore: NSObject, ObservableObject {
     @Published var keys: [ManagedKey] = []
     @Published var selectedKeyId: UUID?
+    @Published var recentlyAddedKeyId: UUID?
 
     let persistenceController: PersistenceController
     private let cryptoEngine = CBMPCCryptoEngine()
@@ -19,7 +20,7 @@ class KeyStore: NSObject, ObservableObject {
     func loadKeys() {
         let context = persistenceController.container.viewContext
         let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: "ManagedKeyEntity")
-        fetchRequest.sortDescriptors = [NSSortDescriptor(key: "createdAt", ascending: false)]
+        fetchRequest.sortDescriptors = [NSSortDescriptor(key: "sortOrder", ascending: true), NSSortDescriptor(key: "createdAt", ascending: false)]
         fetchRequest.relationshipKeyPathsForPrefetching = ["signingRecords"]
 
         do {
@@ -44,6 +45,12 @@ class KeyStore: NSObject, ObservableObject {
         saveKeyToEntity(key, in: context)
         persistenceController.save()
         loadKeys()
+        recentlyAddedKeyId = key.id
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
+            if self?.recentlyAddedKeyId == key.id {
+                self?.recentlyAddedKeyId = nil
+            }
+        }
     }
 
     func updateKeyName(_ keyId: UUID, newName: String) {
@@ -79,6 +86,24 @@ class KeyStore: NSObject, ObservableObject {
         } catch {
             print("Error deleting key: \(error)")
         }
+    }
+
+    /// Reorder keys by moving from source indices to destination
+    func moveKeys(from source: IndexSet, to destination: Int) {
+        keys.move(fromOffsets: source, toOffset: destination)
+
+        // Update sortOrder for all keys and persist
+        let context = persistenceController.container.viewContext
+        for (index, key) in keys.enumerated() {
+            keys[index].sortOrder = Int32(index)
+
+            let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: "ManagedKeyEntity")
+            fetchRequest.predicate = NSPredicate(format: "id == %@", key.id as CVarArg)
+            if let entity = try? context.fetch(fetchRequest).first {
+                entity.setValue(Int32(index), forKey: "sortOrder")
+            }
+        }
+        persistenceController.save()
     }
 
     @Published var isSeedingDemoData = false
@@ -148,6 +173,7 @@ class KeyStore: NSObject, ObservableObject {
         entity.setValue(key.createdAt, forKey: "createdAt")
         entity.setValue(key.lastUsedAt, forKey: "lastUsedAt")
         entity.setValue(key.isBackedUp, forKey: "isBackedUp")
+        entity.setValue(key.sortOrder, forKey: "sortOrder")
     }
 
     private func managedKeyToModel(_ entity: NSManagedObject) -> ManagedKey {
@@ -164,6 +190,7 @@ class KeyStore: NSObject, ObservableObject {
         let createdAt = entity.value(forKey: "createdAt") as? Date ?? Date()
         let lastUsedAt = entity.value(forKey: "lastUsedAt") as? Date
         let isBackedUp = entity.value(forKey: "isBackedUp") as? Bool ?? false
+        let sortOrder = entity.value(forKey: "sortOrder") as? Int32 ?? 0
 
         return ManagedKey(
             id: id,
@@ -177,6 +204,7 @@ class KeyStore: NSObject, ObservableObject {
             createdAt: createdAt,
             lastUsedAt: lastUsedAt,
             isBackedUp: isBackedUp,
+            sortOrder: sortOrder,
             signingRecords: []
         )
     }
@@ -301,7 +329,7 @@ class KeyStore: NSObject, ObservableObject {
     // MARK: - iCloud Backup
 
     func backupToICloud() {
-        guard let containerURL = FileManager.default.url(forUbiquityContainerIdentifier: nil) else {
+        guard let containerURL = FileManager.default.url(forUbiquityContainerIdentifier: "iCloud.xyz.atsignhandle.cb-mpc") else {
             print("iCloud not available")
             return
         }

@@ -28,6 +28,7 @@ struct ManagedKey: Identifiable {
     let createdAt: Date
     let lastUsedAt: Date?
     let isBackedUp: Bool
+    var sortOrder: Int32 = 0
     var signingRecords: [SigningRecord] = []
 
     var publicKeyDisplay: String {
@@ -81,9 +82,9 @@ struct ManagedKey: Identifiable {
     var displayStorageLocation: String {
         switch storageLocation {
         case .secureEnclave:
-            return "Secure Enclave"
+            return "Device Keychain"
         case .keychain:
-            return "Keychain"
+            return "iCloud Keychain"
         }
     }
 
@@ -145,6 +146,7 @@ func managedKeyToModel(_ object: NSManagedObject) -> ManagedKey {
         createdAt: object.value(forKey: "createdAt") as? Date ?? Date(),
         lastUsedAt: object.value(forKey: "lastUsedAt") as? Date,
         isBackedUp: object.value(forKey: "isBackedUp") as? Bool ?? false,
+        sortOrder: object.value(forKey: "sortOrder") as? Int32 ?? 0,
         signingRecords: []
     )
 }
@@ -175,6 +177,7 @@ func saveKeyToEntity(_ key: ManagedKey, in context: NSManagedObjectContext) {
     entity.setValue(key.createdAt, forKey: "createdAt")
     entity.setValue(key.lastUsedAt, forKey: "lastUsedAt")
     entity.setValue(key.isBackedUp, forKey: "isBackedUp")
+    entity.setValue(key.sortOrder, forKey: "sortOrder")
 }
 
 func saveRecordToEntity(_ record: SigningRecord, in context: NSManagedObjectContext) {

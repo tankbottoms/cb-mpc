@@ -29,99 +29,103 @@ struct SignMessageSheetView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 10) {
-                // Message Input
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Message")
-                        .font(.system(size: 10, weight: .medium, design: .monospaced))
-                        .foregroundColor(.secondary)
-
-                    TextEditor(text: $message)
-                        .frame(height: 70)
-                        .font(.system(size: 11, design: .monospaced))
-                        .padding(6)
-                        .background(.gray.opacity(0.1))
-                        .cornerRadius(4)
-                        .border(Color.gray.opacity(0.3), width: 0.5)
-
-                    // SHA-256 hash directly under message
-                    Text("SHA-256")
-                        .font(.system(size: 8, weight: .medium, design: .monospaced))
-                        .foregroundColor(.secondary)
-                        .padding(.top, 2)
-
-                    Text(messageHash)
-                        .font(.system(size: 9, design: .monospaced))
-                        .lineLimit(2)
-                        .truncationMode(.middle)
-                        .foregroundColor(.secondary)
-                }
-
-                // Nonce Field
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text("Nonce")
+            VStack(spacing: 0) {
+              ScrollView {
+                VStack(spacing: 10) {
+                    // Message Input
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Message")
                             .font(.system(size: 10, weight: .medium, design: .monospaced))
                             .foregroundColor(.secondary)
-                        Spacer()
-                        Button(action: { nonce = UUID().uuidString }) {
-                            Image(systemName: "arrow.triangle.2.circlepath")
-                                .font(.system(size: 11))
-                        }
-                        .buttonStyle(.borderless)
+
+                        TextEditor(text: $message)
+                            .frame(height: 70)
+                            .font(.system(size: 11, design: .monospaced))
+                            .padding(6)
+                            .background(.gray.opacity(0.1))
+                            .cornerRadius(4)
+                            .border(Color.gray.opacity(0.3), width: 0.5)
+
+                        // SHA-256 hash directly under message
+                        Text("SHA-256")
+                            .font(.system(size: 8, weight: .medium, design: .monospaced))
+                            .foregroundColor(.secondary)
+                            .padding(.top, 2)
+
+                        Text(messageHash)
+                            .font(.system(size: 9, design: .monospaced))
+                            .lineLimit(2)
+                            .truncationMode(.middle)
+                            .foregroundColor(.secondary)
                     }
 
-                    Text(nonce.uppercased())
-                        .font(.system(size: 9, design: .monospaced))
-                        .lineLimit(2)
-                        .truncationMode(.middle)
-                        .padding(6)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(.gray.opacity(0.1))
-                        .cornerRadius(4)
-                        .textSelection(.enabled)
-
-                    Text("A unique random value appended to the message before signing. Prevents replay attacks by ensuring each signature is bound to a single-use token. Generated using UUID v4 (122 bits of randomness).")
-                        .font(.system(size: 8))
-                        .foregroundColor(.secondary.opacity(0.7))
-                        .lineLimit(3)
-                }
-
-                // Signature Display (if signed)
-                if let sig = signature {
-                    VStack(alignment: .leading, spacing: 6) {
+                    // Nonce Field
+                    VStack(alignment: .leading, spacing: 4) {
                         HStack {
-                            Text("Signature")
-                                .font(.system(.caption, design: .monospaced))
+                            Text("Nonce")
+                                .font(.system(size: 10, weight: .medium, design: .monospaced))
                                 .foregroundColor(.secondary)
                             Spacer()
-                            Label("Signed", systemImage: "checkmark.circle.fill")
-                                .font(.caption2)
-                                .foregroundColor(.green)
+                            Button(action: { nonce = UUID().uuidString }) {
+                                Image(systemName: "arrow.triangle.2.circlepath")
+                                    .font(.system(size: 11))
+                            }
+                            .buttonStyle(.borderless)
                         }
 
-                        HStack(alignment: .top, spacing: 4) {
-                            Text(sig)
-                                .font(.system(.caption2, design: .monospaced))
-                                .lineLimit(3)
-                                .truncationMode(.middle)
-                                .textSelection(.enabled)
-                            Button(action: { copyToClipboard(sig) }) {
-                                Image(systemName: "doc.on.doc")
-                                    .font(.system(size: 9))
+                        Text(nonce.uppercased())
+                            .font(.system(size: 9, design: .monospaced))
+                            .lineLimit(2)
+                            .truncationMode(.middle)
+                            .padding(6)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(.gray.opacity(0.1))
+                            .cornerRadius(4)
+                            .textSelection(.enabled)
+
+                        Text("A unique random value appended to the message before signing. Prevents replay attacks by ensuring each signature is bound to a single-use token. Generated using UUID v4 (122 bits of randomness).")
+                            .font(.system(size: 8))
+                            .foregroundColor(.secondary.opacity(0.7))
+                            .lineLimit(3)
+                    }
+
+                    // Signature Display (if signed)
+                    if let sig = signature {
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack {
+                                Text("Signature")
+                                    .font(.system(.caption, design: .monospaced))
                                     .foregroundColor(.secondary)
+                                Spacer()
+                                Label("Signed", systemImage: "checkmark.circle.fill")
+                                    .font(.caption2)
+                                    .foregroundColor(.green)
                             }
-                            .buttonStyle(.plain)
+
+                            HStack(alignment: .top, spacing: 4) {
+                                Text(sig)
+                                    .font(.system(.caption2, design: .monospaced))
+                                    .lineLimit(3)
+                                    .truncationMode(.middle)
+                                    .textSelection(.enabled)
+                                Button(action: { copyToClipboard(sig) }) {
+                                    Image(systemName: "doc.on.doc")
+                                        .font(.system(size: 9))
+                                        .foregroundColor(.secondary)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            .padding(8)
+                            .background(.gray.opacity(0.1))
+                            .cornerRadius(4)
                         }
-                        .padding(8)
-                        .background(.gray.opacity(0.1))
-                        .cornerRadius(4)
                     }
                 }
+                .padding(12)
+              }
 
-                Spacer()
-
-                // Sign Button
+              // Sign Button — always visible above keyboard
+              VStack {
                 if signature == nil {
                     Button(action: signMessage) {
                         if isSigning {
@@ -169,8 +173,10 @@ struct SignMessageSheetView: View {
                         }
                     }
                 }
+              }
+              .padding(.horizontal, 12)
+              .padding(.bottom, 8)
             }
-            .padding(12)
             .navigationTitle("Sign Message")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -181,6 +187,17 @@ struct SignMessageSheetView: View {
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .interactiveDismissDisabled(false)
+            .onTapGesture {
+                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+            }
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") {
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    }
+                }
+            }
             .alert("Error", isPresented: Binding(get: { signError != nil }, set: { if !$0 { signError = nil } })) {
                 Button("OK") { signError = nil }
             } message: {
@@ -236,8 +253,8 @@ struct SignMessageSheetView: View {
                     // Auto-copy signature to clipboard with haptic
                     #if os(iOS)
                     UIPasteboard.general.string = sigHex
-                    let impact = UIImpactFeedbackGenerator(style: .medium)
-                    impact.impactOccurred()
+                    let feedback = UINotificationFeedbackGenerator()
+                    feedback.notificationOccurred(.success)
                     #endif
 
                     // Record signing in key history

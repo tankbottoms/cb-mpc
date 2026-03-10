@@ -12,9 +12,24 @@ class PersistenceController {
             container.persistentStoreDescriptions.first?.url = URL(fileURLWithPath: "/dev/null")
         }
 
-        container.loadPersistentStores { _, error in
+        // Enable lightweight migration for schema changes (e.g. added sortOrder)
+        if let description = container.persistentStoreDescriptions.first {
+            description.setOption(true as NSNumber, forKey: NSMigratePersistentStoresAutomaticallyOption)
+            description.setOption(true as NSNumber, forKey: NSInferMappingModelAutomaticallyOption)
+        }
+
+        container.loadPersistentStores { description, error in
             if let error = error as NSError? {
-                fatalError("Core Data fatal error: \(error), \(error.userInfo)")
+                // If migration fails, destroy and recreate the store
+                print("Core Data load error: \(error), \(error.userInfo)")
+                if let url = description.url {
+                    try? self.container.persistentStoreCoordinator.destroyPersistentStore(at: url, type: .sqlite)
+                    self.container.loadPersistentStores { _, retryError in
+                        if let retryError = retryError {
+                            print("Core Data retry error: \(retryError)")
+                        }
+                    }
+                }
             }
         }
 
@@ -29,8 +44,7 @@ class PersistenceController {
             do {
                 try context.save()
             } catch {
-                let nsError = error as NSError
-                fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
+                print("Core Data save error: \(error)")
             }
         }
     }

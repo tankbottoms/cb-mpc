@@ -27,6 +27,8 @@
 		186DDEE4C6AE4F34B7B5AC0C /* DemoData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2856A2E308B6401A97B1C01E /* DemoData.swift */; };
 		C5D94AC4683F4C108F8D95A3 /* KeyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Models/KeyStore.swift; sourceTree = SOURCE_ROOT; };
 		80BD0AC97D6746B38E7136D2 /* KeyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5D94AC4683F4C108F8D95A3 /* KeyStore.swift */; };
+		EE14000100000000000000A1 /* EtherscanService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Models/EtherscanService.swift; sourceTree = SOURCE_ROOT; };
+		EE14000200000000000000A1 /* EtherscanService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE14000100000000000000A1 /* EtherscanService.swift */; };
 		40F0D6C0F8DD422BA52777FF /* ManagedKeyModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Models/ManagedKeyModel.swift; sourceTree = SOURCE_ROOT; };
 		44CC6E0C21A7458488419EC8 /* ManagedKeyModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40F0D6C0F8DD422BA52777FF /* ManagedKeyModel.swift */; };
 		2D24F1C072CB4647A72B392C /* AppNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Navigation/AppNavigation.swift; sourceTree = SOURCE_ROOT; };
@@ -120,6 +122,42 @@
 		DD00000300000000000000A5 /* CBMPCAccessStructure.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000100000000000000A5 /* CBMPCAccessStructure.swift */; };
 		DD00000300000000000000A6 /* LocalNPartyRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD00000100000000000000A6 /* LocalNPartyRunner.swift */; };
 
+/* v0.14.0 phase 3: device pairing, server registration */
+		FF14000100000000000000B1 /* PairingManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Models/PairingManager.swift; sourceTree = SOURCE_ROOT; };
+		FF14000200000000000000B1 /* PairingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF14000100000000000000B1 /* PairingManager.swift */; };
+		FF14000300000000000000B1 /* PairingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF14000100000000000000B1 /* PairingManager.swift */; };
+		FF14000100000000000000B2 /* DevicePairingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Views/DevicePairingView.swift; sourceTree = SOURCE_ROOT; };
+		FF14000200000000000000B2 /* DevicePairingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF14000100000000000000B2 /* DevicePairingView.swift */; };
+		FF14000300000000000000B2 /* DevicePairingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF14000100000000000000B2 /* DevicePairingView.swift */; };
+		FF14000100000000000000B3 /* ServerRegistrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Views/ServerRegistrationView.swift; sourceTree = SOURCE_ROOT; };
+		FF14000200000000000000B3 /* ServerRegistrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF14000100000000000000B3 /* ServerRegistrationView.swift */; };
+		FF14000300000000000000B3 /* ServerRegistrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF14000100000000000000B3 /* ServerRegistrationView.swift */; };
+
+/* v0.14.0 network view */
+		FF14000100000000000000A1 /* NetworkView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Views/NetworkView.swift; sourceTree = SOURCE_ROOT; };
+		FF14000200000000000000A1 /* NetworkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF14000100000000000000A1 /* NetworkView.swift */; };
+		FF14000300000000000000A1 /* NetworkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF14000100000000000000A1 /* NetworkView.swift */; };
+
+/* v0.13.2 export sheet standalone view */
+		EE15000100000000000000A1 /* ExportKeySheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Views/ExportKeySheetView.swift; sourceTree = SOURCE_ROOT; };
+		EE15000200000000000000A1 /* ExportKeySheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE15000100000000000000A1 /* ExportKeySheetView.swift */; };
+		EE15000300000000000000A1 /* ExportKeySheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE15000100000000000000A1 /* ExportKeySheetView.swift */; };
+
+/* v0.13.1 new file references */
+		EE13000100000000000000A1 /* KeychainSyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Models/KeychainSyncManager.swift; sourceTree = SOURCE_ROOT; };
+		EE13000100000000000000A2 /* MultiQRCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Models/MultiQRCodec.swift; sourceTree = SOURCE_ROOT; };
+		EE13000100000000000000A3 /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Views/QRScannerView.swift; sourceTree = SOURCE_ROOT; };
+
+/* v0.13.0 iOS build file entries */
+		EE13000200000000000000A1 /* KeychainSyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE13000100000000000000A1 /* KeychainSyncManager.swift */; };
+		EE13000200000000000000A2 /* MultiQRCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE13000100000000000000A2 /* MultiQRCodec.swift */; };
+		EE13000200000000000000A3 /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE13000100000000000000A3 /* QRScannerView.swift */; };
+
+/* v0.13.0 macOS build file entries */
+		EE13000300000000000000A1 /* KeychainSyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE13000100000000000000A1 /* KeychainSyncManager.swift */; };
+		EE13000300000000000000A2 /* MultiQRCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE13000100000000000000A2 /* MultiQRCodec.swift */; };
+		EE13000300000000000000A3 /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE13000100000000000000A3 /* QRScannerView.swift */; };
+
 		A1E5F40B2D5E4A1B00C8F3E2 /* CBMPCNative.xcdatamodeld */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodeld; path = CBMPCNative/CBMPCNative.xcdatamodeld; sourceTree = SOURCE_ROOT; };
 		A1E5F40C2D5E4A1B00C8F3E2 /* CBMPCNative.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = A1E5F40B2D5E4A1B00C8F3E2 /* CBMPCNative.xcdatamodeld */; };
 
@@ -136,6 +174,7 @@
 		AA00000100000000000000B0 /* CBMPCSigner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34ECF65314E74AC7A0BA95A4 /* CBMPCSigner.swift */; };
 		AA00000100000000000000B1 /* DemoData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2856A2E308B6401A97B1C01E /* DemoData.swift */; };
 		AA00000100000000000000B2 /* KeyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5D94AC4683F4C108F8D95A3 /* KeyStore.swift */; };
+		EE14000300000000000000A1 /* EtherscanService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE14000100000000000000A1 /* EtherscanService.swift */; };
 		AA00000100000000000000B3 /* ManagedKeyModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40F0D6C0F8DD422BA52777FF /* ManagedKeyModel.swift */; };
 		AA00000100000000000000B4 /* AppNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D24F1C072CB4647A72B392C /* AppNavigation.swift */; };
 		AA00000100000000000000B5 /* CreateKeySheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C73628B8FCF45F083610781 /* CreateKeySheetView.swift */; };
@@ -213,6 +252,15 @@
 				DD00000200000000000000A4 /* CBMPCKeyShareMP.swift in Sources */,
 				DD00000200000000000000A5 /* CBMPCAccessStructure.swift in Sources */,
 				DD00000200000000000000A6 /* LocalNPartyRunner.swift in Sources */,
+				EE13000200000000000000A1 /* KeychainSyncManager.swift in Sources */,
+				EE13000200000000000000A2 /* MultiQRCodec.swift in Sources */,
+				EE13000200000000000000A3 /* QRScannerView.swift in Sources */,
+				EE14000200000000000000A1 /* EtherscanService.swift in Sources */,
+				EE15000200000000000000A1 /* ExportKeySheetView.swift in Sources */,
+				FF14000200000000000000A1 /* NetworkView.swift in Sources */,
+				FF14000200000000000000B1 /* PairingManager.swift in Sources */,
+				FF14000200000000000000B2 /* DevicePairingView.swift in Sources */,
+				FF14000200000000000000B3 /* ServerRegistrationView.swift in Sources */,
 				A1E5F40C2D5E4A1B00C8F3E2 /* CBMPCNative.xcdatamodeld in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -285,6 +333,15 @@
 				DD00000300000000000000A4 /* CBMPCKeyShareMP.swift in Sources */,
 				DD00000300000000000000A5 /* CBMPCAccessStructure.swift in Sources */,
 				DD00000300000000000000A6 /* LocalNPartyRunner.swift in Sources */,
+				EE13000300000000000000A1 /* KeychainSyncManager.swift in Sources */,
+				EE13000300000000000000A2 /* MultiQRCodec.swift in Sources */,
+				EE13000300000000000000A3 /* QRScannerView.swift in Sources */,
+				EE14000300000000000000A1 /* EtherscanService.swift in Sources */,
+				EE15000300000000000000A1 /* ExportKeySheetView.swift in Sources */,
+				FF14000300000000000000A1 /* NetworkView.swift in Sources */,
+				FF14000300000000000000B1 /* PairingManager.swift in Sources */,
+				FF14000300000000000000B2 /* DevicePairingView.swift in Sources */,
+				FF14000300000000000000B3 /* ServerRegistrationView.swift in Sources */,
 				AA00000100000000000000C4 /* CBMPCNative.xcdatamodeld in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -354,7 +411,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = CBMPCNative/CBMPCNative.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 59;
 				DEVELOPMENT_TEAM = YT6VJY3L35;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -367,7 +424,7 @@
 				);
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				SDKROOT = iphoneos;
-				MARKETING_VERSION = 0.6.0;
+				MARKETING_VERSION = 0.14.0;
 				"OTHER_LDFLAGS[sdk=iphonesimulator*]" = (
 					"$(SRCROOT)/../cbmpc.xcframework/ios-arm64-simulator/libcbmpc.a",
 					"$(SRCROOT)/../openssl-ios/iossimulator-arm64/lib/libssl.a",
@@ -394,7 +451,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = CBMPCNative/CBMPCNative.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 59;
 				DEVELOPMENT_TEAM = YT6VJY3L35;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -407,7 +464,7 @@
 				);
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				SDKROOT = iphoneos;
-				MARKETING_VERSION = 0.6.0;
+				MARKETING_VERSION = 0.14.0;
 				"OTHER_LDFLAGS[sdk=iphonesimulator*]" = (
 					"$(SRCROOT)/../cbmpc.xcframework/ios-arm64-simulator/libcbmpc.a",
 					"$(SRCROOT)/../openssl-ios/iossimulator-arm64/lib/libssl.a",
@@ -445,7 +502,7 @@
 			buildSettings = {
 				ARCHS = arm64;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 59;
 				DEVELOPMENT_TEAM = YT6VJY3L35;
 				INFOPLIST_FILE = CBMPCNative/Info.plist;
 				HEADER_SEARCH_PATHS = (
@@ -454,7 +511,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				SDKROOT = macosx;
-				MARKETING_VERSION = 0.6.0;
+				MARKETING_VERSION = 0.14.0;
 				OTHER_LDFLAGS = (
 					"$(SRCROOT)/../cbmpc.xcframework/macos-arm64/libcbmpc.a",
 					"/usr/local/opt/openssl@3.2.0/lib/libssl.a",
@@ -473,7 +530,7 @@
 			buildSettings = {
 				ARCHS = arm64;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 59;
 				DEVELOPMENT_TEAM = YT6VJY3L35;
 				INFOPLIST_FILE = CBMPCNative/Info.plist;
 				HEADER_SEARCH_PATHS = (
@@ -482,7 +539,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				SDKROOT = macosx;
-				MARKETING_VERSION = 0.6.0;
+				MARKETING_VERSION = 0.14.0;
 				OTHER_LDFLAGS = (
 					"$(SRCROOT)/../cbmpc.xcframework/macos-arm64/libcbmpc.a",
 					"/usr/local/opt/openssl@3.2.0/lib/libssl.a",

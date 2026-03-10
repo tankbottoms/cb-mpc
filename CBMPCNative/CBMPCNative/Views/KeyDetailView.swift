@@ -6,19 +6,30 @@ import UIKit
 import AppKit
 #endif
 
+enum KeyDetailSheet: Identifiable {
+    case signing, signTx, verify, qrShare, derive, export
+    var id: Int {
+        switch self {
+        case .signing: return 0
+        case .signTx: return 1
+        case .verify: return 2
+        case .qrShare: return 3
+        case .derive: return 4
+        case .export: return 5
+        }
+    }
+}
+
 struct KeyDetailView: View {
     let key: ManagedKey
     @EnvironmentObject var keyStore: KeyStore
-    @State private var showSigningSheet = false
-    @State private var showSignTxSheet = false
-    @State private var showVerifySheet = false
-    @State private var showExportSheet = false
-    @State private var showQRShareSheet = false
-    @State private var showDeriveSheet = false
+    @State private var activeSheet: KeyDetailSheet?
     @State private var isEditingName = false
     @State private var editedName = ""
     @State private var copiedId: String?
+    @State private var navigateToDerivedKeyId: UUID?
     @AppStorage("exportFormat") private var exportFormat = "keystoreJSON"
+    @AppStorage("qrTransferSpeed") private var qrTransferSpeed: Double = 1.5
 
     private var hasKeyData: Bool {
         UserDefaults.standard.data(forKey: "key_\(key.id.uuidString)") != nil
@@ -42,22 +53,56 @@ struct KeyDetailView: View {
     }
 
     private func buildKeystoreDict() -> [String: Any] {
-        var dict: [String: Any] = [
+        var cbmpc: [String: Any] = [
             "name": key.name,
             "publicKey": key.publicKey,
             "keyType": key.keyType.rawValue,
             "curveCode": Int(key.curveCode),
-            "createdAt": ISO8601DateFormatter().string(from: key.createdAt)
+            "createdAt": ISO8601DateFormatter().string(from: key.createdAt),
+            "storageLocation": key.storageLocation.rawValue
         ]
         if let path = key.derivationPath {
-            dict["derivationPath"] = path
+            cbmpc["derivationPath"] = path
+        }
+        if let parentId = key.parentKeyId {
+            cbmpc["parentKeyId"] = parentId.uuidString
         }
         if exportFormat == "keystoreJSON" {
             if let keyData = UserDefaults.standard.data(forKey: "key_\(key.id.uuidString)") {
-                dict["keyData"] = keyData.base64EncodedString()
+                cbmpc["keyData"] = keyData.base64EncodedString()
             }
         }
+
+        let dict: [String: Any] = [
+            "version": 3,
+            "id": key.id.uuidString.lowercased(),
+            "address": String(key.publicKey.suffix(40)),
+            "crypto": [
+                "cipher": "aes-128-ctr",
+                "cipherparams": ["iv": ""],
+                "ciphertext": "",
+                "kdf": "scrypt",
+                "kdfparams": [
+                    "dklen": 32,
+                    "n": 262144,
+                    "p": 1,
+                    "r": 8,
+                    "salt": ""
+                ],
+                "mac": ""
+            ],
+            "cb-mpc": cbmpc
+        ]
         return dict
+    }
+
+    private var utcFileName: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd'T'HH-mm-ss.SSS'Z'"
+        formatter.timeZone = TimeZone(identifier: "UTC")
+        let timestamp = formatter.string(from: key.createdAt)
+        let addr = String(key.publicKey.suffix(40))
+        return "UTC--\(timestamp)--\(addr)"
     }
 
     private var exportJSON: String {
@@ -69,9 +114,14 @@ struct KeyDetailView: View {
         return "{}"
     }
 
-    /// Compact JSON for QR encoding (no pretty printing to fit in QR capacity)
+    /// Compact JSON for QR encoding — excludes keyData to fit within QR capacity (~4K chars)
     private var exportJSONCompact: String {
-        let dict = buildKeystoreDict()
+        var dict = buildKeystoreDict()
+        // Strip keyData from cb-mpc section for QR (too large for QR encoding)
+        if var cbmpc = dict["cb-mpc"] as? [String: Any] {
+            cbmpc.removeValue(forKey: "keyData")
+            dict["cb-mpc"] = cbmpc
+        }
         if let jsonData = try? JSONSerialization.data(withJSONObject: dict, options: [.sortedKeys]),
            let jsonString = String(data: jsonData, encoding: .utf8) {
             return jsonString
@@ -90,6 +140,14 @@ struct KeyDetailView: View {
             return "Seed phrase export not available for MPC keys"
         default:
             return exportJSON
+        }
+    }
+
+    private var exportFormatLabel: String {
+        switch exportFormat {
+        case "privateKey": return "Private Key"
+        case "seedPhrase": return "Seed Phrase"
+        default: return "KeyStore V3 JSON"
         }
     }
 
@@ -128,7 +186,7 @@ struct KeyDetailView: View {
                     }
                     Spacer()
                     // QR glyph opens QR detail sheet (public key only)
-                    Button(action: { showQRShareSheet = true }) {
+                    Button(action: { activeSheet = .qrShare }) {
                         Image(systemName: "qrcode")
                             .font(.system(size: 16))
                             .foregroundColor(.secondary)
@@ -137,6 +195,23 @@ struct KeyDetailView: View {
                 }
                 .padding(.bottom, 8)
 
+                // Key security indicator
+                HStack(spacing: 6) {
+                    Image(systemName: "shield.lefthalf.filled")
+                        .font(.system(size: 10))
+                        .foregroundColor(.orange)
+                    Text("2-PARTY LOCAL")
+                        .font(.system(size: 8, weight: .bold, design: .monospaced))
+                        .foregroundColor(.orange)
+                    Spacer()
+                    Text("Both key shares stored on this device")
+                        .font(.system(size: 8, design: .monospaced))
+                        .foregroundColor(.secondary)
+                }
+                .padding(8)
+                .background(.orange.opacity(0.08))
+                .cornerRadius(4)
+
                 // Public Key Display -- 3/4 on top, 1/4 on bottom with copy glyph
                 VStack(alignment: .leading, spacing: 6) {
                     Text("PUBLIC KEY")
@@ -144,12 +219,12 @@ struct KeyDetailView: View {
                         .foregroundColor(.secondary)
 
                     VStack(alignment: .leading, spacing: 0) {
-                        Text(publicKeyFirstPart)
+                        Text("0x" + publicKeyFirstPart)
                             .font(.system(.caption2, design: .monospaced))
                         HStack(spacing: 4) {
                             Text(publicKeySecondPart)
                                 .font(.system(.caption2, design: .monospaced))
-                            copyButton(key.publicKey, id: "pubkey")
+                            copyButton("0x" + key.publicKey, id: "pubkey")
                         }
                     }
                     .textSelection(.enabled)
@@ -186,6 +261,27 @@ struct KeyDetailView: View {
                             Spacer()
                             Text(preset)
                                 .font(.system(.caption, design: .monospaced))
+                        }
+                    }
+
+                    if key.keyType == .hdChild, let parentId = key.parentKeyId,
+                       let parentKey = keyStore.keys.first(where: { $0.id == parentId }) {
+                        Divider()
+                        NavigationLink(destination: KeyDetailView(key: parentKey).environmentObject(keyStore)) {
+                            HStack {
+                                Text("HD Master")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                                HStack(spacing: 4) {
+                                    Text("0x\(parentKey.shortAddress)")
+                                        .font(.system(.caption, design: .monospaced))
+                                        .foregroundColor(.primary)
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 8))
+                                        .foregroundColor(.secondary)
+                                }
+                            }
                         }
                     }
 
@@ -226,6 +322,19 @@ struct KeyDetailView: View {
                             .font(.system(.caption, design: .monospaced))
                     }
 
+                    if key.isBackedUp {
+                        Divider()
+                        HStack {
+                            Text("Source")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Text("Imported")
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundColor(.blue)
+                        }
+                    }
+
                     if let lastUsed = key.lastUsedAt {
                         Divider()
                         HStack {
@@ -236,6 +345,67 @@ struct KeyDetailView: View {
                             Text(AppDateFormat.string(from: lastUsed))
                                 .font(.system(.caption, design: .monospaced))
                         }
+                    }
+
+                    Divider()
+
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Filename")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            let fParts = utcFileName.components(separatedBy: "--")
+                            if fParts.count >= 3 {
+                                VStack(alignment: .leading, spacing: 0) {
+                                    Text("\(fParts[0])--\(fParts[1])--")
+                                        .font(.system(size: 9, design: .monospaced))
+                                        .foregroundColor(.secondary)
+                                    Text("\(fParts[2]).json")
+                                        .font(.system(size: 9, design: .monospaced))
+                                        .foregroundColor(.secondary)
+                                }
+                                .textSelection(.enabled)
+                            } else {
+                                Text("\(utcFileName).json")
+                                    .font(.system(size: 9, design: .monospaced))
+                                    .foregroundColor(.secondary)
+                                    .textSelection(.enabled)
+                            }
+                        }
+                        Spacer()
+                        copyButton("\(utcFileName).json", id: "filename")
+                    }
+
+                    Divider()
+
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("iCloud Path")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            let iParts = utcFileName.components(separatedBy: "--")
+                            if iParts.count >= 3 {
+                                VStack(alignment: .leading, spacing: 0) {
+                                    Text("iCloud/Key-MGMT-CB-MPC/")
+                                        .font(.system(size: 9, design: .monospaced))
+                                        .foregroundColor(.secondary)
+                                    Text("\(iParts[0])--\(iParts[1])--")
+                                        .font(.system(size: 9, design: .monospaced))
+                                        .foregroundColor(.secondary)
+                                    Text("\(iParts[2]).json")
+                                        .font(.system(size: 9, design: .monospaced))
+                                        .foregroundColor(.secondary)
+                                }
+                                .textSelection(.enabled)
+                            } else {
+                                Text("iCloud/Key-MGMT-CB-MPC/\(utcFileName).json")
+                                    .font(.system(size: 9, design: .monospaced))
+                                    .foregroundColor(.secondary)
+                                    .textSelection(.enabled)
+                            }
+                        }
+                        Spacer()
+                        copyButton("iCloud/Key-MGMT-CB-MPC/\(utcFileName).json", id: "icloudpath")
                     }
                 }
                 .padding(8)
@@ -248,13 +418,13 @@ struct KeyDetailView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     if hasKeyData {
                         HStack(spacing: 6) {
-                            Button(action: { showSigningSheet = true }) {
+                            Button(action: { activeSheet = .signing }) {
                                 Label("Sign", systemImage: "checkmark.circle.fill")
                                     .frame(maxWidth: .infinity)
                             }
                             .buttonStyle(.borderedProminent)
 
-                            Button(action: { showSignTxSheet = true }) {
+                            Button(action: { activeSheet = .signTx }) {
                                 Label("Sign Tx", systemImage: "arrow.right.circle.fill")
                                     .frame(maxWidth: .infinity)
                             }
@@ -272,7 +442,7 @@ struct KeyDetailView: View {
                     }
 
                     HStack(spacing: 6) {
-                        Button(action: { showVerifySheet = true }) {
+                        Button(action: { activeSheet = .verify }) {
                             Text("Verify")
                                 .font(.system(size: 9, design: .monospaced))
                         }
@@ -281,7 +451,7 @@ struct KeyDetailView: View {
                         .disabled(key.signingRecords.isEmpty)
 
                         if key.keyType == .hdMaster {
-                            Button(action: { showDeriveSheet = true }) {
+                            Button(action: { activeSheet = .derive }) {
                                 Text("Derive")
                                     .font(.system(size: 9, design: .monospaced))
                             }
@@ -289,7 +459,7 @@ struct KeyDetailView: View {
                             .buttonStyle(.bordered)
                         }
 
-                        Button(action: { showExportSheet = true }) {
+                        Button(action: { activeSheet = .export }) {
                             Text("Export")
                                 .font(.system(size: 9, design: .monospaced))
                         }
@@ -370,6 +540,9 @@ struct KeyDetailView: View {
                             .padding(6)
                             .background(.gray.opacity(0.1))
                             .cornerRadius(4)
+                            .onTapGesture {
+                                shareSigningRecord(record)
+                            }
                         }
                     }
                 }
@@ -379,27 +552,34 @@ struct KeyDetailView: View {
             .padding(12)
         }
         .navigationTitle("Key Details")
-        .sheet(isPresented: $showSigningSheet) {
-            SignMessageSheetView(key: key)
+        .sheet(item: $activeSheet) { sheet in
+            switch sheet {
+            case .signing:
+                SignMessageSheetView(key: key)
+                    .environmentObject(keyStore)
+            case .signTx:
+                SignTransactionSheetView(key: key)
+            case .verify:
+                VerifySignatureSheetView(key: key)
+            case .qrShare:
+                qrDetailSheet
+                    .presentationDetents([.large])
+            case .derive:
+                DeriveChildSheetView(masterKey: key) { newKeyId in
+                    navigateToDerivedKeyId = newKeyId
+                }
                 .environmentObject(keyStore)
+            case .export:
+                ExportKeySheetView(key: key, exportJSON: exportJSON, utcFileName: utcFileName, exportFormatLabel: exportFormatLabel, exportDataForFormat: exportDataForFormat)
+                    .environmentObject(keyStore)
+                    .presentationDetents([.medium, .large])
+            }
         }
-        .sheet(isPresented: $showSignTxSheet) {
-            SignTransactionSheetView(key: key)
-        }
-        .sheet(isPresented: $showVerifySheet) {
-            VerifySignatureSheetView(key: key)
-        }
-        .sheet(isPresented: $showQRShareSheet) {
-            qrDetailSheet
-                .presentationDetents([.large])
-        }
-        .sheet(isPresented: $showDeriveSheet) {
-            DeriveChildSheetView(masterKey: key)
-                .environmentObject(keyStore)
-        }
-        .sheet(isPresented: $showExportSheet) {
-            exportSheetContent
-                .presentationDetents([.medium, .large])
+        .navigationDestination(item: $navigateToDerivedKeyId) { keyId in
+            if let derivedKey = keyStore.keys.first(where: { $0.id == keyId }) {
+                KeyDetailView(key: derivedKey)
+                    .environmentObject(keyStore)
+            }
         }
     }
 
@@ -434,6 +614,42 @@ struct KeyDetailView: View {
         .buttonStyle(.plain)
     }
 
+    // MARK: - Share Signing Record
+
+    private func shareSigningRecord(_ record: SigningRecord) {
+        let text = """
+        CB-MPC Signing Record
+        =====================
+
+        Date:       \(AppDateFormat.string(from: record.timestamp))
+        Key:        \(key.name)
+        Type:       \(key.displayKeyType)
+        Public Key: 0x\(key.publicKey)
+        Verified:   \(record.verified ? "Yes" : "No")
+
+        SHA-256 Hash:
+        \(record.messageHash)
+
+        Signature:
+        \(record.signature)
+        """
+
+        #if os(iOS)
+        let av = UIActivityViewController(activityItems: [text], applicationActivities: nil)
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let rootVC = windowScene.windows.first?.rootViewController {
+            var topVC = rootVC
+            while let presented = topVC.presentedViewController { topVC = presented }
+            if let popover = av.popoverPresentationController {
+                popover.sourceView = topVC.view
+                popover.sourceRect = CGRect(x: topVC.view.bounds.midX, y: topVC.view.bounds.midY, width: 0, height: 0)
+                popover.permittedArrowDirections = []
+            }
+            topVC.present(av, animated: true)
+        }
+        #endif
+    }
+
     // MARK: - Save Name
 
     private func saveName() {
@@ -446,6 +662,7 @@ struct KeyDetailView: View {
         isEditingName = false
     }
 
+
     // MARK: - QR Code Generator
 
     private func generateQRCode(from string: String, correctionLevel: String = "M") -> UIImage {
@@ -453,6 +670,22 @@ struct KeyDetailView: View {
         let filter = CIFilter.qrCodeGenerator()
         filter.message = Data(string.utf8)
         filter.correctionLevel = correctionLevel
+
+        if let outputImage = filter.outputImage {
+            let scale = 200.0 / outputImage.extent.size.width
+            let transformed = outputImage.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+            if let cgImage = context.createCGImage(transformed, from: transformed.extent) {
+                return UIImage(cgImage: cgImage)
+            }
+        }
+        return UIImage(systemName: "qrcode") ?? UIImage()
+    }
+
+    private func generateQRCode(from data: Data) -> UIImage {
+        let context = CIContext()
+        let filter = CIFilter.qrCodeGenerator()
+        filter.message = data
+        filter.correctionLevel = "L"
 
         if let outputImage = filter.outputImage {
             let scale = 200.0 / outputImage.extent.size.width
@@ -530,10 +763,23 @@ struct KeyDetailView: View {
                                 .font(.system(.caption, design: .monospaced))
                         }
 
+                        if key.keyType == .hdChild, let parentId = key.parentKeyId,
+                           let parentKey = keyStore.keys.first(where: { $0.id == parentId }) {
+                            Divider()
+                            HStack {
+                                Text("HD Master")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                                Text(parentKey.name)
+                                    .font(.system(.caption, design: .monospaced))
+                            }
+                        }
+
                         if let path = key.derivationPath {
                             Divider()
                             HStack {
-                                Text("Derivation")
+                                Text("Derivation Path")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                                 Spacer()
@@ -552,6 +798,60 @@ struct KeyDetailView: View {
                             Text(AppDateFormat.string(from: key.createdAt))
                                 .font(.system(.caption, design: .monospaced))
                         }
+
+                        if key.isBackedUp {
+                            Divider()
+                            HStack {
+                                Text("Source")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                                Text("Imported")
+                                    .font(.system(.caption, design: .monospaced))
+                                    .foregroundColor(.blue)
+                            }
+                        }
+
+                        Divider()
+
+                        HStack {
+                            Text("Storage")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Text(key.displayStorageLocation)
+                                .font(.system(.caption, design: .monospaced))
+                        }
+
+                        Divider()
+
+                        HStack(alignment: .top) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Filename")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Text("\(utcFileName).json")
+                                    .font(.system(size: 9, design: .monospaced))
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                            copyButton("\(utcFileName).json", id: "qr-filename")
+                        }
+
+                        Divider()
+
+                        HStack(alignment: .top) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("iCloud Path")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Text("iCloud/Key-MGMT-CB-MPC/\(utcFileName).json")
+                                    .font(.system(size: 9, design: .monospaced))
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                            copyButton("iCloud/Key-MGMT-CB-MPC/\(utcFileName).json", id: "qr-icloudpath")
+                        }
                     }
                     .padding(8)
                     .background(.gray.opacity(0.1))
@@ -565,7 +865,7 @@ struct KeyDetailView: View {
 
                         HStack(alignment: .top, spacing: 4) {
                             Text(publicKeyHex)
-                                .font(.system(size: 8, design: .monospaced))
+                                .font(.system(size: 9, design: .monospaced))
                                 .textSelection(.enabled)
                                 .fixedSize(horizontal: false, vertical: true)
                             Spacer(minLength: 4)
@@ -590,91 +890,20 @@ struct KeyDetailView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { showQRShareSheet = false }
+                    Button("Close") { activeSheet = nil }
                 }
             }
         }
     }
 
-    // MARK: - Export Sheet (QR encodes keystore JSON)
 
-    private var exportSheetContent: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(alignment: .top, spacing: 8) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundColor(.orange)
-                            .font(.system(size: 14))
-                        Text("Private keys and seed phrases should only exist in Secure Enclave, encrypted iCloud, or encrypted on a USB-C device.")
-                            .font(.system(size: 10, design: .monospaced))
-                            .foregroundColor(.orange)
-                    }
-                    .padding(10)
-                    .background(.orange.opacity(0.1))
-                    .cornerRadius(6)
-
-                    // QR code of export/keystore JSON data (compact, low correction for capacity)
-                    HStack {
-                        Spacer()
-                        Image(uiImage: generateQRCode(from: exportJSONCompact, correctionLevel: "L"))
-                            .interpolation(.none)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 160, height: 160)
-                            .padding(8)
-                            .background(.white)
-                            .cornerRadius(8)
-                        Spacer()
-                    }
-
-                    HStack {
-                        Text("EXPORT DATA (\(exportFormatLabel.uppercased()))")
-                            .font(.system(size: 9, weight: .medium, design: .monospaced))
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        copyButton(exportDataForFormat, id: "export")
-                    }
-
-                    Text(exportDataForFormat)
-                        .font(.system(size: 9, design: .monospaced))
-                        .textSelection(.enabled)
-                        .padding(8)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(.gray.opacity(0.1))
-                        .cornerRadius(4)
-
-                    Button(action: { showExportSheet = false }) {
-                        Label("Done", systemImage: "checkmark")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.borderedProminent)
-                }
-                .padding(16)
-            }
-            .navigationTitle("Export Key")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { showExportSheet = false }
-                }
-            }
-        }
-    }
-
-    private var exportFormatLabel: String {
-        switch exportFormat {
-        case "privateKey": return "Private Key"
-        case "seedPhrase": return "Seed Phrase"
-        default: return "JSON"
-        }
-    }
 }
 
 // MARK: - Derive Child Sheet
 
 struct DeriveChildSheetView: View {
     let masterKey: ManagedKey
+    var onDerived: ((UUID) -> Void)?
     @EnvironmentObject var keyStore: KeyStore
     @Environment(\.dismiss) var dismiss
 
@@ -682,16 +911,46 @@ struct DeriveChildSheetView: View {
     @State private var childName = ""
     @State private var isDeriving = false
     @State private var deriveError: String?
+    @State private var selectedPreset: String = "metamask"
+    @State private var copiedChildId: String?
     @AppStorage("hdChildNamingUseSelf") private var hdChildNamingUseSelf = false
 
-    private var accountFromPath: String {
+    /// Existing child keys derived from this master
+    private var existingChildren: [ManagedKey] {
+        keyStore.keys.filter { $0.parentKeyId == masterKey.id && $0.keyType == .hdChild }
+    }
+
+    /// Existing derivation paths for this master
+    private var existingPaths: Set<String> {
+        Set(existingChildren.compactMap { $0.derivationPath })
+    }
+
+    /// Auto-compute next available derivation path based on preset and existing children
+    private func nextAvailablePath(for preset: String) -> String {
+        switch preset {
+        case "metamask":
+            // MetaMask: m/44'/60'/0'/0/N -- increment N
+            for n in 0...999 {
+                let path = "m/44'/60'/0'/0/\(n)"
+                if !existingPaths.contains(path) { return path }
+            }
+            return "m/44'/60'/0'/0/0"
+        case "ledger":
+            // Ledger: m/44'/60'/N'/0/0 -- increment N
+            for n in 0...999 {
+                let path = "m/44'/60'/\(n)'/0/0"
+                if !existingPaths.contains(path) { return path }
+            }
+            return "m/44'/60'/0'/0/0"
+        default:
+            return "m/44'/60'/0'"
+        }
+    }
+
+    private var accountNumber: String {
         let parts = derivationPath.split(separator: "/")
-        if parts.count >= 5 {
-            let addressIndex = String(parts[4]).replacingOccurrences(of: "'", with: "")
-            return addressIndex
-        } else if parts.count >= 3 {
-            let account = String(parts[2]).replacingOccurrences(of: "'", with: "")
-            return account
+        if let last = parts.last {
+            return String(last).replacingOccurrences(of: "'", with: "")
         }
         return "0"
     }
@@ -699,7 +958,11 @@ struct DeriveChildSheetView: View {
     private var defaultChildName: String {
         let addr = masterKey.shortAddress
         let dateStr = AppDateFormat.string(from: Date())
-        return "\(addr)/\(derivationPath) \(dateStr)"
+        return "\(addr)/\(accountNumber) \(dateStr)"
+    }
+
+    private var pathAlreadyExists: Bool {
+        existingPaths.contains(derivationPath)
     }
 
     var body: some View {
@@ -733,26 +996,93 @@ struct DeriveChildSheetView: View {
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
 
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack(spacing: 6) {
-                            Button("MetaMask") { derivationPath = "m/44'/60'/0'/0/0" }
-                                .font(.system(size: 9))
-                                .buttonStyle(.bordered)
-                                .controlSize(.mini)
-                            Button("Ledger Live") { derivationPath = "m/44'/60'/0'/0/0" }
-                                .font(.system(size: 9))
-                                .buttonStyle(.bordered)
-                                .controlSize(.mini)
-                            Button("Custom") { derivationPath = "m/44'/60'/0'" }
-                                .font(.system(size: 9))
-                                .buttonStyle(.bordered)
-                                .controlSize(.mini)
-                        }
-
-                        Text("MetaMask: increments address index (m/44'/60'/0'/0/N)\nLedger Live: increments account (m/44'/60'/N'/0/0)")
-                            .font(.system(size: 7, design: .monospaced))
+                    if pathAlreadyExists {
+                        Text("This path is already derived -- choose a different path")
+                            .font(.system(size: 9, design: .monospaced))
+                            .foregroundColor(.red)
+                    } else if selectedPreset == "metamask" {
+                        Text("Increments address index: m/44'/60'/0'/0/N")
+                            .font(.system(size: 9, design: .monospaced))
                             .foregroundColor(.secondary.opacity(0.7))
-                            .fixedSize(horizontal: false, vertical: true)
+                    } else if selectedPreset == "ledger" {
+                        Text("Increments account: m/44'/60'/N'/0/0")
+                            .font(.system(size: 9, design: .monospaced))
+                            .foregroundColor(.secondary.opacity(0.7))
+                    } else {
+                        Text("Custom derivation path")
+                            .font(.system(size: 9, design: .monospaced))
+                            .foregroundColor(.secondary.opacity(0.7))
+                    }
+
+                    HStack(spacing: 6) {
+                        Button("MetaMask") {
+                            selectedPreset = "metamask"
+                            derivationPath = nextAvailablePath(for: "metamask")
+                        }
+                        .font(.system(size: 9))
+                        .buttonStyle(.bordered)
+                        .controlSize(.mini)
+                        .tint(selectedPreset == "metamask" ? .blue : .gray)
+
+                        Button("Ledger Live") {
+                            selectedPreset = "ledger"
+                            derivationPath = nextAvailablePath(for: "ledger")
+                        }
+                        .font(.system(size: 9))
+                        .buttonStyle(.bordered)
+                        .controlSize(.mini)
+                        .tint(selectedPreset == "ledger" ? .blue : .gray)
+
+                        Button("Custom") {
+                            selectedPreset = "custom"
+                            derivationPath = "m/44'/60'/0'"
+                        }
+                        .font(.system(size: 9))
+                        .buttonStyle(.bordered)
+                        .controlSize(.mini)
+                        .tint(selectedPreset == "custom" ? .blue : .gray)
+                    }
+
+                    // Show existing derived children
+                    if !existingChildren.isEmpty {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("DERIVED (\(existingChildren.count))")
+                                .font(.system(size: 9, weight: .medium, design: .monospaced))
+                                .foregroundColor(.secondary)
+                            ForEach(existingChildren) { child in
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(child.derivationPath ?? "?")
+                                        .font(.system(size: 9, weight: .medium, design: .monospaced))
+                                        .foregroundColor(.secondary)
+                                    HStack(alignment: .top, spacing: 4) {
+                                        Text("0x\(child.publicKey)")
+                                            .font(.system(size: 8, design: .monospaced))
+                                            .foregroundColor(.secondary.opacity(0.7))
+                                            .fixedSize(horizontal: false, vertical: true)
+                                        Spacer(minLength: 4)
+                                        Button(action: {
+                                            #if os(iOS)
+                                            UIPasteboard.general.string = "0x\(child.publicKey)"
+                                            let impact = UIImpactFeedbackGenerator(style: .light)
+                                            impact.impactOccurred()
+                                            #endif
+                                            copiedChildId = child.id.uuidString
+                                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                                                if copiedChildId == child.id.uuidString { copiedChildId = nil }
+                                            }
+                                        }) {
+                                            Image(systemName: "doc.on.doc")
+                                                .font(.system(size: 8))
+                                                .foregroundColor(copiedChildId == child.id.uuidString ? .blue : .secondary)
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                            }
+                        }
+                        .padding(8)
+                        .background(.gray.opacity(0.05))
+                        .cornerRadius(4)
                     }
                 }
 
@@ -778,7 +1108,7 @@ struct DeriveChildSheetView: View {
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(isDeriving)
+                .disabled(isDeriving || pathAlreadyExists)
             }
             .padding(16)
             .navigationTitle("Derive Child")
@@ -787,6 +1117,10 @@ struct DeriveChildSheetView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                 }
+            }
+            .onAppear {
+                // Auto-suggest next available path on sheet open
+                derivationPath = nextAvailablePath(for: selectedPreset)
             }
         }
     }
@@ -799,10 +1133,14 @@ struct DeriveChildSheetView: View {
 
         DispatchQueue.global(qos: .userInitiated).async {
             do {
-                let _ = try keyStore.deriveChildKey(from: masterKey, path: derivationPath, name: name)
+                let newKey = try keyStore.deriveChildKey(from: masterKey, path: derivationPath, name: name)
                 DispatchQueue.main.async {
+                    let impact = UIImpactFeedbackGenerator(style: .medium)
+                    impact.impactOccurred()
                     isDeriving = false
                     dismiss()
+                    // Navigate to the new key's detail view
+                    onDerived?(newKey.id)
                 }
             } catch {
                 DispatchQueue.main.async {

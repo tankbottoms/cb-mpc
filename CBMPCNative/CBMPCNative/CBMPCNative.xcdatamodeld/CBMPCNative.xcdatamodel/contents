@@ -11,6 +11,7 @@
         <attribute name="name" attributeType="String" defaultValueString="" syncable="YES"/>
         <attribute name="parentKeyId" attributeType="UUID" optional="YES" usesScalarValueType="NO" syncable="YES"/>
         <attribute name="publicKey" attributeType="String" defaultValueString="" syncable="YES"/>
+        <attribute name="sortOrder" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
         <attribute name="storageLocation" attributeType="String" defaultValueString="keychain" syncable="YES"/>
         <relationship name="signingRecords" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="SigningRecordEntity" inverseName="managedKey" inverseEntity="SigningRecordEntity" syncable="YES"/>
         <uniqueConstraint>

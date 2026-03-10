@@ -6,9 +6,20 @@ import UniformTypeIdentifiers
 
 enum KeyCreationMode: String, CaseIterable {
     case generate = "Generate"
-    case importSeed = "Seed Phrase"
-    case importPrivateKey = "Private Key"
-    case importUSB = "USB-C"
+    case importSeed = "Seed"
+    case importPrivateKey = "Private"
+    case importUSB = "Storage"
+    case importQR = "QR Code"
+
+    var fullName: String {
+        switch self {
+        case .generate: return "Generate"
+        case .importSeed: return "Seed Phrase"
+        case .importPrivateKey: return "Private Key"
+        case .importUSB: return "Storage"
+        case .importQR: return "QR Code"
+        }
+    }
 }
 
 enum DerivationPreset: String, CaseIterable {
@@ -26,15 +37,26 @@ enum DerivationPreset: String, CaseIterable {
 }
 
 enum ExportDestination: String, CaseIterable {
-    case secureEnclave = "Secure Enclave"
-    case icloud = "iCloud"
-    case usbc = "USB-C"
+    case secureEnclave = "Device Keychain"
+    case icloudKeychain = "iCloud Keychain"
+    case storage = "File Export"
 
     var icon: String {
         switch self {
         case .secureEnclave: return "lock.shield"
-        case .icloud: return "icloud"
-        case .usbc: return "externaldrive"
+        case .icloudKeychain: return "key.icloud"
+        case .storage: return "externaldrive"
+        }
+    }
+
+    var securityNote: String {
+        switch self {
+        case .secureEnclave:
+            return "AES-256 encrypted at rest by iOS data protection. Tied to device hardware. Never leaves this device. Requires unlock (passcode/Face ID)."
+        case .icloudKeychain:
+            return "Apple end-to-end encrypted. Syncs across devices signed into same Apple ID. Protected by device passcode + Apple ID."
+        case .storage:
+            return "Exported as file via share sheet. No automatic encryption. User responsible for secure storage."
         }
     }
 }
@@ -53,6 +75,9 @@ struct CreateKeySheetView: View {
     @State private var seedPhrase = ""
     @State private var privateKeyHex = ""
     @State private var showDocumentPicker = false
+    @State private var importedKeystoreJSON: [String: Any]?
+    @State private var importedKeystoreFileName: String?
+    @State private var importedKeystoreAddress: String?
     @State private var derivationPreset: DerivationPreset = .metamask
     @State private var batchChildCount = 1
     @State private var vanityPrefix = ""
@@ -70,24 +95,38 @@ struct CreateKeySheetView: View {
     @State private var vanitySearchCancelled = false
     @AppStorage("hdChildNamingUseSelf") private var hdChildNamingUseSelf = false
 
+    // QR import state
+    @State private var scannedQRParts: [Data] = []
+    @State private var qrTotalParts: Int = 0
+    @State private var showQRScanner = false
+    @State private var qrPassphrase = ""
+    @State private var qrImportStatus: String?
+
     private var hdMasterKeys: [ManagedKey] {
         keyStore.keys.filter { $0.keyType == .hdMaster }
     }
 
     private var defaultKeyName: String {
         let timestamp = AppDateFormat.string(from: Date())
-        switch keyType {
-        case .simple:
-            return "ECDSA \(timestamp)"
-        case .hdMaster:
-            return "HD-MASTER \(timestamp)"
-        case .hdChild:
-            if let parentId = selectedParentKeyId,
-               let parent = hdMasterKeys.first(where: { $0.id == parentId }) {
-                let lastComponent = derivationPath.split(separator: "/").last.map(String.init) ?? "0"
-                return "\(parent.shortAddress)/\(lastComponent) \(timestamp)"
+        switch creationMode {
+        case .importSeed:
+            return "0x0000...0000/m \(timestamp)"
+        case .importUSB, .importQR:
+            return ""
+        default:
+            switch keyType {
+            case .simple:
+                return "ECDSA \(timestamp)"
+            case .hdMaster:
+                return "0x0000...0000/m \(timestamp)"
+            case .hdChild:
+                if let parentId = selectedParentKeyId,
+                   let parent = hdMasterKeys.first(where: { $0.id == parentId }) {
+                    let lastComponent = derivationPath.split(separator: "/").last.map(String.init) ?? "0"
+                    return "\(parent.shortAddress)/\(lastComponent) \(timestamp)"
+                }
+                return derivationPath
             }
-            return derivationPath
         }
     }
 
@@ -105,13 +144,14 @@ struct CreateKeySheetView: View {
         case .hdMaster:
             return "\(shortAddr)/m \(timestamp)"
         case .hdChild:
+            let acct = path?.split(separator: "/").last.map { String($0).replacingOccurrences(of: "'", with: "") } ?? "0"
             if !hdChildNamingUseSelf,
                let parentId = selectedParentKeyId,
                let parent = hdMasterKeys.first(where: { $0.id == parentId }) {
                 let masterAddr = parent.shortAddress
-                return "\(masterAddr)/\(path ?? "0") \(timestamp)"
+                return "\(masterAddr)/\(acct) \(timestamp)"
             }
-            return "\(shortAddr)/\(path ?? "0") \(timestamp)"
+            return "\(shortAddr)/\(acct) \(timestamp)"
         }
     }
 
@@ -201,6 +241,19 @@ struct CreateKeySheetView: View {
                             .background(.gray.opacity(0.1))
                             .cornerRadius(4)
                         }
+
+                        // Storage notice
+                        HStack(alignment: .top, spacing: 8) {
+                            Image(systemName: "shield.lefthalf.filled")
+                                .foregroundColor(.orange)
+                                .font(.system(size: 12))
+                            Text("This will generate a private key using 2-party DKG. Both key shares are stored locally on this device. The complete private key never exists in memory.")
+                                .font(.system(size: 9, design: .monospaced))
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(10)
+                        .background(.orange.opacity(0.05))
+                        .cornerRadius(6)
                     }
 
                     // HD Child options
@@ -325,6 +378,18 @@ struct CreateKeySheetView: View {
                                 .font(.system(size: 9, design: .monospaced))
                                 .foregroundColor(.secondary)
 
+                            HStack(alignment: .top, spacing: 8) {
+                                Image(systemName: "shield.lefthalf.filled")
+                                    .foregroundColor(.orange)
+                                    .font(.system(size: 12))
+                                Text("The seed phrase will generate an HD Master key. Both 2-party key shares are stored locally on this device.")
+                                    .font(.system(size: 9, design: .monospaced))
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(8)
+                            .background(.orange.opacity(0.05))
+                            .cornerRadius(6)
+
                             if !seedPhrase.isEmpty {
                                 HStack(spacing: 8) {
                                     Button(action: { isSeedRevealed.toggle() }) {
@@ -373,63 +438,21 @@ struct CreateKeySheetView: View {
                             Text("64-character hex string (32 bytes). The raw private key will be split into two MPC key shares using distributed key generation. Neither share alone can reconstruct the key or produce valid signatures.")
                                 .font(.system(size: 9, design: .monospaced))
                                 .foregroundColor(.secondary)
-                        }
-                    }
 
-                    // Import: USB-C
-                    if creationMode == .importUSB {
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack {
-                                Image(systemName: "externaldrive.fill")
-                                    .font(.system(size: 24))
-                                    .foregroundColor(.secondary)
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("Connect USB-C Drive")
-                                        .font(.system(size: 13, weight: .medium, design: .monospaced))
-                                    Text("Import an Ethereum keystore (V3 JSON)")
-                                        .font(.system(size: 9, design: .monospaced))
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-                            .padding(12)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(.gray.opacity(0.1))
-                            .cornerRadius(4)
-
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Accepted format: Ethereum V3 Keystore JSON")
-                                    .font(.system(size: 9, weight: .medium, design: .monospaced))
-                                    .foregroundColor(.secondary)
-                                Text("The keystore file uses AES-128-CTR encryption with scrypt KDF. A password is required to decrypt the private key. Files follow the naming convention:")
+                            HStack(alignment: .top, spacing: 8) {
+                                Image(systemName: "shield.lefthalf.filled")
+                                    .foregroundColor(.orange)
+                                    .font(.system(size: 12))
+                                Text("The private key will be split into 2 MPC shares via DKG. Both shares are stored locally on this device.")
                                     .font(.system(size: 9, design: .monospaced))
                                     .foregroundColor(.secondary)
-                                Text("UTC--<timestamp>--<address>")
-                                    .font(.system(size: 9, weight: .medium, design: .monospaced))
-                                    .foregroundColor(.secondary)
-                                    .padding(4)
-                                    .background(.gray.opacity(0.05))
-                                    .cornerRadius(2)
-                                Text("Compatible with Geth (go-ethereum), Clef, and standard Ethereum account management tools. See geth.ethereum.org for keystore specification details.")
-                                    .font(.system(size: 9, design: .monospaced))
-                                    .foregroundColor(.secondary.opacity(0.7))
                             }
                             .padding(8)
-                            .background(.blue.opacity(0.05))
-                            .cornerRadius(4)
-
-                            Button(action: { showDocumentPicker = true }) {
-                                Label("Browse Files", systemImage: "folder")
-                                    .frame(maxWidth: .infinity)
-                            }
-                            .buttonStyle(.bordered)
+                            .background(.orange.opacity(0.05))
+                            .cornerRadius(6)
                         }
-                        .sheet(isPresented: $showDocumentPicker) {
-                            DocumentPickerView()
-                        }
-                    }
 
-                    // Vanity Address (for generate mode, simple keys)
-                    if creationMode == .generate && keyType == .simple {
+                        // Vanity Address
                         VStack(alignment: .leading, spacing: 6) {
                             Text("Vanity Address (optional)")
                                 .font(.system(.caption, design: .monospaced))
@@ -440,26 +463,50 @@ struct CreateKeySheetView: View {
                                     Text("Prefix")
                                         .font(.system(size: 9, design: .monospaced))
                                         .foregroundColor(.secondary)
-                                    TextField("0x...", text: $vanityPrefix)
-                                        .font(.system(size: 11, design: .monospaced))
-                                        .padding(6)
-                                        .background(.gray.opacity(0.1))
-                                        .cornerRadius(4)
-                                        .textInputAutocapitalization(.never)
-                                        .autocorrectionDisabled()
+                                    ZStack(alignment: .trailing) {
+                                        TextField("0x...", text: $vanityPrefix)
+                                            .font(.system(size: 11, design: .monospaced))
+                                            .padding(6)
+                                            .padding(.trailing, vanityPrefix.isEmpty ? 0 : 22)
+                                            .background(.gray.opacity(0.1))
+                                            .cornerRadius(4)
+                                            .textInputAutocapitalization(.never)
+                                            .autocorrectionDisabled()
+                                        if !vanityPrefix.isEmpty {
+                                            Button(action: { vanityPrefix = "" }) {
+                                                Image(systemName: "xmark.circle.fill")
+                                                    .font(.system(size: 14))
+                                                    .foregroundColor(.secondary.opacity(0.6))
+                                            }
+                                            .buttonStyle(.plain)
+                                            .padding(.trailing, 6)
+                                        }
+                                    }
                                 }
 
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("Suffix")
                                         .font(.system(size: 9, design: .monospaced))
                                         .foregroundColor(.secondary)
-                                    TextField("...ff", text: $vanitySuffix)
-                                        .font(.system(size: 11, design: .monospaced))
-                                        .padding(6)
-                                        .background(.gray.opacity(0.1))
-                                        .cornerRadius(4)
-                                        .textInputAutocapitalization(.never)
-                                        .autocorrectionDisabled()
+                                    ZStack(alignment: .trailing) {
+                                        TextField("...ff", text: $vanitySuffix)
+                                            .font(.system(size: 11, design: .monospaced))
+                                            .padding(6)
+                                            .padding(.trailing, vanitySuffix.isEmpty ? 0 : 22)
+                                            .background(.gray.opacity(0.1))
+                                            .cornerRadius(4)
+                                            .textInputAutocapitalization(.never)
+                                            .autocorrectionDisabled()
+                                        if !vanitySuffix.isEmpty {
+                                            Button(action: { vanitySuffix = "" }) {
+                                                Image(systemName: "xmark.circle.fill")
+                                                    .font(.system(size: 14))
+                                                    .foregroundColor(.secondary.opacity(0.6))
+                                            }
+                                            .buttonStyle(.plain)
+                                            .padding(.trailing, 6)
+                                        }
+                                    }
                                 }
                             }
 
@@ -483,7 +530,6 @@ struct CreateKeySheetView: View {
 
                             if isVanitySearching {
                                 VStack(alignment: .leading, spacing: 4) {
-                                    // Current address being searched (left) + stats (right)
                                     HStack(alignment: .top) {
                                         VStack(alignment: .leading, spacing: 2) {
                                             Text("0x\(currentSearchAddress.prefix(40))")
@@ -531,6 +577,261 @@ struct CreateKeySheetView: View {
                         }
                     }
 
+                    // Import: USB-C
+                    if creationMode == .importUSB {
+                        VStack(alignment: .leading, spacing: 12) {
+                            if let ksJSON = importedKeystoreJSON {
+                                // Loaded keystore display
+                                VStack(alignment: .leading, spacing: 8) {
+                                    HStack {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundColor(.green)
+                                            .font(.system(size: 16))
+                                        Text("Keystore Loaded")
+                                            .font(.system(size: 13, weight: .medium, design: .monospaced))
+                                        Spacer()
+                                        Button(action: {
+                                            importedKeystoreJSON = nil
+                                            importedKeystoreFileName = nil
+                                            importedKeystoreAddress = nil
+                                        }) {
+                                            Image(systemName: "xmark.circle.fill")
+                                                .foregroundColor(.secondary)
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+
+                                    if let fileName = importedKeystoreFileName {
+                                        HStack {
+                                            Text("File")
+                                                .font(.system(size: 9, design: .monospaced))
+                                                .foregroundColor(.secondary)
+                                            Spacer()
+                                            Text(fileName)
+                                                .font(.system(size: 9, design: .monospaced))
+                                                .lineLimit(1)
+                                                .truncationMode(.middle)
+                                        }
+                                    }
+
+                                    if let addr = importedKeystoreAddress {
+                                        HStack {
+                                            Text("Address")
+                                                .font(.system(size: 9, design: .monospaced))
+                                                .foregroundColor(.secondary)
+                                            Spacer()
+                                            Text("0x\(addr)")
+                                                .font(.system(size: 9, design: .monospaced))
+                                        }
+                                    }
+
+                                    let version = ksJSON["version"] as? Int ?? 0
+                                    HStack {
+                                        Text("Version")
+                                            .font(.system(size: 9, design: .monospaced))
+                                            .foregroundColor(.secondary)
+                                        Spacer()
+                                        Text("V\(version)")
+                                            .font(.system(size: 9, design: .monospaced))
+                                    }
+
+                                    if let crypto = ksJSON["crypto"] as? [String: Any] ?? ksJSON["Crypto"] as? [String: Any] {
+                                        let cipher = crypto["cipher"] as? String ?? "unknown"
+                                        let kdf = crypto["kdf"] as? String ?? "unknown"
+                                        HStack {
+                                            Text("Cipher")
+                                                .font(.system(size: 9, design: .monospaced))
+                                                .foregroundColor(.secondary)
+                                            Spacer()
+                                            Text(cipher)
+                                                .font(.system(size: 9, design: .monospaced))
+                                        }
+                                        HStack {
+                                            Text("KDF")
+                                                .font(.system(size: 9, design: .monospaced))
+                                                .foregroundColor(.secondary)
+                                            Spacer()
+                                            Text(kdf)
+                                                .font(.system(size: 9, design: .monospaced))
+                                        }
+                                    }
+
+                                    if let ksId = ksJSON["id"] as? String {
+                                        HStack {
+                                            Text("ID")
+                                                .font(.system(size: 9, design: .monospaced))
+                                                .foregroundColor(.secondary)
+                                            Spacer()
+                                            Text(ksId)
+                                                .font(.system(size: 8, design: .monospaced))
+                                                .lineLimit(1)
+                                        }
+                                    }
+                                }
+                                .padding(12)
+                                .background(.green.opacity(0.05))
+                                .cornerRadius(4)
+                            } else {
+                                // No keystore loaded yet
+                                HStack {
+                                    Image(systemName: "externaldrive.fill")
+                                        .font(.system(size: 24))
+                                        .foregroundColor(.secondary)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Browse Storage")
+                                            .font(.system(size: 13, weight: .medium, design: .monospaced))
+                                        Text("Import an Ethereum keystore (V3 JSON) from iCloud, USB-C, or local storage")
+                                            .font(.system(size: 9, design: .monospaced))
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                                .padding(12)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(.gray.opacity(0.1))
+                                .cornerRadius(4)
+
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Web3 Secret Storage Definition (V3)")
+                                        .font(.system(size: 9, weight: .medium, design: .monospaced))
+                                        .foregroundColor(.secondary)
+                                    Text("AES-128-CTR encryption with scrypt/pbkdf2 KDF. Files named:")
+                                        .font(.system(size: 9, design: .monospaced))
+                                        .foregroundColor(.secondary)
+                                    Text("<uuid>.json  or  UTC--<timestamp>--<address>")
+                                        .font(.system(size: 9, weight: .medium, design: .monospaced))
+                                        .foregroundColor(.secondary)
+                                        .padding(4)
+                                        .background(.gray.opacity(0.05))
+                                        .cornerRadius(2)
+                                }
+                                .padding(8)
+                                .background(.blue.opacity(0.05))
+                                .cornerRadius(4)
+                            }
+
+                            Button(action: { showDocumentPicker = true }) {
+                                Label(importedKeystoreJSON != nil ? "Choose Different File" : "Browse Files", systemImage: "folder")
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.bordered)
+
+                            HStack(alignment: .top, spacing: 8) {
+                                Image(systemName: "shield.lefthalf.filled")
+                                    .foregroundColor(.orange)
+                                    .font(.system(size: 12))
+                                Text("The imported key data will be stored locally. If the keystore contains CB-MPC key shares, both shares are kept on this device.")
+                                    .font(.system(size: 9, design: .monospaced))
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(8)
+                            .background(.orange.opacity(0.05))
+                            .cornerRadius(6)
+                        }
+                        .sheet(isPresented: $showDocumentPicker) {
+                            DocumentPickerView { url in
+                                loadKeystoreFromURL(url)
+                            }
+                        }
+                    }
+
+                    // Import: QR Code
+                    if creationMode == .importQR {
+                        VStack(alignment: .leading, spacing: 12) {
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack(alignment: .top, spacing: 8) {
+                                    Image(systemName: "info.circle.fill")
+                                        .foregroundColor(.blue)
+                                        .font(.system(size: 14))
+                                    Text("On the sending device, open Key Details and tap Export Key. The rotating QR codes appear at the top of the export sheet.")
+                                        .font(.system(size: 10, design: .monospaced))
+                                        .foregroundColor(.blue)
+                                }
+                                HStack(alignment: .top, spacing: 8) {
+                                    Image(systemName: "key.fill")
+                                        .foregroundColor(.blue)
+                                        .font(.system(size: 12))
+                                    Text("Scroll to the bottom of the export sheet to find the transfer passphrase. You will need it after scanning to decrypt the key.")
+                                        .font(.system(size: 10, design: .monospaced))
+                                        .foregroundColor(.blue)
+                                }
+                            }
+                            .padding(10)
+                            .background(.blue.opacity(0.05))
+                            .cornerRadius(6)
+
+                            if scannedQRParts.isEmpty {
+                                Button(action: { showQRScanner = true }) {
+                                    Label("Start Scanner", systemImage: "camera.fill")
+                                        .frame(maxWidth: .infinity)
+                                }
+                                .buttonStyle(.bordered)
+                            } else {
+                                HStack {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(.green)
+                                        .font(.system(size: 16))
+                                    Text("\(scannedQRParts.count) of \(qrTotalParts) parts scanned")
+                                        .font(.system(size: 13, weight: .medium, design: .monospaced))
+                                    Spacer()
+                                    Button(action: {
+                                        scannedQRParts = []
+                                        qrTotalParts = 0
+                                        qrImportStatus = nil
+                                    }) {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .foregroundColor(.secondary)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                                .padding(12)
+                                .background(.green.opacity(0.05))
+                                .cornerRadius(4)
+
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("Passphrase")
+                                        .font(.system(.caption, design: .monospaced))
+                                        .foregroundColor(.secondary)
+
+                                    SecureField("Enter transfer passphrase", text: $qrPassphrase)
+                                        .font(.system(size: 12, design: .monospaced))
+                                        .padding(8)
+                                        .background(.gray.opacity(0.1))
+                                        .cornerRadius(4)
+                                        .textInputAutocapitalization(.never)
+                                        .autocorrectionDisabled()
+
+                                    Text("The passphrase was shown on the sending device during export.")
+                                        .font(.system(size: 9, design: .monospaced))
+                                        .foregroundColor(.secondary)
+                                }
+
+                                Button(action: { showQRScanner = true }) {
+                                    Label("Scan Again", systemImage: "camera")
+                                        .font(.system(size: 11, design: .monospaced))
+                                }
+                                .buttonStyle(.bordered)
+                                .controlSize(.small)
+                            }
+
+                            if let status = qrImportStatus {
+                                Text(status)
+                                    .font(.system(size: 10, design: .monospaced))
+                                    .foregroundColor(.red)
+                                    .padding(8)
+                                    .background(.red.opacity(0.05))
+                                    .cornerRadius(4)
+                            }
+                        }
+                        .sheet(isPresented: $showQRScanner) {
+                            QRScannerView { parts in
+                                scannedQRParts = parts
+                                if let first = parts.first, first.count >= 10 {
+                                    qrTotalParts = Int(first.readUInt16BE(at: 8))
+                                }
+                            }
+                        }
+                    }
+
                     // Key Name
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Key Name")
@@ -573,7 +874,7 @@ struct CreateKeySheetView: View {
                 }
                 .padding(16)
             }
-            .navigationTitle(creationMode == .generate ? "Create New Key" : "Import Key")
+            .navigationTitle(creationMode == .generate ? "Create New Key" : "Import \(creationMode.fullName)")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
@@ -672,7 +973,7 @@ struct CreateKeySheetView: View {
                             .foregroundColor(.secondary)
 
                         if selectedExportDest == .secureEnclave {
-                            Text("Secure Enclave uses hardware-backed encryption. No password required.")
+                            Text("Device Keychain uses iOS data protection (AES-256). No additional password required.")
                                 .font(.system(size: 9, design: .monospaced))
                                 .foregroundColor(.green)
                         } else {
@@ -752,7 +1053,7 @@ struct CreateKeySheetView: View {
         if let jsonData = try? JSONSerialization.data(withJSONObject: keystoreJSON, options: [.prettyPrinted, .sortedKeys]),
            let _ = String(data: jsonData, encoding: .utf8) {
             // Write to destination based on selectedExportDest
-            if selectedExportDest == .icloud {
+            if selectedExportDest == .icloudKeychain {
                 if let containerURL = FileManager.default.url(forUbiquityContainerIdentifier: nil) {
                     let dir = containerURL.appendingPathComponent("Documents/Key-MGMT-CB-MPC", isDirectory: true)
                     try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -770,18 +1071,21 @@ struct CreateKeySheetView: View {
         switch creationMode {
         case .generate:
             if keyType == .hdChild && selectedParentKeyId == nil { return false }
-            if !vanityPrefix.isEmpty || !vanitySuffix.isEmpty {
-                if !isValidHex { return false }
-            }
             return true
         case .importSeed:
             let words = seedPhrase.trimmingCharacters(in: .whitespacesAndNewlines).split(separator: " ")
             return words.count == 12 || words.count == 18 || words.count == 24
         case .importPrivateKey:
             let hex = privateKeyHex.trimmingCharacters(in: .whitespacesAndNewlines)
-            return hex.count == 64
+            if hex.count != 64 { return false }
+            if !vanityPrefix.isEmpty || !vanitySuffix.isEmpty {
+                if !isValidHex { return false }
+            }
+            return true
         case .importUSB:
-            return false
+            return importedKeystoreJSON != nil
+        case .importQR:
+            return !scannedQRParts.isEmpty && !qrPassphrase.isEmpty
         }
     }
 
@@ -816,9 +1120,210 @@ struct CreateKeySheetView: View {
         errorMessage = nil
         vanitySearchCancelled = false
 
+        // QR Code import: decode scanned parts and restore key
+        if creationMode == .importQR {
+            qrImportStatus = nil
+            DispatchQueue.global(qos: .userInitiated).async {
+                do {
+                    let decoded = try MultiQRCodec.decode(parts: scannedQRParts, passphrase: qrPassphrase)
+                    guard let ksJSON = try JSONSerialization.jsonObject(with: decoded) as? [String: Any] else {
+                        throw MultiQRCodec.CodecError.decompressionFailed
+                    }
+
+                    let cbmpc = ksJSON["cb-mpc"] as? [String: Any]
+                    let hasKeyData = cbmpc?["keyData"] as? String != nil
+
+                    let publicKeyHex: String
+                    let serializedKey: Data
+
+                    if hasKeyData,
+                       let keyDataB64 = cbmpc?["keyData"] as? String,
+                       let restoredKeyData = Data(base64Encoded: keyDataB64),
+                       let restoredPK = cbmpc?["publicKey"] as? String {
+                        publicKeyHex = restoredPK
+                        serializedKey = restoredKeyData
+                    } else {
+                        let engine = CBMPCCryptoEngine()
+                        let (pk, sk) = try engine.generateKey(curveCode: 714)
+                        publicKeyHex = pk.map { String(format: "%02x", $0) }.joined()
+                        serializedKey = sk
+                    }
+
+                    let restoredKeyType: KeyType
+                    if let typeStr = cbmpc?["keyType"] as? String,
+                       let kt = KeyType(rawValue: typeStr) {
+                        restoredKeyType = kt
+                    } else {
+                        restoredKeyType = .simple
+                    }
+
+                    let restoredPath = cbmpc?["derivationPath"] as? String
+                    let restoredCurve = cbmpc?["curveCode"] as? Int ?? 714
+                    let addr = ksJSON["address"] as? String ?? ""
+
+                    let restoredId: UUID
+                    if let idStr = ksJSON["id"] as? String, let uuid = UUID(uuidString: idStr) {
+                        restoredId = uuid
+                    } else {
+                        restoredId = UUID()
+                    }
+
+                    let finalName: String
+                    if !self.keyName.isEmpty {
+                        finalName = self.keyName
+                    } else if let savedName = cbmpc?["name"] as? String, !savedName.isEmpty {
+                        finalName = savedName
+                    } else {
+                        finalName = self.buildKeyName(publicKeyHex: publicKeyHex, keyType: restoredKeyType, path: restoredPath)
+                    }
+
+                    let originalCreatedAt: Date
+                    if let createdAtStr = cbmpc?["createdAt"] as? String,
+                       let parsed = ISO8601DateFormatter().date(from: createdAtStr) {
+                        originalCreatedAt = parsed
+                    } else {
+                        originalCreatedAt = Date()
+                    }
+
+                    let managedKey = ManagedKey(
+                        id: restoredId,
+                        name: finalName,
+                        publicKey: hasKeyData ? publicKeyHex : (addr.isEmpty ? publicKeyHex : addr),
+                        keyType: restoredKeyType,
+                        curveCode: Int32(restoredCurve),
+                        derivationPath: restoredPath,
+                        parentKeyId: nil,
+                        storageLocation: .secureEnclave,
+                        createdAt: originalCreatedAt,
+                        lastUsedAt: nil,
+                        isBackedUp: true,
+                        signingRecords: []
+                    )
+
+                    DispatchQueue.main.async {
+                        UserDefaults.standard.set(serializedKey, forKey: "key_\(managedKey.id.uuidString)")
+                        self.keyStore.addKey(managedKey)
+                        let feedback = UINotificationFeedbackGenerator()
+                        feedback.notificationOccurred(.success)
+                        self.isCreating = false
+                        self.dismiss()
+                    }
+                } catch {
+                    DispatchQueue.main.async {
+                        self.qrImportStatus = "Import failed: \(error.localizedDescription)"
+                        self.isCreating = false
+                    }
+                }
+            }
+            return
+        }
+
+        // Storage import: restore key from loaded keystore JSON
+        if creationMode == .importUSB, let ksJSON = importedKeystoreJSON {
+            let name = keyName
+            let addr = importedKeystoreAddress ?? ""
+            let cbmpc = ksJSON["cb-mpc"] as? [String: Any]
+
+            // Check if this keystore has cb-mpc key data we can restore
+            let hasKeyData = cbmpc?["keyData"] as? String != nil
+
+            DispatchQueue.global(qos: .userInitiated).async {
+                do {
+                    let publicKeyHex: String
+                    let serializedKey: Data
+
+                    if hasKeyData,
+                       let keyDataB64 = cbmpc?["keyData"] as? String,
+                       let restoredKeyData = Data(base64Encoded: keyDataB64),
+                       let restoredPK = cbmpc?["publicKey"] as? String {
+                        // Restore from backup — use original key data
+                        publicKeyHex = restoredPK
+                        serializedKey = restoredKeyData
+                    } else {
+                        // No key data — generate a new MPC key pair
+                        let engine = CBMPCCryptoEngine()
+                        let (pk, sk) = try engine.generateKey(curveCode: 714)
+                        publicKeyHex = pk.map { String(format: "%02x", $0) }.joined()
+                        serializedKey = sk
+                    }
+
+                    // Restore key type from cb-mpc metadata or default to simple
+                    let restoredKeyType: KeyType
+                    if let typeStr = cbmpc?["keyType"] as? String,
+                       let kt = KeyType(rawValue: typeStr) {
+                        restoredKeyType = kt
+                    } else {
+                        restoredKeyType = .simple
+                    }
+
+                    let restoredPath = cbmpc?["derivationPath"] as? String
+                    let restoredCurve = cbmpc?["curveCode"] as? Int ?? 714
+
+                    // Restore original ID if available
+                    let restoredId: UUID
+                    if let idStr = ksJSON["id"] as? String, let uuid = UUID(uuidString: idStr) {
+                        restoredId = uuid
+                    } else {
+                        restoredId = UUID()
+                    }
+
+                    let finalName: String
+                    if !name.isEmpty {
+                        finalName = name
+                    } else if let savedName = cbmpc?["name"] as? String, !savedName.isEmpty {
+                        finalName = savedName
+                    } else {
+                        finalName = self.buildKeyName(publicKeyHex: publicKeyHex, keyType: restoredKeyType, path: restoredPath)
+                    }
+
+                    // Preserve original creation date from keystore if available
+                    let originalCreatedAt: Date
+                    if let createdAtStr = cbmpc?["createdAt"] as? String,
+                       let parsed = ISO8601DateFormatter().date(from: createdAtStr) {
+                        originalCreatedAt = parsed
+                    } else {
+                        originalCreatedAt = Date()
+                    }
+
+                    let managedKey = ManagedKey(
+                        id: restoredId,
+                        name: finalName,
+                        publicKey: hasKeyData ? publicKeyHex : (addr.isEmpty ? publicKeyHex : addr),
+                        keyType: restoredKeyType,
+                        curveCode: Int32(restoredCurve),
+                        derivationPath: restoredPath,
+                        parentKeyId: nil,
+                        storageLocation: .secureEnclave,
+                        createdAt: originalCreatedAt,
+                        lastUsedAt: nil,
+                        isBackedUp: true,
+                        signingRecords: []
+                    )
+
+                    DispatchQueue.main.async {
+                        UserDefaults.standard.set(serializedKey, forKey: "key_\(managedKey.id.uuidString)")
+                        keyStore.addKey(managedKey)
+
+                        let feedback = UINotificationFeedbackGenerator()
+                        feedback.notificationOccurred(.success)
+                        isCreating = false
+                        dismiss()
+                    }
+                } catch {
+                    DispatchQueue.main.async {
+                        errorMessage = "Import failed: \(error.localizedDescription)"
+                        isCreating = false
+                    }
+                }
+            }
+            return
+        }
+
+        // Seed phrase import forces HD-MASTER key type
+        let effectiveKeyType = (creationMode == .importSeed) ? KeyType.hdMaster : keyType
         let userProvidedName = keyName.isEmpty ? nil : keyName
-        let keysToCreate = (keyType == .hdChild) ? batchChildCount : 1
-        let hasVanity = keyType == .simple && (!vanityPrefix.isEmpty || !vanitySuffix.isEmpty) && isValidHex
+        let keysToCreate = (effectiveKeyType == .hdChild) ? batchChildCount : 1
+        let hasVanity = effectiveKeyType == .simple && (!vanityPrefix.isEmpty || !vanitySuffix.isEmpty) && isValidHex
         let vPrefix = vanityPrefix.lowercased()
         let vSuffix = vanitySuffix.lowercased()
 
@@ -841,7 +1346,7 @@ struct CreateKeySheetView: View {
                     var serializedKey: Data
                     var publicKeyHex: String
 
-                    if hasVanity && keyType == .simple {
+                    if hasVanity && effectiveKeyType == .simple {
                         var found = false
                         var attempts = 0
                         repeat {
@@ -901,7 +1406,7 @@ struct CreateKeySheetView: View {
 
                     let path: String?
                     let name: String
-                    switch keyType {
+                    switch effectiveKeyType {
                     case .hdMaster:
                         path = "m"
                         name = userProvidedName ?? buildKeyName(publicKeyHex: publicKeyHex, keyType: .hdMaster, path: "m")
@@ -929,10 +1434,10 @@ struct CreateKeySheetView: View {
                         id: UUID(),
                         name: name,
                         publicKey: publicKeyHex,
-                        keyType: keyType,
+                        keyType: effectiveKeyType,
                         curveCode: Int32(curveCode),
                         derivationPath: path,
-                        parentKeyId: (keyType == .hdChild) ? selectedParentKeyId : nil,
+                        parentKeyId: (effectiveKeyType == .hdChild) ? selectedParentKeyId : nil,
                         storageLocation: .secureEnclave,
                         createdAt: Date(),
                         lastUsedAt: nil,
@@ -961,6 +1466,57 @@ struct CreateKeySheetView: View {
         }
     }
 
+    // MARK: - Storage Keystore Import
+
+    private func loadKeystoreFromURL(_ url: URL) {
+        guard url.startAccessingSecurityScopedResource() else {
+            errorMessage = "Cannot access file"
+            return
+        }
+        defer { url.stopAccessingSecurityScopedResource() }
+
+        do {
+            let data = try Data(contentsOf: url)
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                errorMessage = "Invalid JSON format"
+                return
+            }
+
+            // Accept V3 keystore format OR cb-mpc export format
+            let version = json["version"] as? Int ?? 0
+            let hasCrypto = json["crypto"] != nil || json["Crypto"] != nil
+            let hasCBMPC = json["cb-mpc"] != nil
+
+            guard (version == 3 && hasCrypto) || hasCBMPC else {
+                errorMessage = "Not a valid keystore (version=\(version), no crypto or cb-mpc section)"
+                return
+            }
+
+            importedKeystoreJSON = json
+            importedKeystoreFileName = url.lastPathComponent
+
+            // Extract address: try JSON fields, then cb-mpc extension, then UTC filename
+            if let addr = json["address"] as? String {
+                importedKeystoreAddress = addr
+            } else if let cbmpc = json["cb-mpc"] as? [String: Any],
+                      let pk = cbmpc["publicKey"] as? String {
+                importedKeystoreAddress = String(pk.suffix(40))
+            } else {
+                // Try UTC--<timestamp>--<address> naming convention
+                let name = url.deletingPathExtension().lastPathComponent
+                let parts = name.components(separatedBy: "--")
+                if parts.count >= 3 {
+                    importedKeystoreAddress = parts.last
+                }
+            }
+
+            let impact = UIImpactFeedbackGenerator(style: .medium)
+            impact.impactOccurred()
+        } catch {
+            errorMessage = "Failed to read file: \(error.localizedDescription)"
+        }
+    }
+
     // MARK: - Helpers
 
     private func generatePlaceholderMnemonic(wordCount: Int) -> String {
@@ -984,6 +1540,12 @@ struct CreateKeySheetView: View {
 
 #if os(iOS)
 struct DocumentPickerView: UIViewControllerRepresentable {
+    let onPick: (URL) -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onPick: onPick)
+    }
+
     func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
         let picker = UIDocumentPickerViewController(forOpeningContentTypes: [
             .json,
@@ -993,10 +1555,24 @@ struct DocumentPickerView: UIViewControllerRepresentable {
         ])
         picker.shouldShowFileExtensions = true
         picker.allowsMultipleSelection = false
+        picker.delegate = context.coordinator
         return picker
     }
 
     func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {}
+
+    class Coordinator: NSObject, UIDocumentPickerDelegate {
+        let onPick: (URL) -> Void
+
+        init(onPick: @escaping (URL) -> Void) {
+            self.onPick = onPick
+        }
+
+        func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+            guard let url = urls.first else { return }
+            onPick(url)
+        }
+    }
 }
 #endif
 

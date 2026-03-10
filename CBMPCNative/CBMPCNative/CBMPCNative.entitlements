@@ -14,5 +14,9 @@
 	<array>
 		<string>iCloud.xyz.atsignhandle.cb-mpc</string>
 	</array>
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)xyz.atsignhandle.cb-mpc</string>
+	</array>
 </dict>
 </plist>
