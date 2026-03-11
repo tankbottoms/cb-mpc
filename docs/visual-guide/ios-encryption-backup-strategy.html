@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>iOS Encryption & Backup Strategy — Visual Guide</title>
+<style>
+  /* ============================================================
+     THEME SYSTEM — light/dark via [data-theme]
+     ============================================================ */
+  :root {
+    --font-mono: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    --font-sans: 'Inter', 'SF Pro', -apple-system, system-ui, sans-serif;
+
+    /* neo-brutalism constants */
+    --border-w: 3px;
+    --shadow-offset: 5px;
+    --radius: 0;
+
+    /* party colors (stable across themes) */
+    --party-0: #6366f1;
+    --party-1: #f59e0b;
+    --party-2: #10b981;
+    --party-3: #ef4444;
+    --secret: #ef4444;
+    --public: #3b82f6;
+    --mail: #8b5cf6;
+    --ok: #22c55e;
+    --warn: #f97316;
+  }
+
+  [data-theme="light"] {
+    --bg: #f5f0e8;
+    --bg2: #ffffff;
+    --card: #ffffff;
+    --card2: #f0ebe3;
+    --text: #1a1a1a;
+    --muted: #6b7280;
+    --border: #1a1a1a;
+    --shadow-color: #1a1a1a;
+    --tag-text: #fff;
+    --phone-bg: #e8e0d4;
+    --phone-screen: #ffffff;
+    --phone-bezel: #1a1a1a;
+    --code-bg: #f0ebe3;
+    --highlight: #fef08a;
+  }
+
+  [data-theme="dark"] {
+    --bg: #0f172a;
+    --bg2: #1a1a1a;
+    --card: #1e293b;
+    --card2: #334155;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --border: #475569;
+    --shadow-color: #000000;
+    --tag-text: #fff;
+    --phone-bg: #141414;
+    --phone-screen: #1e293b;
+    --phone-bezel: #475569;
+    --code-bg: #334155;
+    --highlight: #854d0e;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font-mono);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  /* ---- THEME TOGGLE ---- */
+  .theme-toggle {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 999;
+    border: var(--border-w) solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color);
+    transition: all 0.15s;
+  }
+  .theme-toggle:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 7px 7px 0 var(--shadow-color);
+  }
+  .theme-toggle:active {
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0 var(--shadow-color);
+  }
+
+  /* ---- DOC NAV ---- */
+  .doc-nav {
+    display: flex;
+    gap: 0;
+    margin: 1.5rem auto 0;
+    max-width: 1200px;
+    width: 100%;
+    border: var(--border-w) solid var(--border);
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color);
+    overflow: hidden;
+    flex-wrap: wrap;
+  }
+  .nav-link {
+    flex: 0 1 calc(100% / 3);
+    text-align: center;
+    padding: 0.5rem 0.4rem;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-decoration: none;
+    color: var(--text);
+    background: var(--card);
+    border-right: var(--border-w) solid var(--border);
+    border-bottom: var(--border-w) solid var(--border);
+    transition: background 0.15s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .nav-link:nth-child(3n) { border-right: none; }
+  .nav-link:nth-last-child(-n+3) { border-bottom: none; }
+  .nav-link:hover { background: var(--card2); }
+  .nav-link.active {
+    background: var(--border);
+    color: var(--text);
+  }
+
+  /* ---- LAYOUT ---- */
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+  }
+
+  h1 {
+    font-size: 2.4rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: -0.03em;
+    border-bottom: var(--border-w) solid var(--border);
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .subtitle {
+    font-size: 0.9rem;
+    color: var(--muted);
+    margin-bottom: 3rem;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
+    margin: 3rem 0 1rem;
+    padding: 0.5rem 1rem;
+    background: var(--text);
+    color: var(--bg);
+    display: inline-block;
+  }
+
+  h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 1.5rem 0 0.5rem;
+    border-left: 6px solid var(--party-0);
+    padding-left: 0.75rem;
+  }
+
+  p { margin: 0.5rem 0; font-size: 0.88rem; }
+
+  /* ---- CARDS ---- */
+  .card {
+    border: var(--border-w) solid var(--border);
+    background: var(--card);
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color);
+    position: relative;
+  }
+
+  .card-label {
+    position: absolute;
+    top: -0.7rem;
+    left: 1rem;
+    background: var(--card);
+    padding: 0 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+  }
+
+  /* ---- TAGS ---- */
+  .tag {
+    display: inline-block;
+    font-size: 0.6rem;
+    padding: 0.15rem 0.5rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    vertical-align: middle;
+    border: 2px solid;
+  }
+  .tag.secure { background: var(--party-0); color: var(--tag-text); border-color: var(--party-0); }
+  .tag.cloud { background: var(--party-1); color: var(--tag-text); border-color: var(--party-1); }
+  .tag.device { background: var(--party-2); color: var(--tag-text); border-color: var(--party-2); }
+  .tag.backup { background: var(--party-3); color: var(--tag-text); border-color: var(--party-3); }
+
+  /* ---- CODE ---- */
+  .code {
+    background: var(--code-bg);
+    border: 2px solid var(--border);
+    padding: 1rem;
+    margin: 0.75rem 0;
+    font-size: 0.78rem;
+    overflow-x: auto;
+    white-space: pre;
+    line-height: 1.5;
+  }
+
+  /* ---- FLOW DIAGRAM ---- */
+  .flow-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 1rem 0;
+    flex-wrap: wrap;
+  }
+  .flow-box {
+    border: var(--border-w) solid var(--border);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-align: center;
+    min-width: 120px;
+    background: var(--card);
+  }
+  .flow-box.highlight { background: var(--highlight); }
+  .flow-box.party0 { background: var(--party-0); color: #fff; }
+  .flow-box.party1 { background: var(--party-1); color: #000; }
+  .flow-arrow {
+    font-size: 1.5rem;
+    color: var(--muted);
+    font-weight: 900;
+  }
+
+  /* ---- STORAGE OPTIONS GRID ---- */
+  .storage-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin: 1.5rem 0;
+  }
+  .storage-card {
+    border: var(--border-w) solid var(--border);
+    padding: 1.25rem;
+    background: var(--card2);
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color);
+  }
+  .storage-card h4 {
+    font-size: 0.95rem;
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .storage-card p {
+    font-size: 0.78rem;
+    margin: 0.4rem 0;
+  }
+
+  /* ---- BACKUP TOPOLOGY DIAGRAM ---- */
+  .topology {
+    border: var(--border-w) solid var(--border);
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+    background: var(--card2);
+    font-size: 0.75rem;
+  }
+  .topology-title {
+    font-weight: 800;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+    color: var(--text);
+  }
+  .topology-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin: 1rem 0;
+  }
+  .topology-item {
+    border: 2px solid var(--border);
+    padding: 0.75rem;
+    text-align: center;
+    background: var(--card);
+  }
+  .topology-item.primary { border-color: var(--party-0); background: var(--highlight); }
+  .topology-item.backup { border-color: var(--party-3); }
+
+  /* ---- LOGIC TABLE ---- */
+  .logic-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+    margin: 1.5rem 0;
+    background: var(--card);
+  }
+  .logic-table th {
+    text-align: left;
+    padding: 0.6rem;
+    border: 2px solid var(--border);
+    font-weight: 800;
+    text-transform: uppercase;
+    background: var(--text);
+    color: var(--card);
+  }
+  .logic-table td {
+    padding: 0.5rem 0.6rem;
+    border: 1px solid var(--card2);
+    font-family: 'SF Mono', monospace;
+  }
+  .logic-table tr:nth-child(even) { background: var(--card2); }
+
+  /* ---- OPTIONS COMPARISON ---- */
+  .options-compare {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin: 1.5rem 0;
+  }
+  .option-box {
+    border: var(--border-w) solid var(--border);
+    padding: 1rem;
+    background: var(--card);
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color);
+  }
+  .option-box strong {
+    display: block;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+    color: var(--party-0);
+  }
+  .option-box p {
+    font-size: 0.75rem;
+    margin: 0.3rem 0;
+  }
+
+  /* ---- CALLOUT ---- */
+  .callout {
+    border-left: 6px solid var(--warn);
+    background: var(--card2);
+    padding: 1rem 1.25rem;
+    margin: 1rem 0;
+    font-size: 0.82rem;
+  }
+  .callout.info { border-left-color: var(--public); }
+  .callout.ok { border-left-color: var(--ok); }
+  .callout.danger { border-left-color: var(--secret); }
+  .callout-title { font-weight: 800; margin-bottom: 0.25rem; text-transform: uppercase; font-size: 0.75rem; }
+
+  /* ============================================================
+     PHONE MOCKUP
+     ============================================================ */
+  .phone-row {
+    display: flex;
+    gap: 2rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: 2rem 0;
+  }
+  .phone {
+    width: 280px;
+    border: var(--border-w) solid var(--phone-bezel);
+    background: var(--phone-bg);
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color);
+    position: relative;
+    padding: 0;
+  }
+  .phone-notch {
+    width: 100px;
+    height: 24px;
+    background: var(--phone-bezel);
+    margin: 0 auto;
+    position: relative;
+    z-index: 2;
+  }
+  .phone-screen {
+    background: var(--phone-screen);
+    margin: 0 8px 8px;
+    min-height: 480px;
+    border: 2px solid var(--phone-bezel);
+    padding: 1rem;
+    font-size: 0.72rem;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .phone-label {
+    text-align: center;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.75rem 0 0.5rem;
+    color: var(--muted);
+  }
+
+  /* phone screen elements */
+  .screen-header {
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-align: center;
+    padding: 0.5rem 0;
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+  }
+  .screen-btn {
+    display: block;
+    width: 100%;
+    border: var(--border-w) solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.6rem;
+    margin: 0.4rem 0;
+    text-align: center;
+    cursor: pointer;
+    box-shadow: 3px 3px 0 var(--shadow-color);
+  }
+  .screen-btn.primary {
+    background: var(--party-0);
+    color: #fff;
+    border-color: var(--party-0);
+  }
+  .screen-btn.secondary {
+    background: var(--party-1);
+    color: #000;
+    border-color: var(--party-1);
+  }
+  .screen-field {
+    border: 2px solid var(--border);
+    padding: 0.5rem;
+    margin: 0.4rem 0;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    background: var(--code-bg);
+  }
+  .screen-field-label {
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 0.5rem;
+  }
+  .screen-status {
+    text-align: center;
+    padding: 0.5rem;
+    margin: 0.4rem 0;
+    font-weight: 700;
+    font-size: 0.72rem;
+    border: 2px solid;
+  }
+  .screen-status.ok { border-color: var(--ok); color: var(--ok); }
+  .screen-status.warn { border-color: var(--warn); color: var(--warn); }
+  .screen-status.err { border-color: var(--secret); color: var(--secret); }
+
+  .screen-icon { font-size: 2rem; text-align: center; padding: 0.5rem 0; }
+  .screen-detail {
+    font-size: 0.65rem;
+    color: var(--muted);
+    word-break: break-all;
+    margin: 0.25rem 0;
+  }
+
+  .screen-divider {
+    border-top: 1px dashed var(--muted);
+    margin: 0.6rem 0;
+  }
+
+  .screen-card {
+    border: 1px solid var(--border);
+    padding: 0.4rem;
+    margin: 0.3rem 0;
+    background: var(--card2);
+    font-size: 0.62rem;
+  }
+
+  /* ---- DIVIDER ---- */
+  .divider {
+    text-align: center;
+    padding: 2.5rem 0 1rem;
+    font-size: 1.3rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    border-top: 2px dashed var(--muted);
+    margin-top: 2rem;
+  }
+
+  /* ---- FOOTER ---- */
+  .footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.72rem;
+    padding: 3rem 0 2rem;
+    border-top: 2px solid var(--card2);
+    margin-top: 3rem;
+  }
+
+  /* ---- PRINT ---- */
+  @media print {
+    .theme-toggle { display: none; }
+    body { background: white; color: #1a1a1a; }
+    .card { box-shadow: none; border-color: #ccc; }
+    .phone { box-shadow: none; }
+  }
+</style>
+<script src="https://fathom-sveltekit.mark-phillips-f7c.workers.dev/api/tracker/abc9c4a5b463d635" defer></script>
+</head>
+<body data-theme="light">
+
+<button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">[ LIGHT ]</button>
+
+<nav class="doc-nav">
+  <a href="/index.html" class="nav-link">Demo Guide</a>
+  <a href="/threshold-signing.html" class="nav-link">Threshold Signing</a>
+  <a href="/dkg-ceremony.html" class="nav-link">DKG Ceremony</a>
+  <a href="/device-to-device.html" class="nav-link">Device-to-Device</a>
+  <a href="/server-architecture.html" class="nav-link">Server Architecture</a>
+  <a href="/shamir-splitting.html" class="nav-link">Shamir Splitting</a>
+  <a href="/ios-encryption-backup-strategy.html" class="nav-link active">iOS Encryption</a>
+  <a href="/key-management.html" class="nav-link">Key Management</a>
+  <a href="/signing-operations.html" class="nav-link">Signing Ops</a>
+</nav>
+
+<div class="container">
+
+<!-- ============================================================ -->
+<h1>iOS Encryption & Backup Strategy</h1>
+<p class="subtitle">Storage Options, Multi-Device Coordination, and Redundancy Logic</p>
+<!-- ============================================================ -->
+
+<!-- ============================================================
+     SECTION 1: iOS ENCRYPTION STORAGE
+     ============================================================ -->
+<h2>1. iOS Encryption Storage Options</h2>
+
+<p>iOS provides multiple mechanisms for securely storing cryptographic material. Each offers different trade-offs between security, accessibility, and recoverability.</p>
+
+<div class="storage-grid">
+
+  <div class="storage-card">
+    <span class="tag secure">HIGHEST</span>
+    <h4>Secure Enclave</h4>
+    <p><strong>What:</strong> Hardware-isolated cryptographic processor on A-series chips.</p>
+    <p><strong>Security:</strong> Private keys never leave the enclave. Operations performed in isolation.</p>
+    <p><strong>Use:</strong> Master keys, signing operations, MPC party shares.</p>
+    <p><strong>Trade-off:</strong> Limited key count (~32 keys). Cannot backup or export.</p>
+  </div>
+
+  <div class="storage-card">
+    <span class="tag cloud">CLOUD-BACKED</span>
+    <h4>iCloud Keychain</h4>
+    <p><strong>What:</strong> Encrypted sync across Apple devices (iPhone, iPad, Mac).</p>
+    <p><strong>Security:</strong> AES-256 encryption, each device has its own encryption key.</p>
+    <p><strong>Use:</strong> Non-critical keys, recovery codes, backups.</p>
+    <p><strong>Trade-off:</strong> Requires iCloud account. Keys at rest in Apple's cloud. Device loss triggers sync delays.</p>
+  </div>
+
+  <div class="storage-card">
+    <span class="tag device">ON-DEVICE</span>
+    <h4>Filesystem Encryption (Data Protection)</h4>
+    <p><strong>What:</strong> App sandbox with file-level encryption.</p>
+    <p><strong>Security:</strong> Class-based protection: Complete, Protected, or Protected Unless Open.</p>
+    <p><strong>Use:</strong> Share data, temporary keys, recovery workflows.</p>
+    <p><strong>Trade-off:</strong> Local-only. Lost if device is reset. Backed up to iCloud or encrypted backups.</p>
+  </div>
+
+  <div class="storage-card">
+    <span class="tag backup">BACKUP</span>
+    <h4>iTunes/Finder Encrypted Backup</h4>
+    <p><strong>What:</strong> Local encrypted backup to computer (Desktop/Laptop).</p>
+    <p><strong>Security:</strong> Optional password protection, stored on trusted computer.</p>
+    <p><strong>Use:</strong> Offline backup of Keychain and sensitive data.</p>
+    <p><strong>Trade-off:</strong> Requires manual setup. Only as secure as the backup computer.</p>
+  </div>
+
+</div>
+
+<div class="callout info">
+<div class="callout-title">Storage Security Hierarchy</div>
+<p><strong>1. Secure Enclave:</strong> No backup, maximum isolation. For master keys only.</p>
+<p style="margin-top:0.3rem"><strong>2. iCloud Keychain:</strong> Encrypted cloud sync. For recovery and secondary keys.</p>
+<p style="margin-top:0.3rem"><strong>3. Filesystem (Protected):</strong> Device-local encryption. For MPC party shares.</p>
+<p style="margin-top:0.3rem"><strong>4. Encrypted Backup:</strong> External storage. For disaster recovery.</p>
+</div>
+
+<!-- ============================================================
+     SECTION 2: MULTI-DEVICE JOINING
+     ============================================================ -->
+<h2>2. Multi-Device Joining via Bluetooth</h2>
+
+<p>iOS devices can coordinate cryptographic operations via Bluetooth using the MultipeerConnectivity framework (peer-to-peer) or via a commitment server (network-coordinated).</p>
+
+<h3>2.1 Peer-to-Peer (Bluetooth Direct)</h3>
+
+<div class="flow-row">
+  <div class="flow-box party0">Device A: Advertise</div>
+  <div class="flow-arrow">↔</div>
+  <div class="flow-box party0">Device B: Discover</div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-box highlight">Exchange MPC Shares</div>
+</div>
+
+<div class="storage-grid">
+  <div class="option-box">
+    <strong>Advantages</strong>
+    <p>✓ No server required</p>
+    <p>✓ Fast (Bluetooth range ~100m)</p>
+    <p>✓ Direct peer-to-peer trust</p>
+  </div>
+  <div class="option-box">
+    <strong>Limitations</strong>
+    <p>✗ Proximity required</p>
+    <p>✗ Both devices online simultaneously</p>
+    <p>✗ No transaction history</p>
+  </div>
+  <div class="option-box">
+    <strong>Best For</strong>
+    <p>Co-located device setup</p>
+    <p>Initial 2-party DKG ceremony</p>
+    <p>Emergency recovery (nearby devices)</p>
+  </div>
+</div>
+
+<h3>2.2 Commitment Server (Network Relay)</h3>
+
+<div class="flow-row">
+  <div class="flow-box party0">Device A</div>
+  <div class="flow-arrow">↓</div>
+  <div class="flow-box party1">Commitment Server</div>
+  <div class="flow-arrow">↑</div>
+  <div class="flow-box party0">Device B</div>
+</div>
+
+<div class="storage-grid">
+  <div class="option-box">
+    <strong>Advantages</strong>
+    <p>✓ Devices don't need proximity</p>
+    <p>✓ Asynchronous messaging</p>
+    <p>✓ Audit trail available</p>
+  </div>
+  <div class="option-box">
+    <strong>Limitations</strong>
+    <p>✗ Server can observe metadata</p>
+    <p>✗ Server downtime = blocked signing</p>
+    <p>✗ Requires server deployment</p>
+  </div>
+  <div class="option-box">
+    <strong>Best For</strong>
+    <p>Distributed multi-device setup</p>
+    <p>Continuous signing operations</p>
+    <p>Cloud-backed MPC</p>
+  </div>
+</div>
+
+<!-- ============================================================
+     SECTION 3: COMMITMENT SERVER ARCHITECTURE
+     ============================================================ -->
+<h2>3. Commitment Server as Party 1</h2>
+
+<p>In a 2-party MPC scheme, the commitment server acts as Party 1, with the iOS device as Party 2. The server is "committed" because it cannot collude with the device without revealing the scheme.</p>
+
+<div class="card">
+<span class="card-label">Server Role in 2-Party MPC</span>
+
+<p><strong>Party 1 (Server):</strong></p>
+<ul style="margin-left: 1rem; margin: 0.5rem 0">
+  <li style="font-size:0.82rem; margin: 0.3rem 0">Holds share s₁ (encrypted in iCloud or in Secure Enclave if local)</li>
+  <li style="font-size:0.82rem; margin: 0.3rem 0">Initiates signing protocol</li>
+  <li style="font-size:0.82rem; margin: 0.3rem 0">Stores transaction history for audit</li>
+  <li style="font-size:0.82rem; margin: 0.3rem 0">Never reveals s₁ (except via threshold protocol)</li>
+</ul>
+
+<p><strong>Party 2 (iOS Device):</strong></p>
+<ul style="margin-left: 1rem; margin: 0.5rem 0">
+  <li style="font-size:0.82rem; margin: 0.3rem 0">Holds share s₂ in Secure Enclave</li>
+  <li style="font-size:0.82rem; margin: 0.3rem 0">Receives signing request from user</li>
+  <li style="font-size:0.82rem; margin: 0.3rem 0">Engages with server to co-sign</li>
+  <li style="font-size:0.82rem; margin: 0.3rem 0">Returns signature without exposing s₂</li>
+</ul>
+
+<p style="margin-top:1rem"><strong>Trust Model:</strong> Server and device are honest-but-curious. Neither can forge a signature alone. Both must be compromised to steal the key.</p>
+</div>
+
+<!-- ============================================================
+     SECTION 4: USB-C BACKUP STRATEGY
+     ============================================================ -->
+<h2>4. USB-C Backup & Disaster Recovery</h2>
+
+<p>For maximum redundancy, MPC shares can be backed up to external USB-C storage or via iCloud. The following strategies balance convenience with security.</p>
+
+<div class="topology">
+  <div class="topology-title">2-Party MPC with USB-C Backup Options</div>
+
+  <div class="topology-grid">
+    <div class="topology-item primary">
+      <strong>Option A</strong><br>
+      Phone (Party 2)<br>
+      + USB Backup #2
+    </div>
+    <div class="topology-item">
+      <strong>Server</strong><br>
+      (Party 1)<br>
+      Primary Location
+    </div>
+    <div class="topology-item backup">
+      <strong>Option B</strong><br>
+      iCloud Keychain<br>
+      (Encrypted Sync)
+    </div>
+  </div>
+
+  <p style="margin-top:1rem; color: var(--muted); font-size:0.75rem">
+    <strong>Option A (Highest Redundancy):</strong> Party 2 share on device AND on encrypted USB. If phone is lost, recover from USB.<br>
+    <strong>Option B (iCloud Sync):</strong> Party 2 share syncs to other devices via Keychain. Seamless multi-device access.<br>
+    <strong>Combined (Recommended):</strong> Party 2 on Secure Enclave + USB backup + iCloud Keychain for redundancy across 3 locations.
+  </p>
+</div>
+
+<h3>4.1 USB-C Encrypted Container</h3>
+
+<div class="code">Device: iPhone 15 Pro
+Storage: USB-C drive or encrypted external SSD
+Format: APFS (encrypted), FAT32 (encrypted via app)
+Backup Contents:
+  ├── share_party2.enc     (encrypted Party 2 share)
+  ├── share_party2.bak     (encrypted backup copy)
+  ├── metadata.json        (threshold, party info)
+  └── recovery_codes.txt   (hardcopy printout)</div>
+
+<div class="callout danger">
+<div class="callout-title">USB Backup Caution</div>
+<p>USB drives can be lost, stolen, or corrupted. Always pair USB backup with either iCloud Keychain sync OR a second USB drive stored separately. Never rely on a single USB as the only backup.</p>
+</div>
+
+<!-- ============================================================
+     SECTION 5: 2-PARTY GENERATION & USER OPTIONS
+     ============================================================ -->
+<h2>5. 2-Party Key Generation Workflow</h2>
+
+<p>When generating keys for 2-party MPC, the user configures where each party's share is stored and how backups are handled.</p>
+
+<div class="phone-row">
+
+  <!-- Phone 1: Select Setup -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-header">Setup 2-Party MPC</div>
+      <div class="screen-field-label">Configuration</div>
+      <button class="screen-btn primary">Generate New Keypair</button>
+      <button class="screen-btn">Import From Existing</button>
+      <div class="screen-divider"></div>
+      <div class="screen-field-label">Party 1 Server</div>
+      <div class="screen-field">api.example.com</div>
+      <button class="screen-btn secondary">Change Server</button>
+    </div>
+    <div class="phone-label">Setup</div>
+  </div>
+
+  <!-- Phone 2: Choose Backup Strategy -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-header">Backup Strategy</div>
+      <div class="screen-field-label">Party 2 Share Location</div>
+      <button class="screen-btn" style="border: 3px solid var(--party-2); background: transparent; color: var(--text)">
+        ☑ Secure Enclave (Primary)
+      </button>
+      <button class="screen-btn">
+        ☐ iCloud Keychain
+      </button>
+      <button class="screen-btn">
+        ☐ USB-C Backup
+      </button>
+      <p style="font-size:0.65rem; color:var(--muted); margin-top:0.5rem">
+        Select all that apply for redundancy
+      </p>
+    </div>
+    <div class="phone-label">Backup</div>
+  </div>
+
+  <!-- Phone 3: Confirm Defaults -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-header">Confirm Defaults</div>
+      <div class="screen-field-label">Recommended Setup</div>
+      <div class="screen-card">
+        <strong>Party 2 (Your Device)</strong><br>
+        <span style="font-size:0.62rem">Secure Enclave: ✓</span><br>
+        <span style="font-size:0.62rem">iCloud Keychain: ✓</span><br>
+        <span style="font-size:0.62rem">USB Backup: Optional</span>
+      </div>
+      <div class="screen-card">
+        <strong>Party 1 (Server)</strong><br>
+        <span style="font-size:0.62rem">Location: api.example.com</span><br>
+        <span style="font-size:0.62rem">HTTPS: ✓</span>
+      </div>
+      <button class="screen-btn primary" style="margin-top:0.5rem">GENERATE SHARES</button>
+    </div>
+    <div class="phone-label">Confirm</div>
+  </div>
+
+</div>
+
+<h3>5.1 Default Settings (Recommended)</h3>
+
+<div class="options-compare">
+  <div class="option-box">
+    <strong>Party 2 (Device)</strong>
+    <p>☑ Secure Enclave (primary)</p>
+    <p>☑ iCloud Keychain (backup)</p>
+    <p>○ USB-C (optional emergency)</p>
+  </div>
+  <div class="option-box">
+    <strong>Party 1 (Server)</strong>
+    <p>☑ Commitment Server</p>
+    <p>☑ HTTPS/TLS</p>
+    <p>☑ Audit Logging</p>
+  </div>
+  <div class="option-box">
+    <strong>User Options</strong>
+    <p>☐ Enable USB backup</p>
+    <p>☐ Auto-sync to iCloud</p>
+    <p>☐ Require biometric for signing</p>
+  </div>
+</div>
+
+<!-- ============================================================
+     SECTION 6: N-PARTY OPTIONS & REDUNDANCY
+     ============================================================ -->
+<h2>6. N-Party Threshold Schemes with Backup Logic</h2>
+
+<p>For distributed setups with 3+ parties, each holding a share of an encryption key, we can combine AND/OR logic to create flexible redundancy strategies.</p>
+
+<h3>6.1 Credible Minimum: 2-of-3 Setup</h3>
+
+<div class="card">
+<span class="card-label">Definition: Credible Minimum</span>
+<p><strong>Credible Minimum:</strong> The smallest threshold where no single party can unilaterally sign or reveal the secret. In 2-of-3, you need ANY 2 out of 3 parties to recover.</p>
+
+<p style="margin-top:0.75rem"><strong>Distribution:</strong></p>
+<ul style="margin-left: 1rem; margin: 0.5rem 0">
+  <li style="font-size:0.82rem; margin: 0.3rem 0">Part A: iPhone (Secure Enclave)</li>
+  <li style="font-size:0.82rem; margin: 0.3rem 0">Part B: USB-C Backup #1 (Home safe)</li>
+  <li style="font-size:0.82rem; margin: 0.3rem 0">Part C: USB-C Backup #2 (Separate location)</li>
+</ul>
+
+<p style="margin-top:0.75rem"><strong>Recovery Scenarios:</strong></p>
+<ul style="margin-left: 1rem; margin: 0.5rem 0">
+  <li style="font-size:0.82rem; margin: 0.3rem 0">Phone lost + Home safe accessible = recover from Phone + Home safe (2 parts) ✓</li>
+  <li style="font-size:0.82rem; margin: 0.3rem 0">Phone lost + Home safe inaccessible = recover from Phone + Separate location ✓</li>
+  <li style="font-size:0.82rem; margin: 0.3rem 0">Phone lost + Both safes inaccessible = disaster (need 2-of-3) ✗</li>
+</ul>
+</div>
+
+<h3>6.2 AND/OR Logic for Backup Combinations</h3>
+
+<div class="logic-table">
+  <tr>
+    <th>Strategy</th>
+    <th>Logic</th>
+    <th>Redundancy</th>
+    <th>Recovery</th>
+  </tr>
+  <tr>
+    <td><strong>Single Device</strong></td>
+    <td>Part A only</td>
+    <td>None</td>
+    <td>Phone lost → key lost</td>
+  </tr>
+  <tr>
+    <td><strong>AND (2 Required)</strong></td>
+    <td>Part A AND Part B</td>
+    <td>1 loss tolerated</td>
+    <td>Both needed; 1 loss = unrecoverable</td>
+  </tr>
+  <tr>
+    <td><strong>OR (2-of-3)</strong></td>
+    <td>(A AND B) OR (A AND C) OR (B AND C)</td>
+    <td>1 loss tolerated</td>
+    <td>Any 2 parts recovers full secret</td>
+  </tr>
+  <tr>
+    <td><strong>OR (2-of-4)</strong></td>
+    <td>Any 2 of {A, B, C, D}</td>
+    <td>2 losses tolerated</td>
+    <td>More resilient; requires more storage</td>
+  </tr>
+</table>
+
+<h3>6.3 Recommended N-Party Topologies</h3>
+
+<div class="topology">
+  <div class="topology-title">Topology Options for 2-of-3 Sharing</div>
+
+  <div style="margin: 1rem 0; font-size: 0.75rem">
+    <strong style="display:block; margin-bottom:0.5rem">Topology 1: Physical + Digital (RECOMMENDED)</strong>
+    <div class="topology-grid">
+      <div class="topology-item primary">
+        Part A<br>
+        iPhone Secure Enclave<br>
+        (Always with you)
+      </div>
+      <div class="topology-item">
+        Part B<br>
+        USB-C (Home Safe)<br>
+        (Physical backup)
+      </div>
+      <div class="topology-item">
+        Part C<br>
+        iCloud Keychain<br>
+        (Cloud backup)
+      </div>
+    </div>
+    <p style="margin-top:0.5rem; color:var(--muted)">Combine portable (A) + physical (B) + cloud (C). Tolerates any 1 loss. Recommended for most users.</p>
+  </div>
+
+  <div style="margin: 1rem 0; font-size: 0.75rem">
+    <strong style="display:block; margin-bottom:0.5rem">Topology 2: Maximum Redundancy</strong>
+    <div class="topology-grid">
+      <div class="topology-item">
+        Part A<br>
+        iPhone Secure Enclave
+      </div>
+      <div class="topology-item">
+        Part B<br>
+        USB-C (Home Safe)
+      </div>
+      <div class="topology-item">
+        Part C<br>
+        USB-C (Separate Location)
+      </div>
+      <div class="topology-item">
+        Part D<br>
+        iCloud Keychain
+      </div>
+    </div>
+    <p style="margin-top:0.5rem; color:var(--muted)">2-of-4 scheme. Tolerates 2 losses. Highest security for institutional use.</p>
+  </div>
+
+</div>
+
+<!-- ============================================================
+     SECTION 7: BACKUP COMPARISON
+     ============================================================ -->
+<h2>7. iPhone Backup vs. N-Party Strategies</h2>
+
+<div class="card">
+<span class="card-label">Comparison: Device Backup vs. Distributed Shares</span>
+
+<table style="width:100%; border-collapse:collapse; font-size:0.75rem; margin-top:0.75rem">
+  <tr style="background: var(--text); color: var(--card)">
+    <th style="padding:0.5rem; text-align:left; border:2px solid var(--border)">Aspect</th>
+    <th style="padding:0.5rem; text-align:left; border:2px solid var(--border)">iPhone iCloud Backup</th>
+    <th style="padding:0.5rem; text-align:left; border:2px solid var(--border)">2-of-3 MPC Shares</th>
+    <th style="padding:0.5rem; text-align:left; border:2px solid var(--border)">USB + iCloud Hybrid</th>
+  </tr>
+  <tr style="background: var(--card2)">
+    <td style="padding:0.4rem; border:1px solid var(--card2)"><strong>Restore Time</strong></td>
+    <td style="padding:0.4rem; border:1px solid var(--card2)">Minutes (cloud sync)</td>
+    <td style="padding:0.4rem; border:1px solid var(--card2)">Minutes (reconstruct)</td>
+    <td style="padding:0.4rem; border:1px solid var(--card2)">Minutes (hybrid)</td>
+  </tr>
+  <tr>
+    <td style="padding:0.4rem; border:1px solid var(--card2)"><strong>Loss Tolerance</strong></td>
+    <td style="padding:0.4rem; border:1px solid var(--card2)">Depends on iCloud account</td>
+    <td style="padding:0.4rem; border:1px solid var(--card2)">Lose 1 part, recover with 2</td>
+    <td style="padding:0.4rem; border:1px solid var(--card2)">Tolerate 1-2 losses</td>
+  </tr>
+  <tr style="background: var(--card2)">
+    <td style="padding:0.4rem; border:1px solid var(--card2)"><strong>Single Point of Failure</strong></td>
+    <td style="padding:0.4rem; border:1px solid var(--card2)">iCloud account compromise</td>
+    <td style="padding:0.4rem; border:1px solid var(--card2)">No single point (distributed)</td>
+    <td style="padding:0.4rem; border:1px solid var(--card2)">No single point (distributed)</td>
+  </tr>
+  <tr>
+    <td style="padding:0.4rem; border:1px solid var(--card2)"><strong>Offline Recovery</strong></td>
+    <td style="padding:0.4rem; border:1px solid var(--card2)">Requires internet</td>
+    <td style="padding:0.4rem; border:1px solid var(--card2)">Air-gapped (fully offline)</td>
+    <td style="padding:0.4rem; border:1px solid var(--card2)">Air-gapped (fully offline)</td>
+  </tr>
+  <tr style="background: var(--card2)">
+    <td style="padding:0.4rem; border:1px solid var(--card2)"><strong>Best For</strong></td>
+    <td style="padding:0.4rem; border:1px solid var(--card2)">Day-to-day recovery</td>
+    <td style="padding:0.4rem; border:1px solid var(--card2)">Cold storage vault</td>
+    <td style="padding:0.4rem; border:1px solid var(--card2)">Optimal: both strategies</td>
+  </tr>
+</table>
+
+<p style="margin-top:1rem"><strong>Recommendation:</strong> Use iCloud backup for convenience and 2-of-3 MPC shares for security redundancy. Both can coexist: iCloud for daily recovery, USB-C shares for emergency vault storage.</p>
+</div>
+
+<!-- ============================================================
+     SECTION 8: DECISION TREE & USER DEFAULTS
+     ============================================================ -->
+<h2>8. User Configuration Decision Tree</h2>
+
+<p>When setting up MPC on iOS, the app presents a series of options leading to a recommended configuration. Below is the decision tree.</p>
+
+<div class="card">
+<span class="card-label">Quick Setup: 3 Questions</span>
+
+<div style="font-size:0.8rem; line-height: 1.8; margin-top:1rem">
+  <div style="margin: 1rem 0; padding: 0.75rem; border: 2px solid var(--party-0); background: var(--highlight)">
+    <strong>Q1: How critical is this key?</strong><br>
+    A. Daily signing (low risk) → Default: Secure Enclave only<br>
+    B. Large transactions (medium risk) → Default: Secure Enclave + iCloud<br>
+    C. Vault key (high risk) → Default: 2-of-3 with USB backups
+  </div>
+
+  <div style="margin: 1rem 0; padding: 0.75rem; border: 2px solid var(--party-1); background: transparent">
+    <strong>Q2: Do you have USB storage available?</strong><br>
+    A. No → Use iCloud Keychain sync (convenient, cloud-backed)<br>
+    B. Yes (1 USB) → Backup to USB + iCloud for redundancy<br>
+    C. Yes (2+ USB) → 2-of-3 scheme (phone + USB #1 + USB #2)
+  </div>
+
+  <div style="margin: 1rem 0; padding: 0.75rem; border: 2px solid var(--party-3); background: transparent">
+    <strong>Q3: Multi-device sync needed?</strong><br>
+    A. Single iPhone → Store on phone only<br>
+    B. iPhone + iPad → Use iCloud Keychain for sync<br>
+    C. iPhone + commitment server → Use server-coordinated 2-party MPC
+  </div>
+</div>
+
+<p style="margin-top:1rem; color: var(--muted); font-size:0.75rem">The user's answers determine whether to recommend Secure Enclave only, iCloud sync, USB backup, or full 2-of-3 distributed scheme.</p>
+</div>
+
+<div class="callout ok">
+<div class="callout-title">Pro Configuration (Recommended for Most)</div>
+<p><strong>Party 2 Share:</strong> Secure Enclave (primary) + iCloud Keychain (sync) + USB-C (optional emergency)</p>
+<p style="margin-top:0.3rem"><strong>Party 1 Server:</strong> Commitment server with HTTPS and audit logging</p>
+<p style="margin-top:0.3rem"><strong>Signing:</strong> Require biometric (Face ID/Touch ID) + server authentication</p>
+<p style="margin-top:0.3rem"><strong>Recovery:</strong> Reconstruct via iCloud + USB if phone lost; reconstruct via server + USB if both devices compromised</p>
+</div>
+
+<!-- ============================================================
+     FOOTER
+     ============================================================ -->
+<div class="footer">
+<p>CB-MPC Visual Guides — iOS Encryption & Backup Strategy</p>
+<p style="font-size:0.65rem; margin-top:0.5rem">
+  <a href="/index.html" style="color:var(--muted); text-decoration:none">← Back to Demo Guide</a>
+</p>
+</div>
+
+</div>
+
+<script>
+  function toggleTheme() {
+    const body = document.body;
+    const btn = document.getElementById('themeBtn');
+    if (body.getAttribute('data-theme') === 'dark') {
+      body.setAttribute('data-theme', 'light');
+    localStorage.setItem('cb-mpc-theme', 'light');
+      btn.textContent = '[ DARK ]';
+    } else {
+      body.setAttribute('data-theme', 'dark');
+    localStorage.setItem('cb-mpc-theme', 'dark');
+      btn.textContent = '[ LIGHT ]';
+    }
+  }
+
+  // Initialize theme from localStorage, default to light
+  (function() {
+    var saved = localStorage.getItem("cb-mpc-theme");
+    if (saved) {
+      document.body.setAttribute("data-theme", saved);
+      document.getElementById("themeBtn").textContent = saved === "dark" ? "[ LIGHT ]" : "[ DARK ]";
+    }
+  })();
+</script>
+
+</body>
+</html>

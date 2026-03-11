@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EC-DKG Ceremony — Visual Guide</title>
+<style>
+  /* ============================================================
+     THEME SYSTEM — light/dark via [data-theme]
+     ============================================================ */
+  :root {
+    --font-mono: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    --font-sans: 'Inter', 'SF Pro', -apple-system, system-ui, sans-serif;
+
+    /* neo-brutalism constants */
+    --border-w: 3px;
+    --shadow-offset: 5px;
+    --radius: 0;
+
+    /* party colors (stable across themes) */
+    --party-0: #6366f1;
+    --party-1: #f59e0b;
+    --party-2: #10b981;
+    --party-3: #ef4444;
+    --secret: #ef4444;
+    --public: #3b82f6;
+    --mail: #8b5cf6;
+    --ok: #22c55e;
+    --warn: #f97316;
+  }
+
+  [data-theme="light"] {
+    --bg: #f5f0e8;
+    --bg2: #ffffff;
+    --card: #ffffff;
+    --card2: #f0ebe3;
+    --text: #1a1a1a;
+    --muted: #6b7280;
+    --border: #1a1a1a;
+    --shadow-color: #1a1a1a;
+    --tag-text: #fff;
+    --phone-bg: #e8e0d4;
+    --phone-screen: #ffffff;
+    --phone-bezel: #1a1a1a;
+    --code-bg: #f0ebe3;
+    --highlight: #fef08a;
+  }
+
+  [data-theme="dark"] {
+    --bg: #0f172a;
+    --bg2: #1a1a1a;
+    --card: #1e293b;
+    --card2: #334155;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --border: #475569;
+    --shadow-color: #000000;
+    --tag-text: #fff;
+    --phone-bg: #141414;
+    --phone-screen: #1e293b;
+    --phone-bezel: #475569;
+    --code-bg: #334155;
+    --highlight: #854d0e;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font-mono);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  /* ---- THEME TOGGLE ---- */
+  .theme-toggle {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 999;
+    border: var(--border-w) solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color);
+    transition: all 0.15s;
+  }
+  .theme-toggle:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 7px 7px 0 var(--shadow-color);
+  }
+  .theme-toggle:active {
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0 var(--shadow-color);
+  }
+
+  /* ---- DOC NAV ---- */
+  .doc-nav {
+    display: flex;
+    gap: 0;
+    margin: 0 auto 2rem;
+    width: 100%;
+    border: var(--border-w) solid var(--border);
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color);
+    overflow: hidden;
+    flex-wrap: wrap;
+  }
+  .nav-link {
+    flex: 0 1 calc(100% / 3);
+    text-align: center;
+    padding: 0.5rem 0.4rem;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-decoration: none;
+    color: var(--text);
+    background: var(--card);
+    border-right: var(--border-w) solid var(--border);
+    border-bottom: var(--border-w) solid var(--border);
+    transition: background 0.15s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .nav-link:nth-child(3n) { border-right: none; }
+  .nav-link:nth-last-child(-n+3) { border-bottom: none; }
+  .nav-link:hover { background: var(--card2); }
+  .nav-link.active {
+    background: var(--border);
+    color: var(--text);
+  }
+
+  /* ---- LAYOUT ---- */
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+  }
+
+  h1 {
+    font-size: 2.4rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: -0.03em;
+    border-bottom: var(--border-w) solid var(--border);
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .subtitle {
+    font-size: 0.9rem;
+    color: var(--muted);
+    margin-bottom: 3rem;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
+    margin: 3rem 0 1rem;
+    padding: 0.5rem 1rem;
+    background: var(--text);
+    color: var(--bg);
+    display: inline-block;
+  }
+
+  h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 1.5rem 0 0.5rem;
+    border-left: 6px solid var(--party-0);
+    padding-left: 0.75rem;
+  }
+
+  p { margin: 0.5rem 0; font-size: 0.88rem; }
+
+  /* ---- CARDS ---- */
+  .card {
+    border: var(--border-w) solid var(--border);
+    background: var(--card);
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color);
+    position: relative;
+  }
+
+  .card-label {
+    position: absolute;
+    top: -0.7rem;
+    left: 1rem;
+    background: var(--card);
+    padding: 0 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+  }
+
+  /* ---- TAGS ---- */
+  .tag {
+    display: inline-block;
+    font-size: 0.6rem;
+    padding: 0.15rem 0.5rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    vertical-align: middle;
+    border: 2px solid;
+  }
+  .tag.priv { background: var(--secret); color: var(--tag-text); border-color: var(--secret); }
+  .tag.pub { background: var(--public); color: var(--tag-text); border-color: var(--public); }
+
+  /* ---- CODE ---- */
+  .code {
+    background: var(--code-bg);
+    border: 2px solid var(--border);
+    padding: 1rem;
+    margin: 0.75rem 0;
+    font-size: 0.78rem;
+    overflow-x: auto;
+    white-space: pre;
+    line-height: 1.5;
+  }
+
+  /* ---- FLOW DIAGRAM ---- */
+  .flow-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 1rem 0;
+    flex-wrap: wrap;
+  }
+  .flow-box {
+    border: var(--border-w) solid var(--border);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-align: center;
+    min-width: 120px;
+    background: var(--card);
+  }
+  .flow-box.highlight { background: var(--highlight); }
+  .flow-arrow {
+    font-size: 1.5rem;
+    color: var(--muted);
+    font-weight: 900;
+  }
+
+  /* ---- PARTY BOXES ---- */
+  .parties {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 1rem 0;
+  }
+  .party-box {
+    border: var(--border-w) solid;
+    padding: 1rem;
+    flex: 1;
+    min-width: 140px;
+    min-width: 200px;
+    max-width: 320px;
+  }
+  .party-box.p0 { border-color: var(--party-0); }
+  .party-box.p1 { border-color: var(--party-1); }
+  .party-box.p2 { border-color: var(--party-2); }
+  .party-box.p3 { border-color: var(--party-3); }
+  .party-name {
+    font-weight: 800;
+    font-size: 0.85rem;
+    margin-bottom: 0.4rem;
+  }
+  .party-box.p0 .party-name { color: var(--party-0); }
+  .party-box.p1 .party-name { color: var(--party-1); }
+  .party-box.p2 .party-name { color: var(--party-2); }
+  .party-box.p3 .party-name { color: var(--party-3); }
+
+  .var-list { list-style: none; font-size: 0.78rem; }
+  .var-list li { padding: 0.2rem 0; }
+  .var-list .secret { border-left: 3px solid var(--secret); padding-left: 0.5rem; margin: 0.15rem 0; }
+  .var-list .public-v { border-left: 3px solid var(--public); padding-left: 0.5rem; margin: 0.15rem 0; }
+
+  /* ---- DIVIDER ---- */
+  .divider {
+    text-align: center;
+    padding: 2.5rem 0 1rem;
+    font-size: 1.3rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    border-top: 2px dashed var(--muted);
+    margin-top: 2rem;
+  }
+
+  /* ---- TABLE ---- */
+  .overview-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+    margin: 0.75rem 0;
+  }
+  .overview-table th {
+    text-align: left;
+    padding: 0.5rem 0.6rem;
+    border-bottom: var(--border-w) solid var(--border);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+  }
+  .overview-table td {
+    padding: 0.4rem 0.6rem;
+    border-bottom: 1px solid var(--card2);
+    vertical-align: top;
+  }
+
+  /* ---- CALLOUT ---- */
+  .callout {
+    border-left: 6px solid var(--warn);
+    background: var(--card2);
+    padding: 1rem 1.25rem;
+    margin: 1rem 0;
+    font-size: 0.82rem;
+  }
+  .callout.info { border-left-color: var(--public); }
+  .callout.ok { border-left-color: var(--ok); }
+  .callout.danger { border-left-color: var(--secret); }
+  .callout-title { font-weight: 800; margin-bottom: 0.25rem; text-transform: uppercase; font-size: 0.75rem; }
+
+  /* ============================================================
+     PHONE MOCKUP
+     ============================================================ */
+  .phone-row {
+    display: flex;
+    gap: 2rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: 2rem 0;
+  }
+  .phone {
+    width: 280px;
+    border: var(--border-w) solid var(--phone-bezel);
+    background: var(--phone-bg);
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color);
+    position: relative;
+    padding: 0;
+  }
+  .phone-notch {
+    width: 100px;
+    height: 24px;
+    background: var(--phone-bezel);
+    margin: 0 auto;
+    position: relative;
+    z-index: 2;
+  }
+  .phone-screen {
+    background: var(--phone-screen);
+    margin: 0 8px 8px;
+    min-height: 480px;
+    border: 2px solid var(--phone-bezel);
+    padding: 1rem;
+    font-size: 0.72rem;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .phone-label {
+    text-align: center;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.75rem 0 0.5rem;
+    color: var(--muted);
+  }
+
+  /* phone screen elements */
+  .screen-header {
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-align: center;
+    padding: 0.5rem 0;
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+  }
+  .screen-btn {
+    display: block;
+    width: 100%;
+    border: var(--border-w) solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.6rem;
+    margin: 0.4rem 0;
+    text-align: center;
+    cursor: pointer;
+    box-shadow: 3px 3px 0 var(--shadow-color);
+  }
+  .screen-btn.primary {
+    background: var(--party-0);
+    color: #fff;
+    border-color: var(--party-0);
+  }
+  .screen-field {
+    border: 2px solid var(--border);
+    padding: 0.5rem;
+    margin: 0.4rem 0;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    background: var(--code-bg);
+  }
+  .screen-field-label {
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 0.5rem;
+  }
+  .screen-status {
+    text-align: center;
+    padding: 0.5rem;
+    margin: 0.4rem 0;
+    font-weight: 700;
+    font-size: 0.72rem;
+    border: 2px solid;
+  }
+  .screen-status.ok { border-color: var(--ok); color: var(--ok); }
+  .screen-status.warn { border-color: var(--warn); color: var(--warn); }
+  .screen-status.err { border-color: var(--secret); color: var(--secret); }
+  .screen-progress {
+    height: 8px;
+    background: var(--card2);
+    border: 2px solid var(--border);
+    margin: 0.5rem 0;
+    position: relative;
+  }
+  .screen-progress-bar {
+    height: 100%;
+    background: var(--party-0);
+    transition: width 0.3s;
+  }
+
+  .screen-icon { font-size: 2rem; text-align: center; padding: 0.5rem 0; }
+  .screen-detail {
+    font-size: 0.65rem;
+    color: var(--muted);
+    word-break: break-all;
+    margin: 0.25rem 0;
+  }
+
+  .screen-divider {
+    border-top: 1px dashed var(--muted);
+    margin: 0.6rem 0;
+  }
+
+  .screen-badge {
+    display: inline-block;
+    border: 2px solid var(--party-0);
+    padding: 0.3rem 0.6rem;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--party-0);
+    margin: 0.25rem;
+  }
+
+  /* ---- FOOTER ---- */
+  .footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.72rem;
+    padding: 3rem 0 2rem;
+    border-top: 2px solid var(--card2);
+    margin-top: 3rem;
+  }
+
+  /* ---- PRINT ---- */
+  @media print {
+    .theme-toggle { display: none; }
+    body { background: white; color: #1a1a1a; }
+    .card { box-shadow: none; border-color: #ccc; }
+    .phone { box-shadow: none; }
+  }
+</style>
+<script src="https://fathom-sveltekit.mark-phillips-f7c.workers.dev/api/tracker/abc9c4a5b463d635" defer></script>
+</head>
+<body data-theme="light">
+
+<button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">[ LIGHT ]</button>
+
+<nav class="doc-nav">
+  <a href="/index.html" class="nav-link">Demo Guide</a>
+  <a href="/threshold-signing.html" class="nav-link">Threshold Signing</a>
+  <a href="/dkg-ceremony.html" class="nav-link active">DKG Ceremony</a>
+  <a href="/device-to-device.html" class="nav-link">Device-to-Device</a>
+  <a href="/server-architecture.html" class="nav-link">Server Architecture</a>
+  <a href="/shamir-splitting.html" class="nav-link">Shamir Splitting</a>
+  <a href="/ios-encryption-backup-strategy.html" class="nav-link">iOS Encryption</a>
+  <a href="/key-management.html" class="nav-link">Key Management</a>
+  <a href="/signing-operations.html" class="nav-link">Signing Ops</a>
+</nav>
+
+<div class="container">
+
+<!-- ============================================================ -->
+<h1>EC-DKG Ceremony</h1>
+<p class="subtitle">Distributed Key Generation — No Trusted Dealer Required</p>
+<!-- ============================================================ -->
+
+<!-- ============================================================
+     SECTION 1: OVERVIEW
+     ============================================================ -->
+<h2>1. Protocol Overview</h2>
+
+<div class="card">
+<span class="card-label">What is EC-DKG?</span>
+<p>Elliptic Curve Distributed Key Generation (EC-DKG) is a cryptographic protocol where N parties jointly create a shared private key without any single "trusted dealer." Each party generates a polynomial, commits to it publicly, and distributes secret shares to all other parties. The result: a threshold public key that all parties verify, with no party ever seeing the complete private key.</p>
+
+<p style="margin-top:0.75rem"><strong>Key property:</strong> No single point of failure. The key is distributed from the start, and all parties can verify the process is honest using the public commitments.</p>
+
+<table class="overview-table">
+  <tr><th>Method</th><th>Dealer</th><th>Verification</th><th>Speed</th></tr>
+  <tr><td><strong>Feldman VSS</strong></td><td>Trusted</td><td>Homomorphic commitments</td><td>Fast</td></tr>
+  <tr><td><strong>Pedersen VSS</strong></td><td>Trusted</td><td>Unconditional security</td><td>Very Fast</td></tr>
+  <tr><td><strong>EC-DKG</strong></td><td>None (distributed)</td><td>Public commitments + dispute</td><td>Moderate</td></tr>
+</table>
+</div>
+
+<!-- ============================================================
+     SECTION 2: PROTOCOL PHASES
+     ============================================================ -->
+<h2>2. Four-Phase Protocol</h2>
+
+<div class="card">
+<span class="card-label">Phase 1: Polynomial Generation</span>
+
+<div class="flow-row">
+  <div class="flow-box" style="border-color: var(--party-0)">Party i picks polynomial P_i(x) = a_0 + a_1*x + ... + a_t*x^t</div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-box highlight">Computes commitments: C_i = [a_0*G, a_1*G, ..., a_t*G]</div>
+</div>
+
+<p><strong>Feldman VSS check:</strong> For each j, all parties can verify that party i's share is correct by checking:</p>
+<div class="code">y_ij = sum(C_i[k] * j^k for k=0..t)</div>
+
+<p style="margin-top:0.5rem">The commitments are public and binding — party i can't change their polynomial later.</p>
+</div>
+
+<div class="card">
+<span class="card-label">Phase 2: Share Distribution</span>
+
+<div class="parties">
+  <div class="party-box p0">
+    <div class="party-name">Party 0 (Alice)</div>
+    <ul class="var-list">
+      <li class="secret">Evaluates P_0(1), P_0(2), P_0(3) at x=1,2,3</li>
+      <li class="secret">Sends P_0(j) to Party j (encrypted)</li>
+      <li class="public-v">Broadcasts commitments C_0</li>
+    </ul>
+  </div>
+  <div class="party-box p1">
+    <div class="party-name">Party 1 (Bob)</div>
+    <ul class="var-list">
+      <li class="secret">Evaluates P_1(0), P_1(2), P_1(3) at x=0,2,3</li>
+      <li class="secret">Sends P_1(j) to Party j (encrypted)</li>
+      <li class="public-v">Broadcasts commitments C_1</li>
+    </ul>
+  </div>
+  <div class="party-box p2">
+    <div class="party-name">Party 2 (Carol)</div>
+    <ul class="var-list">
+      <li class="secret">Evaluates P_2(0), P_2(1), P_2(3) at x=0,1,3</li>
+      <li class="secret">Sends P_2(j) to Party j (encrypted)</li>
+      <li class="public-v">Broadcasts commitments C_2</li>
+    </ul>
+  </div>
+</div>
+
+<p><strong>Each party i:</strong></p>
+<ul style="font-size:0.82rem; padding-left:1.5rem; margin:0.25rem 0">
+  <li>Receives shares from all other parties: y_0i, y_1i, y_2i, ...</li>
+  <li>Verifies each share j against the commitment: y_ji ?= sum(C_j[k] * i^k)</li>
+  <li>Computes their local share: x_i = sum(y_ji for all j)</li>
+</ul>
+</div>
+
+<div class="card">
+<span class="card-label">Phase 3: Dispute Resolution</span>
+
+<p>If Party i finds that a share from Party j is incorrect (fails verification against C_j), they <strong>broadcast a complaint</strong>:</p>
+
+<div class="code">COMPLAINT: (i, j, y_ji)
+Reason: y_ji != sum(C_j[k] * i^k for k=0..t)</div>
+
+<p style="margin-top:0.5rem">Party j must then <strong>publicly reveal</strong> the correct share y_ji. If the revealed share matches the complaint, Party j is disqualified. If it doesn't match, Party i is disqualified for lying.</p>
+
+<div class="callout danger">
+<div class="callout-title">Byzantine Resilience</div>
+The protocol can tolerate up to t faulty parties (where n >= 3t+1). Complaints ensure that dishonest parties are identified and excluded from the final key.
+</div>
+</div>
+
+<div class="card">
+<span class="card-label">Phase 4: Finalization</span>
+
+<div class="flow-row">
+  <div class="flow-box">Disqualified parties removed</div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-box highlight">Qualified set Q finalized</div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-box">All parties compute public key Q = sum(a_j0*G for j in Q)</div>
+</div>
+
+<p>Each party i holds their local share: x_i = sum(y_ji for j in Q)</p>
+
+<div class="callout ok">
+<div class="callout-title">Security Properties</div>
+<p><strong>No single point of failure:</strong> The key is never reconstructed or visible to any single party.</p>
+<p style="margin-top:0.4rem"><strong>Verifiable shares:</strong> Every party can check that their share is correctly formed using public commitments.</p>
+<p style="margin-top:0.4rem"><strong>Forward security:</strong> If old shares are compromised, they're useless unless combined with other parties' current shares.</p>
+</div>
+</div>
+
+<!-- ============================================================
+     SECTION 3: MATHEMATICAL FOUNDATION
+     ============================================================ -->
+<h2>3. The Mathematics</h2>
+
+<div class="card">
+<span class="card-label">Shamir Secret Sharing (SSS) Basics</span>
+
+<p>DKG relies on Shamir Secret Sharing. A secret S is encoded as the constant term of a polynomial:</p>
+
+<div class="code">P(x) = S + a_1*x + a_2*x^2 + ... + a_t*x^t  (degree t)
+
+The secret S = P(0).
+Each share: s_i = P(i)
+
+Recovery: Any t+1 shares can reconstruct S via Lagrange interpolation.
+Fewer than t+1 shares reveal nothing about S.</div>
+
+<p style="margin-top:0.75rem"><strong>Commitments (Feldman's method):</strong> To hide the polynomial, broadcast C = [a_0*G, a_1*G, ..., a_t*G]</p>
+
+<div class="code">To verify share y_j: Check y_j*G = sum(C[k] * j^k for k=0..t)
+
+This works because:
+y_j*G = P(j)*G = (a_0 + a_1*j + ... + a_t*j^t)*G
+      = a_0*G + j*(a_1*G) + j^2*(a_2*G) + ...
+      = sum(C[k] * j^k)</div>
+</div>
+
+<!-- ============================================================
+     SECTION 4: MOBILE UX
+     ============================================================ -->
+<div class="divider">Mobile Experience</div>
+<h2>4. iOS App — DKG Ceremony Flow</h2>
+
+<h3 style="border-left-color: var(--party-0)">4.1 Starting the Ceremony</h3>
+
+<div class="phone-row">
+
+  <!-- Phone 1: Setup -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-header">Start DKG</div>
+      <div class="screen-divider"></div>
+      <div class="screen-field-label">Number of Parties</div>
+      <div class="screen-field">3</div>
+      <div class="screen-field-label">Threshold (t)</div>
+      <div class="screen-field">1</div>
+      <p style="font-size:0.65rem; color:var(--muted); margin:0.5rem 0">
+        t+1 = 2 parties needed to sign<br>
+        Tolerates 1 faulty party
+      </p>
+      <div class="screen-divider"></div>
+      <div class="screen-field-label">Elliptic Curve</div>
+      <div class="screen-field">secp256k1</div>
+      <button class="screen-btn primary" style="margin-top:0.75rem">PROCEED</button>
+    </div>
+    <div class="phone-label">Config</div>
+  </div>
+
+  <!-- Phone 2: Generate Polynomial -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-header">Generate Polynomial</div>
+      <div class="screen-icon">🔐</div>
+      <div class="screen-status ok">Your polynomial generated</div>
+      <div style="margin-top:0.75rem">
+        <div class="screen-field-label">Polynomial Degree</div>
+        <div class="screen-detail">1</div>
+        <div class="screen-field-label">Coefficients</div>
+        <div class="screen-detail">a₀ = 0x7f2a...</div>
+        <div class="screen-detail">a₁ = 0x3e8d...</div>
+      </div>
+      <div class="screen-divider"></div>
+      <div class="screen-field-label">Commitments (Public)</div>
+      <div class="screen-detail">C₀ = 0x028a... (a₀*G)</div>
+      <div class="screen-detail">C₁ = 0x037f... (a₁*G)</div>
+      <button class="screen-btn primary" style="margin-top:0.5rem">BROADCAST COMMITMENTS</button>
+    </div>
+    <div class="phone-label">Polynomial</div>
+  </div>
+
+  <!-- Phone 3: Distribute Shares -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-header">Distribute Shares</div>
+      <div class="screen-icon">📤</div>
+      <div class="screen-field-label">Share to Party 1</div>
+      <div class="screen-detail">y₁ = 0x5a3b... (encrypted)</div>
+      <div class="screen-field-label">Share to Party 2</div>
+      <div class="screen-detail">y₂ = 0x2c7e... (encrypted)</div>
+      <div class="screen-status ok">Shares sent</div>
+      <div class="screen-divider"></div>
+      <div class="screen-field-label">Incoming Shares (Collecting)</div>
+      <div class="screen-badge">From Party 1 ✓</div>
+      <div class="screen-badge" style="border-color:var(--warn); color:var(--warn)">From Party 2 ✗</div>
+      <button class="screen-btn" style="margin-top:0.5rem">WAITING FOR OTHERS...</button>
+    </div>
+    <div class="phone-label">Distribution</div>
+  </div>
+
+</div>
+
+<h3 style="border-left-color: var(--party-0)">4.2 Verification & Finalization</h3>
+
+<div class="phone-row">
+
+  <!-- Phone 4: Verify Shares -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-header">Verify Shares</div>
+      <div class="screen-icon">✓</div>
+      <div class="screen-field-label">Party 1's Commitment</div>
+      <div class="screen-detail">C₁ = [0x028a..., 0x037f...]</div>
+      <div class="screen-detail">y₁ = 0x5a3b... ← verifying</div>
+      <div class="screen-divider"></div>
+      <div class="screen-status ok">Share 1 valid (y₁*G = sum(...)) </div>
+      <div class="screen-detail">y₁ = 0x5a3b...</div>
+      <div class="screen-divider"></div>
+      <div class="screen-field-label">Party 2's Commitment</div>
+      <div class="screen-status ok">Share 2 valid</div>
+      <div class="screen-divider"></div>
+      <button class="screen-btn primary">ALL SHARES VERIFIED</button>
+    </div>
+    <div class="phone-label">Verify</div>
+  </div>
+
+  <!-- Phone 5: Compute Local Share -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-header">Finalize Keys</div>
+      <div class="screen-icon">🔑</div>
+      <div class="screen-field-label">Your Local Share</div>
+      <div class="screen-detail">x₀ = sum(y₁₀, y₂₀, ...)</div>
+      <div class="screen-detail">x₀ = 0x8f7d...</div>
+      <div class="screen-divider"></div>
+      <div class="screen-field-label">Public Key (All parties agree)</div>
+      <div class="screen-detail" style="word-break:break-all">Q = 0x02</div>
+      <div class="screen-detail" style="font-size:0.6rem">8a7f9e2c3b5d4a1f6e8c9b2a3d4e5f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d</div>
+      <div class="screen-divider"></div>
+      <button class="screen-btn primary" style="margin-top:0.5rem">CEREMONY COMPLETE ✓</button>
+    </div>
+    <div class="phone-label">Complete</div>
+  </div>
+
+</div>
+
+<div class="callout info">
+<div class="callout-title">What just happened?</div>
+<p>No party ever saw the full private key. Each party has a random share (x_i). Together, any threshold number of parties can sign, but no single party can sign alone. The public key Q is the same on all devices and verifiable on-chain.</p>
+</div>
+
+<!-- ============================================================
+     SECTION 5: COMPARISON
+     ============================================================ -->
+<h2>5. DKG vs. Traditional Key Gen</h2>
+
+<div class="card">
+<span class="card-label">Comparison</span>
+
+<table class="overview-table">
+  <tr>
+    <th>Aspect</th>
+    <th>Single Device (Traditional)</th>
+    <th>EC-DKG (Distributed)</th>
+  </tr>
+  <tr>
+    <td><strong>Key Generation</strong></td>
+    <td>One device generates the key locally</td>
+    <td>All N parties jointly generate; no device has the full key</td>
+  </tr>
+  <tr>
+    <td><strong>Exposure Risk</strong></td>
+    <td>If device is hacked before signing, full key is exposed</td>
+    <td>Attacker must compromise threshold parties simultaneously</td>
+  </tr>
+  <tr>
+    <td><strong>Recovery</strong></td>
+    <td>If device lost, key is lost</td>
+    <td>Can recover via backup quorum (by access structure)</td>
+  </tr>
+  <tr>
+    <td><strong>Verification</strong></td>
+    <td>Must trust device's randomness</td>
+    <td>All parties verify the protocol; public commitments prove fairness</td>
+  </tr>
+  <tr>
+    <td><strong>Complexity</strong></td>
+    <td>Simple (one device)</td>
+    <td>Moderate (network communication, dispute handling)</td>
+  </tr>
+</table>
+</div>
+
+<!-- ============================================================
+     FOOTER
+     ============================================================ -->
+<div class="footer">
+<p>CB-MPC Visual Guides — EC-DKG Ceremony</p>
+<p style="font-size:0.65rem; margin-top:0.5rem">
+  <a href="/index.html" style="color:var(--muted); text-decoration:none">← Back to Demo Guide</a>
+</p>
+</div>
+
+</div>
+
+<script>
+  function toggleTheme() {
+    const body = document.body;
+    const btn = document.getElementById('themeBtn');
+    if (body.getAttribute('data-theme') === 'dark') {
+      body.setAttribute('data-theme', 'light');
+    localStorage.setItem('cb-mpc-theme', 'light');
+      btn.textContent = '[ DARK ]';
+    } else {
+      body.setAttribute('data-theme', 'dark');
+    localStorage.setItem('cb-mpc-theme', 'dark');
+      btn.textContent = '[ LIGHT ]';
+    }
+  }
+
+  // Initialize theme from localStorage, default to light
+  (function() {
+    var saved = localStorage.getItem("cb-mpc-theme");
+    if (saved) {
+      document.body.setAttribute("data-theme", saved);
+      document.getElementById("themeBtn").textContent = saved === "dark" ? "[ LIGHT ]" : "[ DARK ]";
+    }
+  })();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Key Management — Visual Guide</title>
+<style>
+  :root {
+    --font-mono: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    --border-w: 3px;
+    --shadow-offset: 5px;
+    --radius: 0;
+    --party-0: #6366f1;
+    --party-1: #f59e0b;
+    --party-2: #10b981;
+    --party-3: #ef4444;
+    --public: #3b82f6;
+    --private: #ef4444;
+    --mail: #8b5cf6;
+  }
+
+  [data-theme="light"] {
+    --bg: #f5f0e8;
+    --card: #ffffff;
+    --card2: #f0ebe3;
+    --text: #1a1a1a;
+    --muted: #6b7280;
+    --border: #1a1a1a;
+    --shadow-color: #1a1a1a;
+  }
+
+  [data-theme="dark"] {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --card2: #334155;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --border: #475569;
+    --shadow-color: #000000;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font-mono);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  h1 {
+    text-align: left;
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    border-bottom: var(--border-w) solid var(--border);
+    padding-bottom: 0.5rem;
+  }
+
+  .subtitle {
+    text-align: left;
+    color: var(--muted);
+    margin-bottom: 3rem;
+    font-size: 0.9rem;
+  }
+
+  h2 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin: 2.5rem 0 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-left: 6px solid var(--party-0);
+    padding-left: 0.75rem;
+  }
+
+  h3 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin: 1.5rem 0 0.75rem;
+    color: var(--text);
+  }
+
+  p { margin: 0.5rem 0; font-size: 0.82rem; }
+
+  .step {
+    margin-bottom: 2rem;
+    border: var(--border-w) solid var(--border);
+    border-radius: 0;
+    overflow: hidden;
+    background: var(--card);
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color);
+  }
+
+  .step-header {
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .step-num {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1rem;
+    flex-shrink: 0;
+    background: var(--party-0);
+    color: white;
+  }
+
+  .step-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    flex: 1;
+  }
+
+  .step-body {
+    padding: 1.25rem;
+    font-size: 0.78rem;
+  }
+
+  .screen-group {
+    display: flex;
+    gap: 1.5rem;
+    margin: 1rem 0;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .phone {
+    width: 240px;
+    border: var(--border-w) solid var(--border);
+    background: var(--card2);
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color);
+    position: relative;
+  }
+
+  .phone-notch {
+    width: 80px;
+    height: 20px;
+    background: var(--border);
+    margin: 0 auto;
+    position: relative;
+    z-index: 2;
+  }
+
+  .phone-screen {
+    background: var(--card);
+    margin: 0 6px 6px;
+    min-height: 400px;
+    border: 2px solid var(--border);
+    padding: 0.8rem;
+    font-size: 0.65rem;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .phone-label {
+    text-align: center;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.5rem 0 0.4rem;
+    color: var(--muted);
+  }
+
+  .screen-header {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-align: center;
+    padding: 0.4rem 0;
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+  }
+
+  .screen-btn {
+    display: block;
+    width: 100%;
+    border: var(--border-w) solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 0.4rem;
+    margin: 0.3rem 0;
+    text-align: center;
+    cursor: pointer;
+    box-shadow: 2px 2px 0 var(--shadow-color);
+  }
+
+  .screen-btn.primary {
+    background: var(--party-0);
+    color: #fff;
+    border-color: var(--party-0);
+  }
+
+  .screen-list {
+    list-style: none;
+    padding: 0.4rem 0;
+  }
+
+  .screen-list li {
+    padding: 0.3rem;
+    margin: 0.2rem 0;
+    border-left: 2px solid var(--party-0);
+    padding-left: 0.4rem;
+    font-size: 0.62rem;
+  }
+
+  .tag {
+    display: inline-block;
+    font-size: 0.55rem;
+    padding: 0.1rem 0.3rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    vertical-align: middle;
+    border: 1px solid;
+    background: var(--party-0);
+    color: white;
+    border-color: var(--party-0);
+  }
+
+  .divider {
+    text-align: center;
+    padding: 2rem 0 1rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    border-top: 2px dashed var(--muted);
+    margin-top: 1.5rem;
+  }
+
+  .theme-toggle {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 999;
+    border: var(--border-w) solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.4rem 0.8rem;
+    cursor: pointer;
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color);
+    transition: all 0.15s;
+  }
+
+  .theme-toggle:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0 var(--shadow-color);
+  }
+
+  .doc-nav {
+    display: flex;
+    gap: 0;
+    margin: 0 auto 2rem;
+    width: 100%;
+    border: var(--border-w) solid var(--border);
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color);
+    overflow: hidden;
+    flex-wrap: wrap;
+  }
+
+  .nav-link {
+    flex: 0 1 calc(100% / 3);
+    text-align: center;
+    padding: 0.5rem 0.4rem;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-decoration: none;
+    color: var(--text);
+    background: var(--card);
+    border-right: var(--border-w) solid var(--border);
+    border-bottom: var(--border-w) solid var(--border);
+    transition: background 0.15s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .nav-link:nth-child(3n) { border-right: none; }
+  .nav-link:nth-last-child(-n+3) { border-bottom: none; }
+
+  .nav-link:hover { background: var(--card2); }
+
+  .nav-link.active {
+    background: var(--border);
+    color: var(--text);
+  }
+
+  .footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.65rem;
+    padding: 3rem 0 2rem;
+    border-top: 2px solid var(--card2);
+    margin-top: 3rem;
+  }
+</style>
+<script src="https://fathom-sveltekit.mark-phillips-f7c.workers.dev/api/tracker/abc9c4a5b463d635" defer></script>
+</head>
+<body data-theme="light">
+
+<button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">[ LIGHT ]</button>
+
+<nav class="doc-nav">
+  <a href="/index.html" class="nav-link">Demo Guide</a>
+  <a href="/threshold-signing.html" class="nav-link">Threshold Signing</a>
+  <a href="/dkg-ceremony.html" class="nav-link">DKG Ceremony</a>
+  <a href="/device-to-device.html" class="nav-link">Device-to-Device</a>
+  <a href="/server-architecture.html" class="nav-link">Server Architecture</a>
+  <a href="/shamir-splitting.html" class="nav-link">Shamir Splitting</a>
+  <a href="/ios-encryption-backup-strategy.html" class="nav-link">iOS Encryption</a>
+  <a href="/key-management.html" class="nav-link active">Key Management</a>
+  <a href="/signing-operations.html" class="nav-link">Signing Ops</a>
+</nav>
+
+<h1>Key Management</h1>
+<p class="subtitle">iOS App Dashboard, Key Creation, and Operations Workflows</p>
+
+<!-- ============================================================
+     SECTION 1: KEY DASHBOARD
+     ============================================================ -->
+<h2>1. Key Dashboard — Empty and Populated States</h2>
+
+<div class="step">
+  <div class="step-header">
+    <div class="step-num">1</div>
+    <div class="step-title">Empty State (First Launch)</div>
+  </div>
+  <div class="step-body">
+    <p><strong>Tab 0: Keys</strong> — When no keys exist, users see a `ContentUnavailableView` prompting key creation.</p>
+
+    <div class="screen-group">
+      <div class="phone">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="screen-header">Keys</div>
+          <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+            <div style="font-size: 2rem; margin-bottom: 0.4rem;">🔓</div>
+            <div style="font-weight: 700; margin-bottom: 0.2rem; font-size: 0.7rem;">No Keys</div>
+            <div style="font-size: 0.62rem; color: var(--muted); margin-bottom: 0.6rem;">Create your first key to get started</div>
+            <button class="screen-btn primary">+ CREATE KEY</button>
+          </div>
+        </div>
+        <div class="phone-label">Empty State</div>
+      </div>
+
+      <div class="phone">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="screen-header">Keys</div>
+          <div style="font-size: 0.62rem; padding: 0.4rem; color: var(--muted);">💡 TIPS</div>
+          <div style="font-size: 0.6rem; padding: 0.3rem; line-height: 1.4;">
+            <strong>Instruction Level:</strong> Verbose<br>
+            Explains DKG, MPC shares, and key types.
+          </div>
+          <button class="screen-btn primary" style="margin-top: 0.5rem;">+ CREATE KEY</button>
+        </div>
+        <div class="phone-label">With Instructions</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-header">
+    <div class="step-num">2</div>
+    <div class="step-title">Key List with Populated Keys</div>
+  </div>
+  <div class="step-body">
+    <p><strong>Key Rows Display</strong>: Name (shield icon + label), address snippet, key type tag. Swipe-to-delete and drag-to-reorder enabled.</p>
+
+    <div class="screen-group">
+      <div class="phone">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="screen-header">Keys (3)</div>
+          <ul class="screen-list">
+            <li style="display: flex; justify-content: space-between; align-items: center;">
+              <span><strong>Main Wallet</strong><br><span style="color: var(--muted);">0xa1b2c3d4...</span></span>
+              <span class="tag">ECDSA</span>
+            </li>
+            <li style="display: flex; justify-content: space-between; align-items: center;">
+              <span><strong>HD Master</strong><br><span style="color: var(--muted);">0xe5f6a1b2...</span></span>
+              <span class="tag">HD-MASTER</span>
+            </li>
+            <li style="display: flex; justify-content: space-between; align-items: center;">
+              <span><strong>Account 0</strong><br><span style="color: var(--muted);">0x7c8d9e0f...</span></span>
+              <span class="tag">HD-CHILD</span>
+            </li>
+          </ul>
+          <button class="screen-btn primary" style="margin-top: 0.5rem;">+ ADD KEY</button>
+        </div>
+        <div class="phone-label">Key List</div>
+      </div>
+
+      <div class="phone">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="screen-header">Key Operations</div>
+          <div style="font-size: 0.6rem; padding: 0.3rem; color: var(--muted); margin-bottom: 0.4rem;">SWIPE LEFT</div>
+          <div style="border: 2px dashed var(--border); padding: 0.4rem; margin-bottom: 0.4rem;">
+            <div style="font-weight: 700; color: var(--private); font-size: 0.62rem;">DELETE</div>
+          </div>
+          <div style="font-size: 0.6rem; padding: 0.3rem; color: var(--muted); margin-bottom: 0.4rem;">DRAG TO REORDER</div>
+          <div style="border: 2px dashed var(--border); padding: 0.4rem;">
+            <div style="font-weight: 700; color: var(--party-0); font-size: 0.62rem;">⋮⋮ DRAG</div>
+          </div>
+        </div>
+        <div class="phone-label">Interactions</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SECTION 2: KEY CREATION MODES
+     ============================================================ -->
+<h2>2. Key Creation — Five Import/Generation Modes</h2>
+
+<p>The <strong>Create Key Sheet</strong> opens as a sheet modal with a segmented picker across the top. Users can switch between five modes before creation.</p>
+
+<div class="step">
+  <div class="step-header">
+    <div class="step-num">1</div>
+    <div class="step-title">Generate (DKG) Mode</div>
+  </div>
+  <div class="step-body">
+    <p>Create a new key via Distributed Key Generation. User selects key type (ECDSA, HD-MASTER, or HD-CHILD) and optionally customizes the name.</p>
+
+    <div class="screen-group">
+      <div class="phone">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="screen-header">Create Key</div>
+          <div style="font-size: 0.6rem; font-weight: 700; text-transform: uppercase; margin-bottom: 0.4rem;">Mode: GENERATE</div>
+          <div style="font-size: 0.6rem; padding: 0.3rem; margin-bottom: 0.4rem; border-bottom: 1px solid var(--border);">
+            <label style="display: block; margin: 0.2rem 0;"><input type="radio" checked> ECDSA (Simple)</label>
+            <label style="display: block; margin: 0.2rem 0;"><input type="radio"> HD-MASTER</label>
+            <label style="display: block; margin: 0.2rem 0;"><input type="radio"> HD-CHILD</label>
+          </div>
+          <div style="font-size: 0.55rem; color: var(--muted); padding: 0.3rem 0;">Key Name (optional)</div>
+          <input style="width: 100%; padding: 0.3rem; font-size: 0.6rem; border: 1px solid var(--border); margin-bottom: 0.4rem;" placeholder="My First Key">
+          <button class="screen-btn primary">CREATE KEY</button>
+        </div>
+        <div class="phone-label">Generate</div>
+      </div>
+
+      <div class="phone">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="screen-header">DKG Progress</div>
+          <div style="text-align: center; padding: 0.8rem 0; flex: 1; display: flex; flex-direction: column; justify-content: center;">
+            <div style="font-size: 1.5rem; margin-bottom: 0.4rem;">⚙️</div>
+            <div style="font-weight: 700; font-size: 0.7rem; margin-bottom: 0.2rem;">Generating Key...</div>
+            <div style="font-size: 0.55rem; color: var(--muted);">2-Party DKG in progress</div>
+            <div style="width: 80%; height: 2px; background: var(--party-0); margin: 0.6rem auto; opacity: 0.6;"></div>
+          </div>
+        </div>
+        <div class="phone-label">Processing</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-header">
+    <div class="step-num">2</div>
+    <div class="step-title">Import Seed Phrase (BIP-39)</div>
+  </div>
+  <div class="step-body">
+    <p>Import from 12 or 24-word BIP-39 mnemonic. Select derivation preset (Ledger, MetaMask, Custom).</p>
+
+    <div class="screen-group">
+      <div class="phone">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="screen-header">Create Key</div>
+          <div style="font-size: 0.6rem; font-weight: 700; text-transform: uppercase; margin-bottom: 0.4rem;">Mode: SEED PHRASE</div>
+          <div style="font-size: 0.55rem; color: var(--muted); padding: 0.2rem 0; margin-bottom: 0.2rem;">Word Count</div>
+          <div style="font-size: 0.6rem; margin-bottom: 0.4rem;">
+            <label><input type="radio" checked> 12 Words</label> &nbsp; <label><input type="radio"> 24 Words</label>
+          </div>
+          <textarea style="width: 100%; height: 2.5rem; padding: 0.3rem; font-size: 0.55rem; border: 1px solid var(--border); margin-bottom: 0.3rem;" placeholder="abandon ability able about above absent..."></textarea>
+          <div style="font-size: 0.55rem; color: var(--muted); padding: 0.2rem 0; margin-bottom: 0.2rem;">Derivation Preset</div>
+          <div style="font-size: 0.6rem;">
+            <label style="display: block; margin: 0.1rem 0;"><input type="radio" checked> Ledger Live</label>
+            <label style="display: block; margin: 0.1rem 0;"><input type="radio"> MetaMask</label>
+            <label style="display: block; margin: 0.1rem 0;"><input type="radio"> Custom</label>
+          </div>
+          <button class="screen-btn primary" style="margin-top: 0.3rem;">IMPORT</button>
+        </div>
+        <div class="phone-label">Seed Import</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-header">
+    <div class="step-num">3</div>
+    <div class="step-title">Import Private Key / QR Code / Storage File</div>
+  </div>
+  <div class="step-body">
+    <p>Three additional modes: raw private key hex, multi-part QR code scanner, and KeyStore V3 JSON file picker.</p>
+
+    <div class="screen-group">
+      <div class="phone">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="screen-header">Create Key</div>
+          <div style="font-size: 0.6rem; font-weight: 700; text-transform: uppercase; margin-bottom: 0.4rem;">Mode: PRIVATE KEY</div>
+          <textarea style="width: 100%; height: 2rem; padding: 0.3rem; font-size: 0.55rem; border: 1px solid var(--border); margin-bottom: 0.3rem; font-family: monospace;" placeholder="0x1234567890abcdef..."></textarea>
+          <button class="screen-btn primary">IMPORT</button>
+        </div>
+        <div class="phone-label">Private Key</div>
+      </div>
+
+      <div class="phone">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="screen-header">Create Key</div>
+          <div style="font-size: 0.6rem; font-weight: 700; text-transform: uppercase; margin-bottom: 0.4rem;">Mode: QR CODE</div>
+          <div style="text-align: center; padding: 0.8rem 0; flex: 1; display: flex; flex-direction: column; justify-content: center;">
+            <div style="width: 100%; aspect-ratio: 1; background: var(--code-bg); border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 0.6rem; margin-bottom: 0.4rem;">▦▦▦▦▦</div>
+            <button class="screen-btn primary">SCAN QR</button>
+          </div>
+        </div>
+        <div class="phone-label">QR Code</div>
+      </div>
+
+      <div class="phone">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="screen-header">Create Key</div>
+          <div style="font-size: 0.6rem; font-weight: 700; text-transform: uppercase; margin-bottom: 0.4rem;">Mode: STORAGE</div>
+          <div style="text-align: center; padding: 0.8rem 0; flex: 1; display: flex; flex-direction: column; justify-content: center;">
+            <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">📄</div>
+            <div style="font-size: 0.62rem; margin-bottom: 0.4rem;">Select KeyStore V3 JSON file</div>
+            <button class="screen-btn primary">SELECT FILE</button>
+          </div>
+        </div>
+        <div class="phone-label">Storage File</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SECTION 3: KEY DETAIL VIEW
+     ============================================================ -->
+<h2>3. Key Detail View — Operations and Metadata</h2>
+
+<div class="step">
+  <div class="step-header">
+    <div class="step-num">1</div>
+    <div class="step-title">Header, Public Key, and Metadata</div>
+  </div>
+  <div class="step-body">
+    <p>Tapping a key from the dashboard navigates to `KeyDetailView` showing name (editable inline), public key, curve info, derivation path, and storage location.</p>
+
+    <div class="screen-group">
+      <div class="phone">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="screen-header">Key Detail</div>
+          <div style="font-weight: 700; font-size: 0.75rem; margin-bottom: 0.2rem;">My First Key <span class="tag">ECDSA</span></div>
+          <div style="font-size: 0.6rem; color: var(--muted); margin-bottom: 0.4rem; font-family: monospace; word-break: break-all;">0xa1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2</div>
+          <div style="border-top: 1px solid var(--border); padding-top: 0.4rem; font-size: 0.6rem;">
+            <div style="margin: 0.2rem 0;"><strong>Curve:</strong> secp256k1</div>
+            <div style="margin: 0.2rem 0;"><strong>Storage:</strong> Secure Enclave</div>
+            <div style="margin: 0.2rem 0;"><strong>Created:</strong> 2026-03-07</div>
+          </div>
+        </div>
+        <div class="phone-label">Key Info</div>
+      </div>
+
+      <div class="phone">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="screen-header">Key Operations</div>
+          <button class="screen-btn primary" style="margin-bottom: 0.2rem;">SIGN MESSAGE</button>
+          <button class="screen-btn primary" style="background: var(--party-1); color: black; border-color: var(--party-1); margin-bottom: 0.2rem;">SIGN TRANSACTION</button>
+          <button class="screen-btn" style="margin-bottom: 0.2rem;">VERIFY</button>
+          <button class="screen-btn" style="margin-bottom: 0.2rem;">DERIVE (HD)</button>
+          <button class="screen-btn">EXPORT</button>
+        </div>
+        <div class="phone-label">Actions</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-header">
+    <div class="step-num">2</div>
+    <div class="step-title">Signing History Inline</div>
+  </div>
+  <div class="step-body">
+    <p>The last 10 signing records are displayed inline in the key detail view. Each shows timestamp, key type, and verified badge with copy buttons for hash and signature.</p>
+
+    <div class="screen-group">
+      <div class="phone">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="screen-header">Signing History</div>
+          <div style="border: 1px solid var(--border); padding: 0.3rem; margin-bottom: 0.3rem; font-size: 0.58rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span><strong>2026-03-07 14:30</strong></span>
+              <span style="color: var(--ok);">✓</span>
+            </div>
+            <div style="color: var(--muted); font-size: 0.55rem; word-break: break-all;">Hash: 0xa1b2c3d4e5f6...</div>
+            <div style="color: var(--muted); font-size: 0.55rem; word-break: break-all;">Sig: 0x3045022100f7a8...</div>
+          </div>
+          <div style="border: 1px solid var(--border); padding: 0.3rem; margin-bottom: 0.3rem; font-size: 0.58rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span><strong>2026-03-07 13:15</strong></span>
+              <span style="color: var(--ok);">✓</span>
+            </div>
+            <div style="color: var(--muted); font-size: 0.55rem; word-break: break-all;">Hash: 0x9c8d7e6f5a4b...</div>
+          </div>
+        </div>
+        <div class="phone-label">Signing Records</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     FOOTER
+     ============================================================ -->
+<div class="footer">
+<p>CB-MPC Visual Guides — Key Management</p>
+<p style="font-size: 0.6rem; margin-top: 0.4rem;">
+  <a href="/index.html" style="color: var(--muted); text-decoration: none;">← Back to Demo Guide</a>
+</p>
+</div>
+
+<script>
+  function toggleTheme() {
+    const body = document.body;
+    const btn = document.getElementById('themeBtn');
+    if (body.getAttribute('data-theme') === 'dark') {
+      body.setAttribute('data-theme', 'light');
+      localStorage.setItem('cb-mpc-theme', 'light');
+      btn.textContent = '[ DARK ]';
+    } else {
+      body.setAttribute('data-theme', 'dark');
+      localStorage.setItem('cb-mpc-theme', 'dark');
+      btn.textContent = '[ LIGHT ]';
+    }
+  }
+
+  (function() {
+    var saved = localStorage.getItem("cb-mpc-theme");
+    if (saved) {
+      document.body.setAttribute("data-theme", saved);
+      document.getElementById("themeBtn").textContent = saved === "dark" ? "[ LIGHT ]" : "[ DARK ]";
+    }
+  })();
+</script>
+
+</body>
+</html>

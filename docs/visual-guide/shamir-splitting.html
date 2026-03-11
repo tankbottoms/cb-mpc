@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shamir Secret Sharing — Visual Guide</title>
+<style>
+  /* ============================================================
+     THEME SYSTEM — light/dark via [data-theme]
+     ============================================================ */
+  :root {
+    --font-mono: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    --font-sans: 'Inter', 'SF Pro', -apple-system, system-ui, sans-serif;
+
+    /* neo-brutalism constants */
+    --border-w: 3px;
+    --shadow-offset: 5px;
+    --radius: 0;
+
+    /* party colors (stable across themes) */
+    --party-0: #6366f1;
+    --party-1: #f59e0b;
+    --party-2: #10b981;
+    --party-3: #ef4444;
+    --secret: #ef4444;
+    --public: #3b82f6;
+    --mail: #8b5cf6;
+    --ok: #22c55e;
+    --warn: #f97316;
+  }
+
+  [data-theme="light"] {
+    --bg: #f5f0e8;
+    --bg2: #ffffff;
+    --card: #ffffff;
+    --card2: #f0ebe3;
+    --text: #1a1a1a;
+    --muted: #6b7280;
+    --border: #1a1a1a;
+    --shadow-color: #1a1a1a;
+    --tag-text: #fff;
+    --phone-bg: #e8e0d4;
+    --phone-screen: #ffffff;
+    --phone-bezel: #1a1a1a;
+    --code-bg: #f0ebe3;
+    --highlight: #fef08a;
+  }
+
+  [data-theme="dark"] {
+    --bg: #0f172a;
+    --bg2: #1a1a1a;
+    --card: #1e293b;
+    --card2: #334155;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --border: #475569;
+    --shadow-color: #000000;
+    --tag-text: #fff;
+    --phone-bg: #141414;
+    --phone-screen: #1e293b;
+    --phone-bezel: #475569;
+    --code-bg: #334155;
+    --highlight: #854d0e;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font-mono);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  /* ---- THEME TOGGLE ---- */
+  .theme-toggle {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 999;
+    border: var(--border-w) solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color);
+    transition: all 0.15s;
+  }
+  .theme-toggle:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 7px 7px 0 var(--shadow-color);
+  }
+  .theme-toggle:active {
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0 var(--shadow-color);
+  }
+
+  /* ---- DOC NAV ---- */
+  .doc-nav {
+    display: flex;
+    gap: 0;
+    margin: 0 auto 2rem;
+    width: 100%;
+    border: var(--border-w) solid var(--border);
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color);
+    overflow: hidden;
+    flex-wrap: wrap;
+  }
+  .nav-link {
+    flex: 0 1 calc(100% / 3);
+    text-align: center;
+    padding: 0.5rem 0.4rem;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-decoration: none;
+    color: var(--text);
+    background: var(--card);
+    border-right: var(--border-w) solid var(--border);
+    border-bottom: var(--border-w) solid var(--border);
+    transition: background 0.15s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .nav-link:nth-child(3n) { border-right: none; }
+  .nav-link:nth-last-child(-n+3) { border-bottom: none; }
+  .nav-link:hover { background: var(--card2); }
+  .nav-link.active {
+    background: var(--border);
+    color: var(--text);
+  }
+
+  /* ---- LAYOUT ---- */
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+  }
+
+  h1 {
+    font-size: 2.4rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: -0.03em;
+    border-bottom: var(--border-w) solid var(--border);
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .subtitle {
+    font-size: 0.9rem;
+    color: var(--muted);
+    margin-bottom: 3rem;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
+    margin: 3rem 0 1rem;
+    padding: 0.5rem 1rem;
+    background: var(--text);
+    color: var(--bg);
+    display: inline-block;
+  }
+
+  h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 1.5rem 0 0.5rem;
+    border-left: 6px solid var(--party-0);
+    padding-left: 0.75rem;
+  }
+
+  p { margin: 0.5rem 0; font-size: 0.88rem; }
+
+  /* ---- CARDS ---- */
+  .card {
+    border: var(--border-w) solid var(--border);
+    background: var(--card);
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color);
+    position: relative;
+  }
+
+  .card-label {
+    position: absolute;
+    top: -0.7rem;
+    left: 1rem;
+    background: var(--card);
+    padding: 0 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+  }
+
+  /* ---- TAGS ---- */
+  .tag {
+    display: inline-block;
+    font-size: 0.6rem;
+    padding: 0.15rem 0.5rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    vertical-align: middle;
+    border: 2px solid;
+  }
+  .tag.priv { background: var(--secret); color: var(--tag-text); border-color: var(--secret); }
+  .tag.pub { background: var(--public); color: var(--tag-text); border-color: var(--public); }
+
+  /* ---- CODE ---- */
+  .code {
+    background: var(--code-bg);
+    border: 2px solid var(--border);
+    padding: 1rem;
+    margin: 0.75rem 0;
+    font-size: 0.78rem;
+    overflow-x: auto;
+    white-space: pre;
+    line-height: 1.5;
+  }
+
+  /* ---- FLOW DIAGRAM ---- */
+  .flow-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 1rem 0;
+    flex-wrap: wrap;
+  }
+  .flow-box {
+    border: var(--border-w) solid var(--border);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-align: center;
+    min-width: 120px;
+    background: var(--card);
+  }
+  .flow-box.highlight { background: var(--highlight); }
+  .flow-arrow {
+    font-size: 1.5rem;
+    color: var(--muted);
+    font-weight: 900;
+  }
+
+  /* ---- STEP CARDS ---- */
+  .step-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin: 1.5rem 0;
+  }
+  .step-card {
+    border: var(--border-w) solid var(--border);
+    padding: 1rem;
+    background: var(--card2);
+    position: relative;
+  }
+  .step-num {
+    display: inline-block;
+    background: var(--party-0);
+    color: #fff;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 28px;
+    font-weight: 800;
+    font-size: 0.8rem;
+    margin-bottom: 0.5rem;
+  }
+  .step-card strong { display: block; margin: 0.5rem 0 0.3rem; font-size: 0.85rem; }
+  .step-card p { font-size: 0.78rem; }
+
+  /* ---- DIVIDER ---- */
+  .divider {
+    text-align: center;
+    padding: 2.5rem 0 1rem;
+    font-size: 1.3rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    border-top: 2px dashed var(--muted);
+    margin-top: 2rem;
+  }
+
+  /* ---- TABLE ---- */
+  .overview-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+    margin: 0.75rem 0;
+  }
+  .overview-table th {
+    text-align: left;
+    padding: 0.5rem 0.6rem;
+    border-bottom: var(--border-w) solid var(--border);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+  }
+  .overview-table td {
+    padding: 0.4rem 0.6rem;
+    border-bottom: 1px solid var(--card2);
+    vertical-align: top;
+  }
+
+  /* ---- CALLOUT ---- */
+  .callout {
+    border-left: 6px solid var(--warn);
+    background: var(--card2);
+    padding: 1rem 1.25rem;
+    margin: 1rem 0;
+    font-size: 0.82rem;
+  }
+  .callout.info { border-left-color: var(--public); }
+  .callout.ok { border-left-color: var(--ok); }
+  .callout.danger { border-left-color: var(--secret); }
+  .callout-title { font-weight: 800; margin-bottom: 0.25rem; text-transform: uppercase; font-size: 0.75rem; }
+
+  /* ============================================================
+     PHONE MOCKUP
+     ============================================================ */
+  .phone-row {
+    display: flex;
+    gap: 2rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: 2rem 0;
+  }
+  .phone {
+    width: 280px;
+    border: var(--border-w) solid var(--phone-bezel);
+    background: var(--phone-bg);
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color);
+    position: relative;
+    padding: 0;
+  }
+  .phone-notch {
+    width: 100px;
+    height: 24px;
+    background: var(--phone-bezel);
+    margin: 0 auto;
+    position: relative;
+    z-index: 2;
+  }
+  .phone-screen {
+    background: var(--phone-screen);
+    margin: 0 8px 8px;
+    min-height: 480px;
+    border: 2px solid var(--phone-bezel);
+    padding: 1rem;
+    font-size: 0.72rem;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .phone-label {
+    text-align: center;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.75rem 0 0.5rem;
+    color: var(--muted);
+  }
+
+  /* phone screen elements */
+  .screen-header {
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-align: center;
+    padding: 0.5rem 0;
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+  }
+  .screen-btn {
+    display: block;
+    width: 100%;
+    border: var(--border-w) solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.6rem;
+    margin: 0.4rem 0;
+    text-align: center;
+    cursor: pointer;
+    box-shadow: 3px 3px 0 var(--shadow-color);
+  }
+  .screen-btn.primary {
+    background: var(--party-0);
+    color: #fff;
+    border-color: var(--party-0);
+  }
+  .screen-field {
+    border: 2px solid var(--border);
+    padding: 0.5rem;
+    margin: 0.4rem 0;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    background: var(--code-bg);
+  }
+  .screen-field-label {
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 0.5rem;
+  }
+  .screen-status {
+    text-align: center;
+    padding: 0.5rem;
+    margin: 0.4rem 0;
+    font-weight: 700;
+    font-size: 0.72rem;
+    border: 2px solid;
+  }
+  .screen-status.ok { border-color: var(--ok); color: var(--ok); }
+  .screen-status.warn { border-color: var(--warn); color: var(--warn); }
+  .screen-status.err { border-color: var(--secret); color: var(--secret); }
+
+  .screen-icon { font-size: 2rem; text-align: center; padding: 0.5rem 0; }
+  .screen-detail {
+    font-size: 0.65rem;
+    color: var(--muted);
+    word-break: break-all;
+    margin: 0.25rem 0;
+  }
+
+  .screen-divider {
+    border-top: 1px dashed var(--muted);
+    margin: 0.6rem 0;
+  }
+
+  .screen-card {
+    border: 1px solid var(--border);
+    padding: 0.4rem;
+    margin: 0.3rem 0;
+    background: var(--card2);
+    font-size: 0.62rem;
+  }
+
+  /* ---- FOOTER ---- */
+  .footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.72rem;
+    padding: 3rem 0 2rem;
+    border-top: 2px solid var(--card2);
+    margin-top: 3rem;
+  }
+
+  /* ---- PRINT ---- */
+  @media print {
+    .theme-toggle { display: none; }
+    body { background: white; color: #1a1a1a; }
+    .card { box-shadow: none; border-color: #ccc; }
+    .phone { box-shadow: none; }
+  }
+</style>
+<script src="https://fathom-sveltekit.mark-phillips-f7c.workers.dev/api/tracker/abc9c4a5b463d635" defer></script>
+</head>
+<body data-theme="light">
+
+<button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">[ LIGHT ]</button>
+
+<nav class="doc-nav">
+  <a href="/index.html" class="nav-link">Demo Guide</a>
+  <a href="/threshold-signing.html" class="nav-link">Threshold Signing</a>
+  <a href="/dkg-ceremony.html" class="nav-link">DKG Ceremony</a>
+  <a href="/device-to-device.html" class="nav-link">Device-to-Device</a>
+  <a href="/server-architecture.html" class="nav-link">Server Architecture</a>
+  <a href="/shamir-splitting.html" class="nav-link active">Shamir Splitting</a>
+  <a href="/ios-encryption-backup-strategy.html" class="nav-link">iOS Encryption</a>
+  <a href="/key-management.html" class="nav-link">Key Management</a>
+  <a href="/signing-operations.html" class="nav-link">Signing Ops</a>
+</nav>
+
+<div class="container">
+
+<!-- ============================================================ -->
+<h1>Shamir Secret Sharing</h1>
+<p class="subtitle">Information-Theoretic Secret Splitting — n-of-m Threshold Recovery</p>
+<!-- ============================================================ -->
+
+<!-- ============================================================
+     SECTION 1: OVERVIEW
+     ============================================================ -->
+<h2>1. Protocol Overview</h2>
+
+<div class="card">
+<span class="card-label">What is Shamir Secret Sharing?</span>
+<p>Shamir Secret Sharing (SSS) is a threshold cryptographic scheme where a secret (like a 12-word mnemonic or private key) is split into m shares, and any n shares can recover the secret. Fewer than n shares reveal nothing about the secret — not even a single bit.</p>
+
+<p style="margin-top:0.75rem"><strong>Key property:</strong> Information-theoretic security. Unlike MPC, SSS is computationally secure without relying on hard problems (ECDLP, factoring). Perfect secrecy: even with infinite computing power, t-1 shares reveal zero information.</p>
+
+<table class="overview-table">
+  <tr><th>Aspect</th><th>Shamir SSS</th><th>MPC (Threshold Signature)</th></tr>
+  <tr><td><strong>Offline</strong></td><td>Yes (purely local)</td><td>No (interactive protocol)</td></tr>
+  <tr><td><strong>Recovery Model</strong></td><td>Reconstruct secret</td><td>Each party keeps their share</td></tr>
+  <tr><td><strong>Information Theory</strong></td><td>Perfect secrecy</td><td>Computational secrecy</td></tr>
+  <tr><td><strong>Use Case</strong></td><td>Backup, recovery codes</td><td>Signing, key derivation</td></tr>
+</table>
+</div>
+
+<!-- ============================================================
+     SECTION 2: MATHEMATICAL FOUNDATION
+     ============================================================ -->
+<h2>2. Mathematics Behind SSS</h2>
+
+<div class="card">
+<span class="card-label">Polynomial Interpolation over a Prime Field</span>
+
+<p>SSS uses Lagrange polynomial interpolation over a finite field GF(p) (integers modulo a large prime p).</p>
+
+<div class="code">Secret: S (a 256-bit integer, e.g., private key)
+Threshold: t (number of shares needed)
+Total shares: m (total shares created)
+
+Step 1: Generate polynomial P(x) with degree t-1
+P(x) = S + a_1*x + a_2*x^2 + ... + a_(t-1)*x^(t-1)
+
+where S = P(0) (the constant term is the secret!)
+a_1, a_2, ..., a_(t-1) are random coefficients in GF(p)
+
+Step 2: Generate m shares by evaluating P at x = 1, 2, ..., m
+share_1 = P(1) = S + a_1 + a_2 + ...
+share_2 = P(2) = S + 2*a_1 + 4*a_2 + ...
+share_3 = P(3) = S + 3*a_1 + 9*a_2 + ...
+...
+share_m = P(m) = S + m*a_1 + m^2*a_2 + ...</div>
+
+<p style="margin-top:0.75rem"><strong>Recovery:</strong> Any t shares can uniquely determine the polynomial via Lagrange interpolation, thus revealing S = P(0).</p>
+
+<p><strong>Security:</strong> Any t-1 shares are uniformly random in GF(p). No information about S is leaked.</p>
+</div>
+
+<div class="card">
+<span class="card-label">Horner Evaluation (Efficient)</span>
+
+<div class="code">To evaluate P(x) = S + a_1*x + a_2*x^2 + ... + a_t*x^t:
+
+Naive: P(x) = S + a_1*x + a_2*x^2 + a_3*x^3 + ...
+  Requires: t multiplications and t additions
+
+Horner: P(x) = S + x*(a_1 + x*(a_2 + x*(a_3 + ...)))
+  Requires: t multiplications and t additions (same!)
+  But: More cache-friendly, avoids computing large powers</div>
+
+<p>Example with t=2 (linear): P(x) = 0x4a2b + x*0x7c3f (mod p)</p>
+<div class="code">P(1) = 0x4a2b + 1*0x7c3f = 0xc66a (share 1)
+P(2) = 0x4a2b + 2*0x7c3f = 0x44a9 (share 2)
+P(3) = 0x4a2b + 3*0x7c3f = 0xbce8 (share 3)</div>
+</div>
+
+<div class="card">
+<span class="card-label">Lagrange Interpolation (Recovery)</span>
+
+<div class="code">Given t shares: (x_1, y_1), (x_2, y_2), ..., (x_t, y_t)
+
+Lagrange basis polynomial:
+L_i(x) = ∏(x - x_j) / (x_i - x_j)  for j != i
+
+Secret S = P(0) = sum(y_i * L_i(0) for i=1..t)
+
+where L_i(0) = ∏(-x_j) / (x_i - x_j) for j != i</div>
+
+<p>This is <strong>offline and deterministic</strong> — no network communication needed.</p>
+
+<div class="callout ok">
+<div class="callout-title">Example: 2-of-3 Recovery</div>
+<p>With shares y_1 and y_2 at x_1=1 and x_2=2, the secret is:</p>
+<p style="margin-top:0.3rem">S = y_1 * (0 - 2)/(1 - 2) + y_2 * (0 - 1)/(2 - 1)</p>
+<p style="margin-top:0.3rem">  = y_1 * (-2)/(-1) + y_2 * (-1)/(1)</p>
+<p style="margin-top:0.3rem">  = 2*y_1 - y_2</p>
+</div>
+</div>
+
+<!-- ============================================================
+     SECTION 3: EXPORT WORKFLOW
+     ============================================================ -->
+<h2>3. Secret Export Workflow</h2>
+
+<p><strong>Typical use:</strong> Split a 12 or 24-word BIP39 mnemonic into shares for backup.</p>
+
+<h3>3.1 Export Flow Diagram</h3>
+
+<div style="display: grid; grid-template-columns: 1fr; gap: 1rem; margin: 1.5rem 0">
+  <div class="flow-row">
+    <div class="flow-box highlight">User Input: Mnemonic</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box party0">Select Threshold (n-of-m)</div>
+  </div>
+  <div style="text-align: center; color: var(--muted); font-size: 0.75rem">Polynomial P(x) = Secret + random coefficients</div>
+
+  <div class="flow-row">
+    <div class="flow-box party0">Generate m Shares</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">P(1), P(2), ..., P(m)</div>
+  </div>
+  <div style="text-align: center; color: var(--muted); font-size: 0.75rem">Evaluate polynomial at x = 1, 2, ..., m</div>
+
+  <div class="flow-row">
+    <div class="flow-box">Verify Shares</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box party0">Lagrange Check</div>
+  </div>
+  <div style="text-align: center; color: var(--muted); font-size: 0.75rem">Any n shares must reconstruct original secret</div>
+
+  <div class="flow-row">
+    <div class="flow-box party0">Generate QR Codes</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box highlight">Display Share Cards</div>
+  </div>
+  <div style="text-align: center; color: var(--muted); font-size: 0.75rem">Print, photograph, or write down</div>
+
+  <div class="flow-row">
+    <div class="flow-box highlight">User Securely Stores Shares</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box party0">Erase Original from Device</div>
+  </div>
+  <div style="text-align: center; color: var(--muted); font-size: 0.75rem">Explicit memory zeroing to prevent recovery</div>
+</div>
+
+<h3>3.2 Step-by-Step Breakdown</h3>
+
+<div class="step-cards">
+  <div class="step-card">
+    <div class="step-num">1</div>
+    <strong>Entropy Selection</strong>
+    <p>User selects 128, 160, 192, or 256 bits of entropy. The app generates a BIP39 mnemonic or uses one from a hardware wallet.</p>
+  </div>
+  <div class="step-card">
+    <div class="step-num">2</div>
+    <strong>Configure Threshold</strong>
+    <p>User selects n-of-m: e.g., "2-of-3" means any 2 shares can recover, but 1 alone cannot.</p>
+  </div>
+  <div class="step-card">
+    <div class="step-num">3</div>
+    <strong>Generate Shares</strong>
+    <p>App creates m random shares using Horner evaluation. Each share is a sequence of hex values or BIP39 words.</p>
+  </div>
+  <div class="step-card">
+    <div class="step-num">4</div>
+    <strong>Verify Shares</strong>
+    <p>App re-runs Lagrange interpolation to verify that combining any t shares recovers the original secret.</p>
+  </div>
+  <div class="step-card">
+    <div class="step-num">5</div>
+    <strong>Display & Export</strong>
+    <p>Show each share as a card (with duplicate QR codes). User can print, photograph, or write them down.</p>
+  </div>
+  <div class="step-card">
+    <div class="step-num">6</div>
+    <strong>Erase Original</strong>
+    <p>Once exported, the original mnemonic is securely erased from device memory using explicit zeroing.</p>
+  </div>
+</div>
+
+<!-- ============================================================
+     SECTION 4: RECOVERY WORKFLOW
+     ============================================================ -->
+<h2>4. Secret Recovery Workflow</h2>
+
+<p><strong>Typical use:</strong> Recover a lost or stolen mnemonic using saved shares.</p>
+
+<h3>4.1 Recovery Flow Diagram</h3>
+
+<div style="display: grid; grid-template-columns: 1fr; gap: 1rem; margin: 1.5rem 0">
+  <div class="flow-row">
+    <div class="flow-box highlight">User Selects n Shares</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box party0">Gather from Storage</div>
+  </div>
+  <div style="text-align: center; color: var(--muted); font-size: 0.75rem">From printed cards, USB, safes, vaults, etc.</div>
+
+  <div class="flow-row">
+    <div class="flow-box party0">Scan/Input Shares</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">QR Camera or Manual</div>
+  </div>
+  <div style="text-align: center; color: var(--muted); font-size: 0.75rem">Read hex values or BIP39 words</div>
+
+  <div class="flow-row">
+    <div class="flow-box">Validate Checksums</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box party0">Verify x-Coordinates</div>
+  </div>
+  <div style="text-align: center; color: var(--muted); font-size: 0.75rem">Check: x₁ ≠ x₂ ≠ ... ≠ xₙ and all in valid range</div>
+
+  <div class="flow-row">
+    <div class="flow-box party0">Lagrange Interpolation</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">Solve P(0) = Secret</div>
+  </div>
+  <div style="text-align: center; color: var(--muted); font-size: 0.75rem">All arithmetic modulo p (prime field), local computation only</div>
+
+  <div class="flow-row">
+    <div class="flow-box">Convert Secret</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box party0">BIP39 Mnemonic</div>
+  </div>
+  <div style="text-align: center; color: var(--muted); font-size: 0.75rem">24-word phrase from 256-bit integer</div>
+
+  <div class="flow-row">
+    <div class="flow-box highlight">Display on Screen</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box party0">Import to Wallet</div>
+  </div>
+  <div style="text-align: center; color: var(--muted); font-size: 0.75rem">User can verify and import into crypto wallet or hardware device</div>
+</div>
+
+<h3>4.2 Step-by-Step Breakdown</h3>
+
+<div class="step-cards">
+  <div class="step-card">
+    <div class="step-num">1</div>
+    <strong>Select Shares to Recover</strong>
+    <p>User picks which n shares (out of m) to use. App shows the threshold requirement.</p>
+  </div>
+  <div class="step-card">
+    <div class="step-num">2</div>
+    <strong>Scan/Input Shares</strong>
+    <p>App uses camera to scan QR codes, or user manually types in hex/BIP39 words.</p>
+  </div>
+  <div class="step-card">
+    <div class="step-num">3</div>
+    <strong>Validate Share Format</strong>
+    <p>Verify checksum and that shares belong to the same scheme (same x-coordinates).</p>
+  </div>
+  <div class="step-card">
+    <div class="step-num">4</div>
+    <strong>Perform Lagrange Interpolation</strong>
+    <p>Recover P(0) = secret using Lagrange basis polynomials. All math is local.</p>
+  </div>
+  <div class="step-card">
+    <div class="step-num">5</div>
+    <strong>Convert to Mnemonic/Key</strong>
+    <p>Convert the recovered secret to BIP39 words or derive crypto keys.</p>
+  </div>
+  <div class="step-card">
+    <div class="step-num">6</div>
+    <strong>Display Results</strong>
+    <p>Show mnemonic on screen. User can import into wallet, hardware device, or MPC app.</p>
+  </div>
+</div>
+
+<!-- ============================================================
+     SECTION 5: MOBILE UX
+     ============================================================ -->
+<div class="divider">Mobile Experience</div>
+<h2>5. iOS App — Share Creation and Recovery</h2>
+
+<h3 style="border-left-color: var(--party-0)">5.1 Export: Creating Shares</h3>
+
+<div class="phone-row">
+
+  <!-- Phone 1: Select Entropy -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-header">Create Secret Shares</div>
+      <div class="screen-field-label">Entropy Source</div>
+      <button class="screen-btn primary">GENERATE NEW (256-bit)</button>
+      <button class="screen-btn">IMPORT MNEMONIC</button>
+      <button class="screen-btn">IMPORT FROM WALLET</button>
+      <div class="screen-divider"></div>
+      <div class="screen-field-label">Security</div>
+      <p style="font-size:0.65rem; color:var(--muted)">
+        256-bit entropy = 24-word BIP39 mnemonic. Highest security.
+      </p>
+    </div>
+    <div class="phone-label">Entropy</div>
+  </div>
+
+  <!-- Phone 2: Configure Threshold -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-header">Configure Threshold</div>
+      <div class="screen-field-label">Recovery Threshold (n-of-m)</div>
+      <div class="screen-field">n: <strong>2</strong></div>
+      <div class="screen-field">m: <strong>3</strong></div>
+      <div class="screen-divider"></div>
+      <p style="font-size:0.7rem; margin:0.5rem 0">
+        2 of 3 shares required to recover
+      </p>
+      <p style="font-size:0.7rem; color:var(--muted); margin:0.5rem 0">
+        Loss of 1 share: OK<br>
+        Loss of 2 shares: Secret lost forever
+      </p>
+      <button class="screen-btn primary" style="margin-top:0.5rem">GENERATE SHARES</button>
+    </div>
+    <div class="phone-label">Threshold</div>
+  </div>
+
+  <!-- Phone 3: Share Cards -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-header">Share Cards</div>
+      <div class="screen-card">
+        <strong style="color:var(--party-0)">SHARE 1</strong><br>
+        <span style="font-size:0.6rem">x=1</span><br>
+        y: 0x7f2a5c8b... (hex)<br>
+        <img style="width:60px; height:60px; background:var(--card); border:1px solid var(--border); margin:0.3rem 0" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%23e5e5e5' width='100' height='100'/%3E%3C/svg%3E" alt="QR">
+      </div>
+      <div class="screen-card">
+        <strong style="color:var(--party-1)">SHARE 2</strong><br>
+        <span style="font-size:0.6rem">x=2</span><br>
+        y: 0x3e8d1f4a... (hex)<br>
+        <img style="width:60px; height:60px; background:var(--card); border:1px solid var(--border); margin:0.3rem 0" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%23e5e5e5' width='100' height='100'/%3E%3C/svg%3E" alt="QR">
+      </div>
+      <button class="screen-btn primary" style="margin-top:0.5rem">PRINT CARDS</button>
+    </div>
+    <div class="phone-label">Cards</div>
+  </div>
+
+</div>
+
+<h3 style="border-left-color: var(--party-0)">5.2 Recovery: Scanning Shares</h3>
+
+<div class="phone-row">
+
+  <!-- Phone 4: Scan Shares -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-header">Recover Secret</div>
+      <div class="screen-icon">📱</div>
+      <div style="margin:0.75rem 0">
+        <div style="font-size:0.7rem; color:var(--muted); margin-bottom:0.3rem">Share 1 (scanned)</div>
+        <div style="height:2px; background:var(--ok); margin-bottom:0.5rem"></div>
+        <div style="font-size:0.7rem; color:var(--muted); margin-bottom:0.3rem">Share 2 (scanned)</div>
+        <div style="height:2px; background:var(--ok); margin-bottom:0.5rem"></div>
+        <div style="font-size:0.7rem; color:var(--muted); margin-bottom:0.3rem">Share 3 (needed: 2/2)</div>
+        <div style="height:2px; background:var(--card2); margin-bottom:0.5rem"></div>
+      </div>
+      <p style="font-size:0.7rem; color:var(--muted); text-align:center">
+        Scan 2 share QR codes or enter manually
+      </p>
+      <button class="screen-btn primary" style="margin-top:0.75rem">SCAN NEXT SHARE</button>
+    </div>
+    <div class="phone-label">Scan</div>
+  </div>
+
+  <!-- Phone 5: Recovering -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-header">Recovering Secret</div>
+      <div class="screen-icon">⏳</div>
+      <div style="margin:1rem 0">
+        <div style="font-size:0.7rem; color:var(--muted); margin-bottom:0.3rem">Validate shares</div>
+        <div style="height:4px; background:var(--ok); margin-bottom:0.5rem"></div>
+        <div style="font-size:0.7rem; color:var(--muted); margin-bottom:0.3rem">Lagrange interpolation</div>
+        <div style="height:4px; background:var(--party-0); margin-bottom:0.5rem"></div>
+        <div style="font-size:0.7rem; color:var(--muted); margin-bottom:0.3rem">Verify mnemonic</div>
+        <div style="height:4px; background:var(--card2); margin-bottom:0.5rem"></div>
+      </div>
+      <p style="font-size:0.65rem; color:var(--muted); text-align:center">
+        All computations local to device...
+      </p>
+    </div>
+    <div class="phone-label">Recovering</div>
+  </div>
+
+  <!-- Phone 6: Mnemonic Recovered -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-header">Secret Recovered ✓</div>
+      <div class="screen-icon">✓</div>
+      <div class="screen-field-label">24-Word Mnemonic</div>
+      <div class="screen-card" style="display:grid; grid-template-columns: 1fr 1fr; gap:0.2rem; font-size:0.6rem; margin:0.3rem 0">
+        <span>1. abandon</span>
+        <span>2. ability</span>
+        <span>3. able</span>
+        <span>4. about</span>
+        <span>5. above</span>
+        <span>6. absent</span>
+      </div>
+      <button class="screen-btn primary" style="margin-top:0.5rem">IMPORT TO WALLET</button>
+      <button class="screen-btn">COPY TO CLIPBOARD</button>
+    </div>
+    <div class="phone-label">Recovered</div>
+  </div>
+
+</div>
+
+<!-- ============================================================
+     SECTION 6: COMPARISON
+     ============================================================ -->
+<h2>6. Shamir SSS vs. MPC vs. Single Device</h2>
+
+<div class="card">
+<span class="card-label">Comparison</span>
+
+<table class="overview-table">
+  <tr>
+    <th>Aspect</th>
+    <th>Shamir SSS</th>
+    <th>MPC (Threshold Signing)</th>
+    <th>Single Device</th>
+  </tr>
+  <tr>
+    <td><strong>Interactive</strong></td>
+    <td>No (offline)</td>
+    <td>Yes (network required)</td>
+    <td>No</td>
+  </tr>
+  <tr>
+    <td><strong>Secret Recovery</strong></td>
+    <td>Reconstruct original</td>
+    <td>Each party keeps share</td>
+    <td>N/A</td>
+  </tr>
+  <tr>
+    <td><strong>Security Type</strong></td>
+    <td>Information-theoretic</td>
+    <td>Computational</td>
+    <td>Single point of failure</td>
+  </tr>
+  <tr>
+    <td><strong>Use Case</strong></td>
+    <td>Backup, recovery codes</td>
+    <td>Signing, key derivation</td>
+    <td>Custodial wallets</td>
+  </tr>
+  <tr>
+    <td><strong>Storage</strong></td>
+    <td>Print, air-gap storage</td>
+    <td>Device Secure Enclave</td>
+    <td>Device storage</td>
+  </tr>
+  <tr>
+    <td><strong>Loss Tolerance</strong></td>
+    <td>Lose m-n shares safely</td>
+    <td>Lose fewer than t parties</td>
+    <td>Device lost = key lost</td>
+  </tr>
+</table>
+</div>
+
+<div class="callout ok">
+<div class="callout-title">Best Use Cases</div>
+<p><strong>Shamir SSS:</strong> Backup a 24-word seed phrase into 5 cards, store them in vaults. Recover with any 3 cards. Perfect for long-term cold storage.</p>
+<p style="margin-top:0.4rem"><strong>MPC:</strong> Day-to-day signing with your phone + server. No single device can sign alone. Better for frequent transactions.</p>
+<p style="margin-top:0.4rem"><strong>Combination:</strong> Generate a master seed via MPC key generation, then back it up via Shamir SSS for ultimate redundancy.</p>
+</div>
+
+<!-- ============================================================
+     FOOTER
+     ============================================================ -->
+<div class="footer">
+<p>CB-MPC Visual Guides — Shamir Secret Sharing</p>
+<p style="font-size:0.65rem; margin-top:0.5rem">
+  <a href="/index.html" style="color:var(--muted); text-decoration:none">← Back to Demo Guide</a>
+</p>
+</div>
+
+</div>
+
+<script>
+  function toggleTheme() {
+    const body = document.body;
+    const btn = document.getElementById('themeBtn');
+    if (body.getAttribute('data-theme') === 'dark') {
+      body.setAttribute('data-theme', 'light');
+    localStorage.setItem('cb-mpc-theme', 'light');
+      btn.textContent = '[ DARK ]';
+    } else {
+      body.setAttribute('data-theme', 'dark');
+    localStorage.setItem('cb-mpc-theme', 'dark');
+      btn.textContent = '[ LIGHT ]';
+    }
+  }
+
+  // Initialize theme from localStorage, default to light
+  (function() {
+    var saved = localStorage.getItem("cb-mpc-theme");
+    if (saved) {
+      document.body.setAttribute("data-theme", saved);
+      document.getElementById("themeBtn").textContent = saved === "dark" ? "[ LIGHT ]" : "[ DARK ]";
+    }
+  })();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Device-to-Device MPC — Visual Guide</title>
+<style>
+  /* ============================================================
+     THEME SYSTEM — light/dark via [data-theme]
+     ============================================================ */
+  :root {
+    --font-mono: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    --font-sans: 'Inter', 'SF Pro', -apple-system, system-ui, sans-serif;
+
+    /* neo-brutalism constants */
+    --border-w: 3px;
+    --shadow-offset: 5px;
+    --radius: 0;
+
+    /* party colors (stable across themes) */
+    --party-0: #6366f1;
+    --party-1: #f59e0b;
+    --party-2: #10b981;
+    --party-3: #ef4444;
+    --secret: #ef4444;
+    --public: #3b82f6;
+    --mail: #8b5cf6;
+    --ok: #22c55e;
+    --warn: #f97316;
+  }
+
+  [data-theme="light"] {
+    --bg: #f5f0e8;
+    --bg2: #ffffff;
+    --card: #ffffff;
+    --card2: #f0ebe3;
+    --text: #1a1a1a;
+    --muted: #6b7280;
+    --border: #1a1a1a;
+    --shadow-color: #1a1a1a;
+    --tag-text: #fff;
+    --phone-bg: #e8e0d4;
+    --phone-screen: #ffffff;
+    --phone-bezel: #1a1a1a;
+    --code-bg: #f0ebe3;
+    --highlight: #fef08a;
+  }
+
+  [data-theme="dark"] {
+    --bg: #0f172a;
+    --bg2: #1a1a1a;
+    --card: #1e293b;
+    --card2: #334155;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --border: #475569;
+    --shadow-color: #000000;
+    --tag-text: #fff;
+    --phone-bg: #141414;
+    --phone-screen: #1e293b;
+    --phone-bezel: #475569;
+    --code-bg: #334155;
+    --highlight: #854d0e;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font-mono);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  /* ---- THEME TOGGLE ---- */
+  .theme-toggle {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 999;
+    border: var(--border-w) solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color);
+    transition: all 0.15s;
+  }
+  .theme-toggle:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 7px 7px 0 var(--shadow-color);
+  }
+  .theme-toggle:active {
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0 var(--shadow-color);
+  }
+
+  /* ---- DOC NAV ---- */
+  .doc-nav {
+    display: flex;
+    gap: 0;
+    margin: 0 auto 2rem;
+    width: 100%;
+    border: var(--border-w) solid var(--border);
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color);
+    overflow: hidden;
+    flex-wrap: wrap;
+  }
+  .nav-link {
+    flex: 0 1 calc(100% / 3);
+    text-align: center;
+    padding: 0.5rem 0.4rem;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-decoration: none;
+    color: var(--text);
+    background: var(--card);
+    border-right: var(--border-w) solid var(--border);
+    border-bottom: var(--border-w) solid var(--border);
+    transition: background 0.15s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .nav-link:nth-child(3n) { border-right: none; }
+  .nav-link:nth-last-child(-n+3) { border-bottom: none; }
+  .nav-link:hover { background: var(--card2); }
+  .nav-link.active {
+    background: var(--border);
+    color: var(--text);
+  }
+
+  /* ---- LAYOUT ---- */
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+  }
+
+  h1 {
+    font-size: 2.4rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: -0.03em;
+    border-bottom: var(--border-w) solid var(--border);
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .subtitle {
+    font-size: 0.9rem;
+    color: var(--muted);
+    margin-bottom: 3rem;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
+    margin: 3rem 0 1rem;
+    padding: 0.5rem 1rem;
+    background: var(--text);
+    color: var(--bg);
+    display: inline-block;
+  }
+
+  h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 1.5rem 0 0.5rem;
+    border-left: 6px solid var(--party-0);
+    padding-left: 0.75rem;
+  }
+
+  p { margin: 0.5rem 0; font-size: 0.88rem; }
+
+  /* ---- CARDS ---- */
+  .card {
+    border: var(--border-w) solid var(--border);
+    background: var(--card);
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color);
+    position: relative;
+  }
+
+  .card-label {
+    position: absolute;
+    top: -0.7rem;
+    left: 1rem;
+    background: var(--card);
+    padding: 0 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+  }
+
+  /* ---- TAGS ---- */
+  .tag {
+    display: inline-block;
+    font-size: 0.6rem;
+    padding: 0.15rem 0.5rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    vertical-align: middle;
+    border: 2px solid;
+  }
+  .tag.priv { background: var(--secret); color: var(--tag-text); border-color: var(--secret); }
+  .tag.pub { background: var(--public); color: var(--tag-text); border-color: var(--public); }
+
+  /* ---- CODE ---- */
+  .code {
+    background: var(--code-bg);
+    border: 2px solid var(--border);
+    padding: 1rem;
+    margin: 0.75rem 0;
+    font-size: 0.78rem;
+    overflow-x: auto;
+    white-space: pre;
+    line-height: 1.5;
+  }
+
+  /* ---- FLOW DIAGRAM ---- */
+  .flow-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 1rem 0;
+    flex-wrap: wrap;
+  }
+  .flow-box {
+    border: var(--border-w) solid var(--border);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-align: center;
+    min-width: 120px;
+    background: var(--card);
+  }
+  .flow-box.highlight { background: var(--highlight); }
+  .flow-arrow {
+    font-size: 1.5rem;
+    color: var(--muted);
+    font-weight: 900;
+  }
+
+  /* ---- PARTY BOXES ---- */
+  .parties {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 1rem 0;
+  }
+  .party-box {
+    border: var(--border-w) solid;
+    padding: 1rem;
+    flex: 1;
+    min-width: 140px;
+    min-width: 200px;
+    max-width: 320px;
+  }
+  .party-box.p0 { border-color: var(--party-0); }
+  .party-box.p1 { border-color: var(--party-1); }
+  .party-box.p2 { border-color: var(--party-2); }
+  .party-box.p3 { border-color: var(--party-3); }
+  .party-name {
+    font-weight: 800;
+    font-size: 0.85rem;
+    margin-bottom: 0.4rem;
+  }
+  .party-box.p0 .party-name { color: var(--party-0); }
+  .party-box.p1 .party-name { color: var(--party-1); }
+  .party-box.p2 .party-name { color: var(--party-2); }
+  .party-box.p3 .party-name { color: var(--party-3); }
+
+  .var-list { list-style: none; font-size: 0.78rem; }
+  .var-list li { padding: 0.2rem 0; }
+  .var-list .secret { border-left: 3px solid var(--secret); padding-left: 0.5rem; margin: 0.15rem 0; }
+  .var-list .public-v { border-left: 3px solid var(--public); padding-left: 0.5rem; margin: 0.15rem 0; }
+
+  /* ---- DIVIDER ---- */
+  .divider {
+    text-align: center;
+    padding: 2.5rem 0 1rem;
+    font-size: 1.3rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    border-top: 2px dashed var(--muted);
+    margin-top: 2rem;
+  }
+
+  /* ---- TABLE ---- */
+  .overview-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+    margin: 0.75rem 0;
+  }
+  .overview-table th {
+    text-align: left;
+    padding: 0.5rem 0.6rem;
+    border-bottom: var(--border-w) solid var(--border);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+  }
+  .overview-table td {
+    padding: 0.4rem 0.6rem;
+    border-bottom: 1px solid var(--card2);
+    vertical-align: top;
+  }
+
+  /* ---- CALLOUT ---- */
+  .callout {
+    border-left: 6px solid var(--warn);
+    background: var(--card2);
+    padding: 1rem 1.25rem;
+    margin: 1rem 0;
+    font-size: 0.82rem;
+  }
+  .callout.info { border-left-color: var(--public); }
+  .callout.ok { border-left-color: var(--ok); }
+  .callout.danger { border-left-color: var(--secret); }
+  .callout-title { font-weight: 800; margin-bottom: 0.25rem; text-transform: uppercase; font-size: 0.75rem; }
+
+  /* ============================================================
+     PHONE MOCKUP
+     ============================================================ */
+  .phone-row {
+    display: flex;
+    gap: 2rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: 2rem 0;
+  }
+  .phone {
+    width: 280px;
+    border: var(--border-w) solid var(--phone-bezel);
+    background: var(--phone-bg);
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color);
+    position: relative;
+    padding: 0;
+  }
+  .phone-notch {
+    width: 100px;
+    height: 24px;
+    background: var(--phone-bezel);
+    margin: 0 auto;
+    position: relative;
+    z-index: 2;
+  }
+  .phone-screen {
+    background: var(--phone-screen);
+    margin: 0 8px 8px;
+    min-height: 480px;
+    border: 2px solid var(--phone-bezel);
+    padding: 1rem;
+    font-size: 0.72rem;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .phone-label {
+    text-align: center;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.75rem 0 0.5rem;
+    color: var(--muted);
+  }
+
+  /* phone screen elements */
+  .screen-header {
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-align: center;
+    padding: 0.5rem 0;
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+  }
+  .screen-btn {
+    display: block;
+    width: 100%;
+    border: var(--border-w) solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.6rem;
+    margin: 0.4rem 0;
+    text-align: center;
+    cursor: pointer;
+    box-shadow: 3px 3px 0 var(--shadow-color);
+  }
+  .screen-btn.primary {
+    background: var(--party-0);
+    color: #fff;
+    border-color: var(--party-0);
+  }
+  .screen-field {
+    border: 2px solid var(--border);
+    padding: 0.5rem;
+    margin: 0.4rem 0;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    background: var(--code-bg);
+  }
+  .screen-field-label {
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 0.5rem;
+  }
+  .screen-status {
+    text-align: center;
+    padding: 0.5rem;
+    margin: 0.4rem 0;
+    font-weight: 700;
+    font-size: 0.72rem;
+    border: 2px solid;
+  }
+  .screen-status.ok { border-color: var(--ok); color: var(--ok); }
+  .screen-status.warn { border-color: var(--warn); color: var(--warn); }
+  .screen-status.err { border-color: var(--secret); color: var(--secret); }
+
+  .screen-icon { font-size: 2rem; text-align: center; padding: 0.5rem 0; }
+  .screen-detail {
+    font-size: 0.65rem;
+    color: var(--muted);
+    word-break: break-all;
+    margin: 0.25rem 0;
+  }
+
+  .screen-divider {
+    border-top: 1px dashed var(--muted);
+    margin: 0.6rem 0;
+  }
+
+  .screen-peer-item {
+    border: 1px solid var(--border);
+    padding: 0.5rem;
+    margin: 0.3rem 0;
+    background: var(--card2);
+  }
+
+  .screen-code-block {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    padding: 0.4rem;
+    margin: 0.3rem 0;
+    font-size: 0.62rem;
+    word-break: break-all;
+  }
+
+  /* ---- FOOTER ---- */
+  .footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.72rem;
+    padding: 3rem 0 2rem;
+    border-top: 2px solid var(--card2);
+    margin-top: 3rem;
+  }
+
+  /* ---- PRINT ---- */
+  @media print {
+    .theme-toggle { display: none; }
+    body { background: white; color: #1a1a1a; }
+    .card { box-shadow: none; border-color: #ccc; }
+    .phone { box-shadow: none; }
+  }
+</style>
+<script src="https://fathom-sveltekit.mark-phillips-f7c.workers.dev/api/tracker/abc9c4a5b463d635" defer></script>
+</head>
+<body data-theme="light">
+
+<button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">[ LIGHT ]</button>
+
+<nav class="doc-nav">
+  <a href="/index.html" class="nav-link">Demo Guide</a>
+  <a href="/threshold-signing.html" class="nav-link">Threshold Signing</a>
+  <a href="/dkg-ceremony.html" class="nav-link">DKG Ceremony</a>
+  <a href="/device-to-device.html" class="nav-link active">Device-to-Device</a>
+  <a href="/server-architecture.html" class="nav-link">Server Architecture</a>
+  <a href="/shamir-splitting.html" class="nav-link">Shamir Splitting</a>
+  <a href="/ios-encryption-backup-strategy.html" class="nav-link">iOS Encryption</a>
+  <a href="/key-management.html" class="nav-link">Key Management</a>
+  <a href="/signing-operations.html" class="nav-link">Signing Ops</a>
+</nav>
+
+<div class="container">
+
+<!-- ============================================================ -->
+<h1>Device-to-Device MPC</h1>
+<p class="subtitle">Peer-to-Peer Multi-Party Computation — No Server Required</p>
+<!-- ============================================================ -->
+
+<!-- ============================================================
+     SECTION 1: OVERVIEW
+     ============================================================ -->
+<h2>1. Protocol Overview</h2>
+
+<div class="card">
+<span class="card-label">What is Device-to-Device MPC?</span>
+<p>In Device-to-Device MPC, two or more smartphones connect directly to each other (peer-to-peer) to perform threshold signing. No central server is required. The phones discover each other, establish a secure session, and run the MPC protocol locally. Each phone holds one key share and uses its own cryptographic processor to sign.</p>
+
+<p style="margin-top:0.75rem"><strong>Transport options:</strong> Bluetooth Low Energy (BLE), MultipeerConnectivity (iOS), peer-discovery over local WiFi, or relay servers for out-of-range pairing.</p>
+
+<table class="overview-table">
+  <tr><th>Transport</th><th>Range</th><th>Latency</th><th>Security</th></tr>
+  <tr><td><strong>BLE</strong></td><td>~30m</td><td>&lt;50ms</td><td>Encrypted link layer</td></tr>
+  <tr><td><strong>MultipeerConnectivity (iOS)</strong></td><td>WiFi/BLE/P2P</td><td>&lt;100ms</td><td>TLS + peer cert</td></tr>
+  <tr><td><strong>WiFi Direct (Android)</strong></td><td>~100m</td><td>&lt;100ms</td><td>WPA2 Enterprise</td></tr>
+  <tr><td><strong>QR + Relay</strong></td><td>Internet</td><td>200ms+</td><td>E2E encryption + MAC</td></tr>
+</table>
+</div>
+
+<!-- ============================================================
+     SECTION 2: DISCOVERY & PAIRING
+     ============================================================ -->
+<h2>2. Discovery and Pairing Flow</h2>
+
+<div class="card">
+<span class="card-label">Phase 1: Device Discovery</span>
+
+<div class="flow-row">
+  <div class="flow-box" style="border-color: var(--party-0)">Phone A broadcasts availability</div>
+  <div class="flow-arrow">&harr;</div>
+  <div class="flow-box highlight">Phone B scans for peers</div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-box" style="border-color: var(--party-1)">Phone A appears in list</div>
+</div>
+
+<p>Both phones advertise themselves on the local network using Bonjour (mDNS) or BLE scanning. Each device shows a friendly name and status indicator.</p>
+</div>
+
+<div class="card">
+<span class="card-label">Phase 2: Pairing Verification</span>
+
+<div class="parties">
+  <div class="party-box p0">
+    <div class="party-name">Phone A (Initiator)</div>
+    <ul class="var-list">
+      <li class="secret">Generates random nonce N_a</li>
+      <li class="public-v">Displays 6-digit code (HMAC-SHA256 of N_a)</li>
+    </ul>
+  </div>
+  <div class="party-box p1">
+    <div class="party-name">Phone B (Responder)</div>
+    <ul class="var-list">
+      <li class="secret">Generates random nonce N_b</li>
+      <li class="public-v">Displays 6-digit code (HMAC-SHA256 of N_b)</li>
+    </ul>
+  </div>
+</div>
+
+<p>Both users verify that the codes match on both screens (out-of-band). This prevents man-in-the-middle attacks. Once verified, both phones establish a TLS session authenticated by the shared nonces.</p>
+</div>
+
+<div class="card">
+<span class="card-label">Phase 3: Session Establishment</span>
+
+<div class="code">Phone A ← TLS handshake → Phone B
+  Cipher: TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+  Session timeout: 30 minutes
+  Perfect forward secrecy: Yes
+  Peer certificate verification: HMAC(N_a, N_b)</div>
+
+<p>Both phones now have a secure, encrypted, and authenticated channel. They can send messages without eavesdropping or tampering.</p>
+</div>
+
+<!-- ============================================================
+     SECTION 3: KEY GENERATION
+     ============================================================ -->
+<h2>3. Remote Key Generation</h2>
+
+<div class="card">
+<span class="card-label">2-Party ECDSA KeyGen</span>
+
+<div class="flow-row">
+  <div class="flow-box">Phone A: Generate share x_0</div>
+  <div class="flow-arrow">&harr;</div>
+  <div class="flow-box">Phone B: Generate share x_1</div>
+</div>
+<div class="flow-row">
+  <div class="flow-box">Exchange commitments</div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-box">Agree on public key Q</div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-box highlight">Store locally on device</div>
+</div>
+
+<p><strong>Round 1 (Commitment):</strong> Each phone generates a random key share and a commitment hash. The commitments are exchanged and verified against received messages.</p>
+
+<p><strong>Round 2 (Key Derivation):</strong> Both phones derive the same public key Q = (x_0 + x_1)*G and verify it matches.</p>
+
+<p><strong>Round 3 (Storage):</strong> Each phone stores its share in the Secure Enclave (iOS) or StrongBox (Android) — a hardware-backed keystore that prevents extraction.</p>
+
+<div class="callout ok">
+<div class="callout-title">Zero-Knowledge Proofs</div>
+During KeyGen, both phones prove knowledge of their shares using zero-knowledge proofs (Schnorr's protocol). This ensures correctness without revealing the share values.
+</div>
+</div>
+
+<!-- ============================================================
+     SECTION 4: SIGNING
+     ============================================================ -->
+<h2>4. Collaborative Signing</h2>
+
+<div class="card">
+<span class="card-label">MPC Signing Protocol</span>
+
+<div class="flow-row">
+  <div class="flow-box">User initiates sign request</div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-box">Message hash is broadcast</div>
+  <div class="flow-arrow">&harr;</div>
+  <div class="flow-box highlight">Phone A &amp; B run 3-round MPC</div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-box">Signature completed on one phone</div>
+</div>
+
+<p><strong>Round 1 (Nonce Generation):</strong> Each phone generates a random nonce k_i and broadcasts a commitment to it.</p>
+
+<p><strong>Round 2 (Partial Signatures):</strong> Each phone computes a partial signature component and sends it to the other. The partial components are combined.</p>
+
+<p><strong>Round 3 (Final Signature):</strong> One phone (designated by access policy) receives the final signature (r, s) and stores it.</p>
+
+<div class="code">Signature message flow:
+Phone A: commit(k_0), share(msg_1)
+Phone B: commit(k_1), share(msg_2)
+Phone A: open nonces, receive (r, s)
+Result: Standard ECDSA signature (67-71 bytes)</div>
+</div>
+
+<!-- ============================================================
+     SECTION 5: MOBILE UX
+     ============================================================ -->
+<div class="divider">Mobile Experience</div>
+<h2>5. iOS App — Device-to-Device Flow</h2>
+
+<h3 style="border-left-color: var(--party-0)">5.1 Discovery and Pairing</h3>
+
+<div class="phone-row">
+
+  <!-- Phone 1: Peers List -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-header">Find Peers</div>
+      <div style="margin-top:0.5rem">
+        <div class="screen-field-label">Nearby Devices</div>
+        <div class="screen-peer-item">
+          Alice's iPhone<br>
+          <span style="font-size:0.62rem; color:var(--ok)">●</span> <span style="color:var(--ok)">Ready</span>
+        </div>
+        <div class="screen-peer-item">
+          Bob's iPad<br>
+          <span style="font-size:0.62rem; color:var(--ok)">●</span> <span style="color:var(--ok)">Available</span>
+        </div>
+        <div class="screen-peer-item">
+          Carol's iPhone<br>
+          <span style="font-size:0.62rem; color:var(--muted)">●</span> <span style="color:var(--muted)">Offline</span>
+        </div>
+      </div>
+      <button class="screen-btn primary" style="margin-top:0.75rem">SELECT ALICE'S IPHONE</button>
+    </div>
+    <div class="phone-label">Peers List</div>
+  </div>
+
+  <!-- Phone 2: Verify Code -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-header">Verify Peer</div>
+      <div class="screen-icon">🔐</div>
+      <p style="text-align:center; font-size:0.72rem; margin:0.75rem 0">
+        Confirm this code appears on both devices:
+      </p>
+      <div class="screen-code-block" style="font-size:1.2rem; text-align:center; font-weight:900; letter-spacing:0.1em">
+        3 8 5 7 2 1
+      </div>
+      <div class="screen-divider"></div>
+      <button class="screen-btn primary">CODES MATCH</button>
+      <button class="screen-btn">CODES DON'T MATCH</button>
+    </div>
+    <div class="phone-label">Verify</div>
+  </div>
+
+</div>
+
+<h3 style="border-left-color: var(--party-0)">5.2 Key Generation</h3>
+
+<div class="phone-row">
+
+  <!-- Phone 3: KeyGen Progress -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-header">KeyGen in Progress</div>
+      <div style="margin:1rem 0">
+        <div style="font-size:0.7rem; color:var(--muted); margin-bottom:0.3rem">Round 1: Generate shares</div>
+        <div style="height:4px; background:var(--ok); margin-bottom:0.5rem"></div>
+        <div style="font-size:0.7rem; color:var(--muted); margin-bottom:0.3rem">Round 2: Exchange commitments</div>
+        <div style="height:4px; background:var(--party-0); margin-bottom:0.5rem"></div>
+        <div style="font-size:0.7rem; color:var(--muted); margin-bottom:0.3rem">Round 3: Verify public key</div>
+        <div style="height:4px; background:var(--card2); margin-bottom:0.5rem"></div>
+      </div>
+      <div class="screen-status ok">Connected to Alice's iPhone</div>
+      <p style="font-size:0.65rem; color:var(--muted); margin-top:0.5rem">
+        Generating 256-bit key on secp256k1...
+      </p>
+    </div>
+    <div class="phone-label">KeyGen</div>
+  </div>
+
+  <!-- Phone 4: KeyGen Complete -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-header">Key Generated ✓</div>
+      <div class="screen-icon">✓</div>
+      <div class="screen-field-label">Your Key Share</div>
+      <div class="screen-detail">x₀ (stored in Secure Enclave)</div>
+      <div class="screen-divider"></div>
+      <div class="screen-field-label">Public Key (Shared)</div>
+      <div class="screen-code-block">02 8a7f9e2c...</div>
+      <div class="screen-divider"></div>
+      <button class="screen-btn primary" style="margin-top:0.5rem">BACKUP KEY</button>
+      <button class="screen-btn">START SIGNING</button>
+    </div>
+    <div class="phone-label">Complete</div>
+  </div>
+
+</div>
+
+<h3 style="border-left-color: var(--party-0)">5.3 Collaborative Signing</h3>
+
+<div class="phone-row">
+
+  <!-- Phone 5: Sign Request -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-header">Sign Request</div>
+      <div class="screen-field-label">Message Hash</div>
+      <div class="screen-code-block">5a7f8d...</div>
+      <div class="screen-field-label">Purpose</div>
+      <div class="screen-field">Approve transaction</div>
+      <div class="screen-divider"></div>
+      <div class="screen-field-label">Requesting Party</div>
+      <div class="screen-detail">Alice's iPhone</div>
+      <button class="screen-btn primary" style="margin-top:0.5rem">APPROVE</button>
+      <button class="screen-btn">REJECT</button>
+    </div>
+    <div class="phone-label">Sign</div>
+  </div>
+
+  <!-- Phone 6: Signing in Progress -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-header">Signing...</div>
+      <div style="margin:1rem 0">
+        <div style="font-size:0.7rem; color:var(--muted); margin-bottom:0.3rem">Round 1: Generate nonce</div>
+        <div style="height:4px; background:var(--ok); margin-bottom:0.5rem"></div>
+        <div style="font-size:0.7rem; color:var(--muted); margin-bottom:0.3rem">Round 2: Compute partial sig</div>
+        <div style="height:4px; background:var(--party-0); margin-bottom:0.5rem"></div>
+        <div style="font-size:0.7rem; color:var(--muted); margin-bottom:0.3rem">Round 3: Final signature</div>
+        <div style="height:4px; background:var(--card2); margin-bottom:0.5rem"></div>
+      </div>
+      <div class="screen-status ok">Connected to peer</div>
+      <p style="font-size:0.65rem; color:var(--muted); margin-top:0.5rem">
+        Processing MPC protocol...
+      </p>
+    </div>
+    <div class="phone-label">Progress</div>
+  </div>
+
+  <!-- Phone 7: Signature Ready -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-header">Signature Ready</div>
+      <div class="screen-icon">✓</div>
+      <div class="screen-field-label">Signature (DER)</div>
+      <div class="screen-code-block">30 45 02 20 8a7f...</div>
+      <div class="screen-divider"></div>
+      <div class="screen-field-label">Verification</div>
+      <div class="screen-status ok">Valid on secp256k1</div>
+      <button class="screen-btn primary" style="margin-top:0.5rem">COPY TO CLIPBOARD</button>
+      <button class="screen-btn">SHARE WITH ALICE</button>
+    </div>
+    <div class="phone-label">Done</div>
+  </div>
+
+</div>
+
+<!-- ============================================================
+     SECTION 6: COMPARISON
+     ============================================================ -->
+<h2>6. Device-to-Device vs. Server-Based MPC</h2>
+
+<div class="card">
+<span class="card-label">Comparison</span>
+
+<table class="overview-table">
+  <tr>
+    <th>Aspect</th>
+    <th>Device-to-Device</th>
+    <th>Server-Based MPC</th>
+  </tr>
+  <tr>
+    <td><strong>Infrastructure</strong></td>
+    <td>Peer-to-peer (no server)</td>
+    <td>Client + Server</td>
+  </tr>
+  <tr>
+    <td><strong>Latency</strong></td>
+    <td>Low (BLE/WiFi direct)</td>
+    <td>Higher (network round-trip)</td>
+  </tr>
+  <tr>
+    <td><strong>Availability</strong></td>
+    <td>Requires both devices online</td>
+    <td>Server always available</td>
+  </tr>
+  <tr>
+    <td><strong>Privacy</strong></td>
+    <td>No intermediary</td>
+    <td>Server sees message hashes</td>
+  </tr>
+  <tr>
+    <td><strong>Scalability</strong></td>
+    <td>Good for 2-3 parties</td>
+    <td>Better for N parties</td>
+  </tr>
+  <tr>
+    <td><strong>Use Case</strong></td>
+    <td>Peer cosigners, family vaults</td>
+    <td>Mobile wallet with commitment server</td>
+  </tr>
+</table>
+</div>
+
+<div class="callout info">
+<div class="callout-title">When to Use Device-to-Device</div>
+<p><strong>Best for:</strong> Two family members approving transactions together, co-signer scenarios where both parties must physically be present, peer-to-peer commerce apps.</p>
+<p style="margin-top:0.4rem"><strong>Not ideal for:</strong> Large thresholds (3+), always-available signing (if one device is offline, signing fails), enterprise deployments.</p>
+</div>
+
+<!-- ============================================================
+     FOOTER
+     ============================================================ -->
+<div class="footer">
+<p>CB-MPC Visual Guides — Device-to-Device MPC</p>
+<p style="font-size:0.65rem; margin-top:0.5rem">
+  <a href="/index.html" style="color:var(--muted); text-decoration:none">← Back to Demo Guide</a>
+</p>
+</div>
+
+</div>
+
+<script>
+  function toggleTheme() {
+    const body = document.body;
+    const btn = document.getElementById('themeBtn');
+    if (body.getAttribute('data-theme') === 'dark') {
+      body.setAttribute('data-theme', 'light');
+    localStorage.setItem('cb-mpc-theme', 'light');
+      btn.textContent = '[ DARK ]';
+    } else {
+      body.setAttribute('data-theme', 'dark');
+    localStorage.setItem('cb-mpc-theme', 'dark');
+      btn.textContent = '[ LIGHT ]';
+    }
+  }
+
+  // Initialize theme from localStorage, default to light
+  (function() {
+    var saved = localStorage.getItem("cb-mpc-theme");
+    if (saved) {
+      document.body.setAttribute("data-theme", saved);
+      document.getElementById("themeBtn").textContent = saved === "dark" ? "[ LIGHT ]" : "[ DARK ]";
+    }
+  })();
+</script>
+
+</body>
+</html>

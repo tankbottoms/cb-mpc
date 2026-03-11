@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Server Architecture — Visual Guide</title>
+<style>
+  /* ============================================================
+     THEME SYSTEM — light/dark via [data-theme]
+     ============================================================ */
+  :root {
+    --font-mono: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    --font-sans: 'Inter', 'SF Pro', -apple-system, system-ui, sans-serif;
+
+    /* neo-brutalism constants */
+    --border-w: 3px;
+    --shadow-offset: 5px;
+    --radius: 0;
+
+    /* party colors (stable across themes) */
+    --party-0: #6366f1;
+    --party-1: #f59e0b;
+    --party-2: #10b981;
+    --party-3: #ef4444;
+    --secret: #ef4444;
+    --public: #3b82f6;
+    --mail: #8b5cf6;
+    --ok: #22c55e;
+    --warn: #f97316;
+  }
+
+  [data-theme="light"] {
+    --bg: #f5f0e8;
+    --bg2: #ffffff;
+    --card: #ffffff;
+    --card2: #f0ebe3;
+    --text: #1a1a1a;
+    --muted: #6b7280;
+    --border: #1a1a1a;
+    --shadow-color: #1a1a1a;
+    --tag-text: #fff;
+    --phone-bg: #e8e0d4;
+    --phone-screen: #ffffff;
+    --phone-bezel: #1a1a1a;
+    --code-bg: #f0ebe3;
+    --highlight: #fef08a;
+  }
+
+  [data-theme="dark"] {
+    --bg: #0f172a;
+    --bg2: #1a1a1a;
+    --card: #1e293b;
+    --card2: #334155;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --border: #475569;
+    --shadow-color: #000000;
+    --tag-text: #fff;
+    --phone-bg: #141414;
+    --phone-screen: #1e293b;
+    --phone-bezel: #475569;
+    --code-bg: #334155;
+    --highlight: #854d0e;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font-mono);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  /* ---- THEME TOGGLE ---- */
+  .theme-toggle {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 999;
+    border: var(--border-w) solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color);
+    transition: all 0.15s;
+  }
+  .theme-toggle:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 7px 7px 0 var(--shadow-color);
+  }
+  .theme-toggle:active {
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0 var(--shadow-color);
+  }
+
+  /* ---- DOC NAV ---- */
+  .doc-nav {
+    display: flex;
+    gap: 0;
+    margin: 0 auto 2rem;
+    width: 100%;
+    border: var(--border-w) solid var(--border);
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color);
+    overflow: hidden;
+    flex-wrap: wrap;
+  }
+  .nav-link {
+    flex: 0 1 calc(100% / 3);
+    text-align: center;
+    padding: 0.5rem 0.4rem;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-decoration: none;
+    color: var(--text);
+    background: var(--card);
+    border-right: var(--border-w) solid var(--border);
+    border-bottom: var(--border-w) solid var(--border);
+    transition: background 0.15s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .nav-link:nth-child(3n) { border-right: none; }
+  .nav-link:nth-last-child(-n+3) { border-bottom: none; }
+  .nav-link:hover { background: var(--card2); }
+  .nav-link.active {
+    background: var(--border);
+    color: var(--text);
+  }
+
+  /* ---- LAYOUT ---- */
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+  }
+
+  h1 {
+    font-size: 2.4rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: -0.03em;
+    border-bottom: var(--border-w) solid var(--border);
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .subtitle {
+    font-size: 0.9rem;
+    color: var(--muted);
+    margin-bottom: 3rem;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
+    margin: 3rem 0 1rem;
+    padding: 0.5rem 1rem;
+    background: var(--text);
+    color: var(--bg);
+    display: inline-block;
+  }
+
+  h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 1.5rem 0 0.5rem;
+    border-left: 6px solid var(--party-0);
+    padding-left: 0.75rem;
+  }
+
+  p { margin: 0.5rem 0; font-size: 0.88rem; }
+
+  /* ---- CARDS ---- */
+  .card {
+    border: var(--border-w) solid var(--border);
+    background: var(--card);
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color);
+    position: relative;
+  }
+
+  .card-label {
+    position: absolute;
+    top: -0.7rem;
+    left: 1rem;
+    background: var(--card);
+    padding: 0 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+  }
+
+  /* ---- TAGS ---- */
+  .tag {
+    display: inline-block;
+    font-size: 0.6rem;
+    padding: 0.15rem 0.5rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    vertical-align: middle;
+    border: 2px solid;
+  }
+  .tag.priv { background: var(--secret); color: var(--tag-text); border-color: var(--secret); }
+  .tag.pub { background: var(--public); color: var(--tag-text); border-color: var(--public); }
+
+  /* ---- CODE ---- */
+  .code {
+    background: var(--code-bg);
+    border: 2px solid var(--border);
+    padding: 1rem;
+    margin: 0.75rem 0;
+    font-size: 0.78rem;
+    overflow-x: auto;
+    white-space: pre;
+    line-height: 1.5;
+  }
+
+  /* ---- FLOW DIAGRAM ---- */
+  .flow-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 1rem 0;
+    flex-wrap: wrap;
+  }
+  .flow-box {
+    border: var(--border-w) solid var(--border);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-align: center;
+    min-width: 120px;
+    background: var(--card);
+  }
+  .flow-box.highlight { background: var(--highlight); }
+  .flow-arrow {
+    font-size: 1.5rem;
+    color: var(--muted);
+    font-weight: 900;
+  }
+
+  /* ---- PARTY BOXES ---- */
+  .parties {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 1rem 0;
+  }
+  .party-box {
+    border: var(--border-w) solid;
+    padding: 1rem;
+    flex: 1;
+    min-width: 140px;
+    min-width: 200px;
+    max-width: 320px;
+  }
+  .party-box.p0 { border-color: var(--party-0); }
+  .party-box.p1 { border-color: var(--party-1); }
+  .party-box.p2 { border-color: var(--party-2); }
+  .party-box.p3 { border-color: var(--party-3); }
+  .party-name {
+    font-weight: 800;
+    font-size: 0.85rem;
+    margin-bottom: 0.4rem;
+  }
+  .party-box.p0 .party-name { color: var(--party-0); }
+  .party-box.p1 .party-name { color: var(--party-1); }
+  .party-box.p2 .party-name { color: var(--party-2); }
+  .party-box.p3 .party-name { color: var(--party-3); }
+
+  .var-list { list-style: none; font-size: 0.78rem; }
+  .var-list li { padding: 0.2rem 0; }
+  .var-list .secret { border-left: 3px solid var(--secret); padding-left: 0.5rem; margin: 0.15rem 0; }
+  .var-list .public-v { border-left: 3px solid var(--public); padding-left: 0.5rem; margin: 0.15rem 0; }
+
+  /* ---- DIVIDER ---- */
+  .divider {
+    text-align: center;
+    padding: 2.5rem 0 1rem;
+    font-size: 1.3rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    border-top: 2px dashed var(--muted);
+    margin-top: 2rem;
+  }
+
+  /* ---- TABLE ---- */
+  .overview-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+    margin: 0.75rem 0;
+  }
+  .overview-table th {
+    text-align: left;
+    padding: 0.5rem 0.6rem;
+    border-bottom: var(--border-w) solid var(--border);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+  }
+  .overview-table td {
+    padding: 0.4rem 0.6rem;
+    border-bottom: 1px solid var(--card2);
+    vertical-align: top;
+  }
+
+  /* ---- CALLOUT ---- */
+  .callout {
+    border-left: 6px solid var(--warn);
+    background: var(--card2);
+    padding: 1rem 1.25rem;
+    margin: 1rem 0;
+    font-size: 0.82rem;
+  }
+  .callout.info { border-left-color: var(--public); }
+  .callout.ok { border-left-color: var(--ok); }
+  .callout.danger { border-left-color: var(--secret); }
+  .callout-title { font-weight: 800; margin-bottom: 0.25rem; text-transform: uppercase; font-size: 0.75rem; }
+
+  /* ============================================================
+     PHONE MOCKUP
+     ============================================================ */
+  .phone-row {
+    display: flex;
+    gap: 2rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: 2rem 0;
+  }
+  .phone {
+    width: 280px;
+    border: var(--border-w) solid var(--phone-bezel);
+    background: var(--phone-bg);
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color);
+    position: relative;
+    padding: 0;
+  }
+  .phone-notch {
+    width: 100px;
+    height: 24px;
+    background: var(--phone-bezel);
+    margin: 0 auto;
+    position: relative;
+    z-index: 2;
+  }
+  .phone-screen {
+    background: var(--phone-screen);
+    margin: 0 8px 8px;
+    min-height: 480px;
+    border: 2px solid var(--phone-bezel);
+    padding: 1rem;
+    font-size: 0.72rem;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .phone-label {
+    text-align: center;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.75rem 0 0.5rem;
+    color: var(--muted);
+  }
+
+  /* phone screen elements */
+  .screen-header {
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-align: center;
+    padding: 0.5rem 0;
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+  }
+  .screen-btn {
+    display: block;
+    width: 100%;
+    border: var(--border-w) solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.6rem;
+    margin: 0.4rem 0;
+    text-align: center;
+    cursor: pointer;
+    box-shadow: 3px 3px 0 var(--shadow-color);
+  }
+  .screen-btn.primary {
+    background: var(--party-0);
+    color: #fff;
+    border-color: var(--party-0);
+  }
+  .screen-field {
+    border: 2px solid var(--border);
+    padding: 0.5rem;
+    margin: 0.4rem 0;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    background: var(--code-bg);
+  }
+  .screen-field-label {
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 0.5rem;
+  }
+  .screen-status {
+    text-align: center;
+    padding: 0.5rem;
+    margin: 0.4rem 0;
+    font-weight: 700;
+    font-size: 0.72rem;
+    border: 2px solid;
+  }
+  .screen-status.ok { border-color: var(--ok); color: var(--ok); }
+  .screen-status.warn { border-color: var(--warn); color: var(--warn); }
+  .screen-status.err { border-color: var(--secret); color: var(--secret); }
+
+  .screen-icon { font-size: 2rem; text-align: center; padding: 0.5rem 0; }
+  .screen-detail {
+    font-size: 0.65rem;
+    color: var(--muted);
+    word-break: break-all;
+    margin: 0.25rem 0;
+  }
+
+  .screen-divider {
+    border-top: 1px dashed var(--muted);
+    margin: 0.6rem 0;
+  }
+
+  .screen-api-endpoint {
+    border: 1px solid var(--party-0);
+    padding: 0.4rem;
+    margin: 0.3rem 0;
+    background: var(--card2);
+    font-size: 0.62rem;
+  }
+
+  /* ---- FOOTER ---- */
+  .footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.72rem;
+    padding: 3rem 0 2rem;
+    border-top: 2px solid var(--card2);
+    margin-top: 3rem;
+  }
+
+  /* ---- PRINT ---- */
+  @media print {
+    .theme-toggle { display: none; }
+    body { background: white; color: #1a1a1a; }
+    .card { box-shadow: none; border-color: #ccc; }
+    .phone { box-shadow: none; }
+  }
+</style>
+<script src="https://fathom-sveltekit.mark-phillips-f7c.workers.dev/api/tracker/abc9c4a5b463d635" defer></script>
+</head>
+<body data-theme="light">
+
+<button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">[ LIGHT ]</button>
+
+<nav class="doc-nav">
+  <a href="/index.html" class="nav-link">Demo Guide</a>
+  <a href="/threshold-signing.html" class="nav-link">Threshold Signing</a>
+  <a href="/dkg-ceremony.html" class="nav-link">DKG Ceremony</a>
+  <a href="/device-to-device.html" class="nav-link">Device-to-Device</a>
+  <a href="/server-architecture.html" class="nav-link active">Server Architecture</a>
+  <a href="/shamir-splitting.html" class="nav-link">Shamir Splitting</a>
+  <a href="/ios-encryption-backup-strategy.html" class="nav-link">iOS Encryption</a>
+  <a href="/key-management.html" class="nav-link">Key Management</a>
+  <a href="/signing-operations.html" class="nav-link">Signing Ops</a>
+</nav>
+
+<div class="container">
+
+<!-- ============================================================ -->
+<h1>Server Architecture</h1>
+<p class="subtitle">Commitment Server Topology — Client + Server 2-Party MPC</p>
+<!-- ============================================================ -->
+
+<!-- ============================================================
+     SECTION 1: OVERVIEW
+     ============================================================ -->
+<h2>1. Architecture Overview</h2>
+
+<div class="card">
+<span class="card-label">What is Server MPC?</span>
+<p>In a Server-based MPC topology, a mobile client (Party 0) and a commitment server (Party 1) jointly generate and sign keys. The client holds its share in the Secure Enclave; the server holds its share in a HSM (Hardware Security Module) or KMS. All cryptographic operations happen collaboratively over an encrypted WebSocket connection.</p>
+
+<p style="margin-top:0.75rem"><strong>Key advantage:</strong> The server is always available. If the client is offline, the signature request waits. When the client comes back online, it can immediately sign without re-running key generation.</p>
+
+<table class="overview-table">
+  <tr><th>Component</th><th>Location</th><th>Storage</th><th>Role</th></tr>
+  <tr><td><strong>Client</strong></td><td>Mobile device</td><td>Secure Enclave</td><td>Party 0 — initiates signing</td></tr>
+  <tr><td><strong>Server</strong></td><td>Cloud (AWS, GCP, etc.)</td><td>HSM or KMS</td><td>Party 1 — co-signs requests</td></tr>
+  <tr><td><strong>Channel</strong></td><td>Internet</td><td>TLS 1.3</td><td>Encrypted transport</td></tr>
+</table>
+</div>
+
+<!-- ============================================================
+     SECTION 2: TOPOLOGY
+     ============================================================ -->
+<h2>2. System Topology</h2>
+
+<div class="card">
+<span class="card-label">Client-Server Architecture</span>
+
+<div class="parties">
+  <div class="party-box p0">
+    <div class="party-name">Mobile Client (Party 0)</div>
+    <ul class="var-list">
+      <li class="secret">Key share x_0 in Secure Enclave</li>
+      <li class="public-v">Public key Q (verified locally)</li>
+      <li class="public-v">App runs signing UX</li>
+      <li class="secret">Session keys for TLS</li>
+    </ul>
+  </div>
+  <div class="party-box p1">
+    <div class="party-name">Commitment Server (Party 1)</div>
+    <ul class="var-list">
+      <li class="secret">Key share x_1 in HSM</li>
+      <li class="public-v">Public key Q (verified on-chain)</li>
+      <li class="public-v">REST API + WebSocket endpoint</li>
+      <li class="secret">Session tracking &amp; rate limits</li>
+    </ul>
+  </div>
+</div>
+
+<div class="flow-row">
+  <div class="flow-box" style="border-color: var(--party-0)">Client</div>
+  <div class="flow-arrow">←→</div>
+  <div class="flow-box highlight">TLS 1.3<br>WebSocket</div>
+  <div class="flow-arrow">←→</div>
+  <div class="flow-box" style="border-color: var(--party-1)">Server</div>
+</div>
+</div>
+
+<!-- ============================================================
+     SECTION 3: KEY GENERATION
+     ============================================================ -->
+<h2>3. Remote Key Generation</h2>
+
+<div class="card">
+<span class="card-label">KeyGen Protocol Over Network</span>
+
+<div class="code">Client initiates: POST /keygen
+{
+  "curve": "secp256k1",
+  "client_id": "mobile-abc123",
+  "timestamp": 1704067200
+}
+
+Server responds: 101 Switching Protocols (WebSocket)
+
+Round 1: Client sends commitment(x_0)
+Round 2: Server sends commitment(x_1)
+Round 3: Exchange and verify public key Q
+Round 4: Confirm and store locally</div>
+
+<p><strong>Session Management:</strong> Each KeyGen starts a new WebSocket session with a unique session ID. Sessions timeout after 5 minutes of inactivity and require re-authentication via JWT.</p>
+
+<p><strong>Storage:</strong> After KeyGen completes, the client stores x_0 in Secure Enclave (non-exportable). The server stores x_1 in its HSM.</p>
+
+<div class="callout ok">
+<div class="callout-title">Zero-Knowledge Proofs</div>
+During KeyGen, the client and server prove correctness of their shares using non-interactive zero-knowledge proofs (Schnorr with Fischlin's transform). This ensures both parties are honest without exposing the shares.
+</div>
+</div>
+
+<!-- ============================================================
+     SECTION 4: SIGNING WORKFLOW
+     ============================================================ -->
+<h2>4. Collaborative Signing</h2>
+
+<div class="card">
+<span class="card-label">Signing Protocol</span>
+
+<div class="flow-row">
+  <div class="flow-box">User taps "Sign"</div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-box">Client connects to server via WebSocket</div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-box highlight">3-round MPC signing protocol</div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-box">Signature returned to client</div>
+</div>
+
+<p><strong>Round 1 (Setup):</strong> Client sends message hash and nonce commitment. Server generates its nonce and commits.</p>
+
+<p><strong>Round 2 (Compute):</strong> Both parties compute partial signature components in parallel. Client and server exchange partial signatures.</p>
+
+<p><strong>Round 3 (Final):</strong> Client combines the partial signatures into the final ECDSA signature (r, s).</p>
+
+<div class="code">Client sends: POST /sign
+{
+  "msg_hash": "5a7f8d...",
+  "session_id": "sess_xyz789",
+  "nonce_commit": "0245a3...",
+  "metadata": { "tx_id": "0x123...", "value": "1.5 ETH" }
+}
+
+Server responds (via WebSocket):
+{
+  "round": 1,
+  "server_nonce_commit": "0378b1...",
+  "signature_component": "2045c7..."
+}
+
+Client computes final signature:
+(r, s) = combine(client_sig_part, server_sig_part)</div>
+
+<div class="callout info">
+<div class="callout-title">Offline Support</div>
+If the client loses connection mid-signing, the protocol can resume from the last round. The server maintains session state for 10 minutes, allowing reconnection without restarting.
+</div>
+</div>
+
+<!-- ============================================================
+     SECTION 5: API ENDPOINTS
+     ============================================================ -->
+<h2>5. Server API Reference</h2>
+
+<div class="card">
+<span class="card-label">REST Endpoints</span>
+
+<table class="overview-table">
+  <tr>
+    <th>Endpoint</th>
+    <th>Method</th>
+    <th>Purpose</th>
+    <th>Auth</th>
+  </tr>
+  <tr>
+    <td><code>/keygen</code></td>
+    <td>POST</td>
+    <td>Initiate 2PC key generation</td>
+    <td>JWT token</td>
+  </tr>
+  <tr>
+    <td><code>/sign</code></td>
+    <td>POST</td>
+    <td>Initiate collaborative signing</td>
+    <td>JWT token</td>
+  </tr>
+  <tr>
+    <td><code>/refresh</code></td>
+    <td>POST</td>
+    <td>Rotate key shares (forward security)</td>
+    <td>JWT token</td>
+  </tr>
+  <tr>
+    <td><code>/status</code></td>
+    <td>GET</td>
+    <td>Server health &amp; version</td>
+    <td>None</td>
+  </tr>
+  <tr>
+    <td><code>/pubkey</code></td>
+    <td>GET</td>
+    <td>Retrieve public key (after keygen)</td>
+    <td>JWT token</td>
+  </tr>
+</table>
+
+<p style="margin-top:1rem"><strong>WebSocket:</strong> All MPC protocols (KeyGen, Sign, Refresh) use WebSocket for bidirectional real-time communication. Upgrade from HTTP with: <code>GET /ws?session_id=sess_xyz789</code></p>
+</div>
+
+<!-- ============================================================
+     SECTION 6: MOBILE UX
+     ============================================================ -->
+<div class="divider">Mobile Experience</div>
+<h2>6. iOS App — Server-Based Signing</h2>
+
+<h3 style="border-left-color: var(--party-0)">6.1 Server Status and Setup</h3>
+
+<div class="phone-row">
+
+  <!-- Phone 1: Server Status -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-header">Server Status</div>
+      <div class="screen-field-label">Connection</div>
+      <div class="screen-status ok">● Connected (latency: 42ms)</div>
+      <div class="screen-field-label">Server Version</div>
+      <div class="screen-detail">1.3.2 (AWS us-east-1)</div>
+      <div class="screen-divider"></div>
+      <div class="screen-field-label">Public Key</div>
+      <div class="screen-detail" style="font-size:0.6rem">02 8a7f9e2c...</div>
+      <div class="screen-divider"></div>
+      <div class="screen-field-label">Last Refresh</div>
+      <div class="screen-detail">2 days ago</div>
+      <button class="screen-btn primary" style="margin-top:0.5rem">REFRESH KEY SHARES</button>
+    </div>
+    <div class="phone-label">Status</div>
+  </div>
+
+  <!-- Phone 2: Remote KeyGen -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-header">Remote KeyGen</div>
+      <div style="margin:1rem 0">
+        <div style="font-size:0.7rem; color:var(--muted); margin-bottom:0.3rem">Round 1: Generate commitment</div>
+        <div style="height:4px; background:var(--ok); margin-bottom:0.5rem"></div>
+        <div style="font-size:0.7rem; color:var(--muted); margin-bottom:0.3rem">Round 2: Exchange shares</div>
+        <div style="height:4px; background:var(--party-0); margin-bottom:0.5rem"></div>
+        <div style="font-size:0.7rem; color:var(--muted); margin-bottom:0.3rem">Round 3: Verify key</div>
+        <div style="height:4px; background:var(--card2); margin-bottom:0.5rem"></div>
+      </div>
+      <div class="screen-status ok">Connected to server</div>
+      <p style="font-size:0.65rem; color:var(--muted); margin-top:0.5rem">
+        Generating key with commitment server...
+      </p>
+    </div>
+    <div class="phone-label">KeyGen</div>
+  </div>
+
+</div>
+
+<h3 style="border-left-color: var(--party-0)">6.2 Signing Request Flow</h3>
+
+<div class="phone-row">
+
+  <!-- Phone 3: Initiate Sign -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-header">Sign Transaction</div>
+      <div class="screen-field-label">Hash</div>
+      <div style="font-size:0.65rem; color:var(--muted); word-break:break-all">
+        5a7f8d9c2b4e1f3a...
+      </div>
+      <div class="screen-field-label">Amount</div>
+      <div class="screen-field">1.5 ETH to 0x1234...</div>
+      <div class="screen-divider"></div>
+      <div class="screen-field-label">Server Status</div>
+      <div class="screen-status ok">Connected (42ms)</div>
+      <button class="screen-btn primary" style="margin-top:0.5rem">SIGN WITH SERVER</button>
+      <button class="screen-btn">CANCEL</button>
+    </div>
+    <div class="phone-label">Sign</div>
+  </div>
+
+  <!-- Phone 4: Signing Progress -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-header">Signing in Progress</div>
+      <div class="screen-icon">⏳</div>
+      <div style="margin:1rem 0">
+        <div style="font-size:0.7rem; color:var(--muted); margin-bottom:0.3rem">Round 1: Nonce exchange</div>
+        <div style="height:4px; background:var(--ok); margin-bottom:0.5rem"></div>
+        <div style="font-size:0.7rem; color:var(--muted); margin-bottom:0.3rem">Round 2: Partial signatures</div>
+        <div style="height:4px; background:var(--party-0); margin-bottom:0.5rem"></div>
+        <div style="font-size:0.7rem; color:var(--muted); margin-bottom:0.3rem">Round 3: Combine</div>
+        <div style="height:4px; background:var(--card2); margin-bottom:0.5rem"></div>
+      </div>
+      <p style="font-size:0.65rem; color:var(--muted); text-align:center">
+        Running 3-round MPC...
+      </p>
+    </div>
+    <div class="phone-label">Progress</div>
+  </div>
+
+  <!-- Phone 5: Signature Ready -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="screen-header">Signature Ready</div>
+      <div class="screen-icon">✓</div>
+      <div class="screen-field-label">Signature (DER)</div>
+      <div style="font-size:0.62rem; color:var(--muted); word-break:break-all">
+        30 45 02 20 8a7f...
+      </div>
+      <div class="screen-divider"></div>
+      <div class="screen-field-label">Verification</div>
+      <div class="screen-status ok">Valid for secp256k1</div>
+      <button class="screen-btn primary" style="margin-top:0.5rem">BROADCAST TX</button>
+      <button class="screen-btn">COPY SIG</button>
+    </div>
+    <div class="phone-label">Done</div>
+  </div>
+
+</div>
+
+<!-- ============================================================
+     SECTION 7: COMPARISON
+     ============================================================ -->
+<h2>7. Server-Based vs. Other Architectures</h2>
+
+<div class="card">
+<span class="card-label">Architecture Comparison</span>
+
+<table class="overview-table">
+  <tr>
+    <th>Aspect</th>
+    <th>Server (2PC)</th>
+    <th>Device-to-Device</th>
+    <th>Single Device</th>
+  </tr>
+  <tr>
+    <td><strong>Availability</strong></td>
+    <td>Server always available</td>
+    <td>Both devices must be online</td>
+    <td>Single point of failure</td>
+  </tr>
+  <tr>
+    <td><strong>Latency</strong></td>
+    <td>100-500ms (network)</td>
+    <td>50-100ms (BLE)</td>
+    <td>&lt;10ms (local)</td>
+  </tr>
+  <tr>
+    <td><strong>Security Model</strong></td>
+    <td>Threshold: compromise server or client (either alone)</td>
+    <td>Threshold: compromise both devices</td>
+    <td>Full key in one place</td>
+  </tr>
+  <tr>
+    <td><strong>Scalability</strong></td>
+    <td>Excellent (many clients per server)</td>
+    <td>Poor (limited to 2-3 peers)</td>
+    <td>N/A (single party)</td>
+  </tr>
+  <tr>
+    <td><strong>Backup &amp; Recovery</strong></td>
+    <td>Supported via PVE</td>
+    <td>Manual coordination</td>
+    <td>User is responsible</td>
+  </tr>
+  <tr>
+    <td><strong>Use Case</strong></td>
+    <td>Mobile wallet, institutional</td>
+    <td>Peer cosigners</td>
+    <td>Custodial</td>
+  </tr>
+</table>
+</div>
+
+<div class="callout danger">
+<div class="callout-title">Security Considerations</div>
+<p><strong>Server Compromise:</strong> If the server's HSM is compromised, attackers can sign arbitrary transactions. Mitigate with: rate limiting, transaction validation, and signing policies.</p>
+<p style="margin-top:0.4rem"><strong>Client Compromise:</strong> If the Secure Enclave is broken, attackers can extract the key share. Mitigate with: key refresh (rotate shares), TLS pinning, and device attestation.</p>
+<p style="margin-top:0.4rem"><strong>Combined Attack:</strong> If both are compromised simultaneously, the full key is exposed. This is the threshold property: threshold = 1 share leakage tolerance.</p>
+</div>
+
+<!-- ============================================================
+     FOOTER
+     ============================================================ -->
+<div class="footer">
+<p>CB-MPC Visual Guides — Server Architecture</p>
+<p style="font-size:0.65rem; margin-top:0.5rem">
+  <a href="/index.html" style="color:var(--muted); text-decoration:none">← Back to Demo Guide</a>
+</p>
+</div>
+
+</div>
+
+<script>
+  function toggleTheme() {
+    const body = document.body;
+    const btn = document.getElementById('themeBtn');
+    if (body.getAttribute('data-theme') === 'dark') {
+      body.setAttribute('data-theme', 'light');
+    localStorage.setItem('cb-mpc-theme', 'light');
+      btn.textContent = '[ DARK ]';
+    } else {
+      body.setAttribute('data-theme', 'dark');
+    localStorage.setItem('cb-mpc-theme', 'dark');
+      btn.textContent = '[ LIGHT ]';
+    }
+  }
+
+  // Initialize theme from localStorage, default to light
+  (function() {
+    var saved = localStorage.getItem("cb-mpc-theme");
+    if (saved) {
+      document.body.setAttribute("data-theme", saved);
+      document.getElementById("themeBtn").textContent = saved === "dark" ? "[ LIGHT ]" : "[ DARK ]";
+    }
+  })();
+</script>
+
+</body>
+</html>
