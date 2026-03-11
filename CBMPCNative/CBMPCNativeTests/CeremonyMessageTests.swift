@@ -84,12 +84,13 @@ class CeremonyMessageTests: XCTestCase {
             .signingResponse(Data([10, 11, 12])),
             .error("test"),
         ]
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
         for message in messages {
-            let encoded = try JSONEncoder().encode(message)
+            let encoded = try encoder.encode(message)
             let decoded = try JSONDecoder().decode(CeremonyMessage.self, from: encoded)
-            let reEncoded = try JSONEncoder().encode(decoded)
-            let reDecoded = try JSONDecoder().decode(CeremonyMessage.self, from: reEncoded)
-            // Double round-trip should produce identical JSON
+            let reEncoded = try encoder.encode(decoded)
+            // With sorted keys, double round-trip should produce identical JSON
             XCTAssertEqual(encoded, reEncoded, "Double round-trip failed")
         }
     }
