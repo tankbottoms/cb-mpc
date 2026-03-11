@@ -537,6 +537,7 @@
 		0A1E5F0F2D5E4A1B00C8F3E2 = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ENABLE_TESTABILITY = YES;
 				SWIFT_VERSION = 5.9;
 				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
 			};
