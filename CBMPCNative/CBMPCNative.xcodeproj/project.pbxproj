@@ -193,6 +193,23 @@
 		FF17000200000000000000A6 /* CeremonyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF17000100000000000000A6 /* CeremonyView.swift */; };
 		FF17000300000000000000A6 /* CeremonyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF17000100000000000000A6 /* CeremonyView.swift */; };
 
+/* Test target file references */
+		TT10000100000000000000A1 /* E2EIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNativeTests/E2EIntegrationTests.swift; sourceTree = SOURCE_ROOT; };
+		TT10000100000000000000A2 /* CeremonySessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNativeTests/CeremonySessionTests.swift; sourceTree = SOURCE_ROOT; };
+		TT10000100000000000000A3 /* CeremonyCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNativeTests/CeremonyCoordinatorTests.swift; sourceTree = SOURCE_ROOT; };
+		TT10000100000000000000A4 /* CeremonyMessageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNativeTests/CeremonyMessageTests.swift; sourceTree = SOURCE_ROOT; };
+		TT10000100000000000000A5 /* KeyShareManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNativeTests/KeyShareManagerTests.swift; sourceTree = SOURCE_ROOT; };
+		TT10000100000000000000A6 /* SigningCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNativeTests/SigningCoordinatorTests.swift; sourceTree = SOURCE_ROOT; };
+		TT10000100000000000000B1 /* CBMPCNativeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CBMPCNativeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+
+/* Test target build file entries */
+		TT20000100000000000000A1 /* E2EIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = TT10000100000000000000A1 /* E2EIntegrationTests.swift */; };
+		TT20000100000000000000A2 /* CeremonySessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = TT10000100000000000000A2 /* CeremonySessionTests.swift */; };
+		TT20000100000000000000A3 /* CeremonyCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = TT10000100000000000000A3 /* CeremonyCoordinatorTests.swift */; };
+		TT20000100000000000000A4 /* CeremonyMessageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = TT10000100000000000000A4 /* CeremonyMessageTests.swift */; };
+		TT20000100000000000000A5 /* KeyShareManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = TT10000100000000000000A5 /* KeyShareManagerTests.swift */; };
+		TT20000100000000000000A6 /* SigningCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = TT10000100000000000000A6 /* SigningCoordinatorTests.swift */; };
+
 /* v0.14.0 network view */
 		FF14000100000000000000A1 /* NetworkView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Views/NetworkView.swift; sourceTree = SOURCE_ROOT; };
 		FF14000200000000000000A1 /* NetworkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF14000100000000000000A1 /* NetworkView.swift */; };
@@ -443,6 +460,47 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 
+/* Test target */
+		TT60000100000000000000A1 = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = TT70000100000000000000A1;
+			buildPhases = (
+				TT30000100000000000000A1 /* Sources */,
+			);
+			dependencies = (
+				TT50000100000000000000A1,
+			);
+			name = CBMPCNativeTests;
+			productName = CBMPCNativeTests;
+			productReference = TT10000100000000000000B1;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		TT30000100000000000000A1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				TT20000100000000000000A1 /* E2EIntegrationTests.swift in Sources */,
+				TT20000100000000000000A2 /* CeremonySessionTests.swift in Sources */,
+				TT20000100000000000000A3 /* CeremonyCoordinatorTests.swift in Sources */,
+				TT20000100000000000000A4 /* CeremonyMessageTests.swift in Sources */,
+				TT20000100000000000000A5 /* KeyShareManagerTests.swift in Sources */,
+				TT20000100000000000000A6 /* SigningCoordinatorTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		TT40000100000000000000A1 = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0A1E5F0B2D5E4A1B00C8F3E2;
+			proxyType = 1;
+			remoteGlobalIDString = 0A1E5F3E2D5E4A1B00C8F3E2;
+			remoteInfo = CBMPCNative;
+		};
+		TT50000100000000000000A1 = {
+			isa = PBXTargetDependency;
+			target = 0A1E5F3E2D5E4A1B00C8F3E2;
+			targetProxy = TT40000100000000000000A1;
+		};
+
 /* Project */
 		0A1E5F0B2D5E4A1B00C8F3E2 = {
 			isa = PBXProject;
@@ -462,6 +520,7 @@
 			targets = (
 				0A1E5F3E2D5E4A1B00C8F3E2,
 				AA00000200000000000000FF,
+				TT60000100000000000000A1,
 			);
 		};
 
@@ -646,6 +705,61 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "CBMPCNative-Bridging-Header.h";
 				SWIFT_VERSION = 5.9;
+			};
+			name = Release;
+		};
+
+/* Test target build configurations */
+		TT70000100000000000000A1 = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				TT80000100000000000000A1,
+				TT80000200000000000000A1,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		TT80000100000000000000A1 = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = YT6VJY3L35;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				PRODUCT_BUNDLE_IDENTIFIER = "xyz.atsignhandle.cb-mpc.tests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CBMPCNative.app/CBMPCNative";
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/../cbmpc.xcframework/Headers",
+				);
+				SWIFT_OBJC_BRIDGING_HEADER = "CBMPCNative-Bridging-Header.h";
+			};
+			name = Debug;
+		};
+		TT80000200000000000000A1 = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = YT6VJY3L35;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				PRODUCT_BUNDLE_IDENTIFIER = "xyz.atsignhandle.cb-mpc.tests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CBMPCNative.app/CBMPCNative";
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/../cbmpc.xcframework/Headers",
+				);
+				SWIFT_OBJC_BRIDGING_HEADER = "CBMPCNative-Bridging-Header.h";
 			};
 			name = Release;
 		};
