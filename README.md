@@ -34,6 +34,34 @@ Interactive HTML visual guides are in [`docs/visual-guide/`](docs/visual-guide/i
 | ImageMagick | 7+ | `brew install imagemagick` (icon generation only) |
 | gh CLI | latest | `brew install gh` (GitHub operations only) |
 
+## First Time Setup: Register Your Device
+
+**Do this before building for a physical device.** Connect your iPhone/iPad via USB-C and run:
+
+```bash
+./scripts/add-device.sh
+```
+
+The script will:
+1. List all connected devices with their UDIDs
+2. Prompt you to paste the UDID and give the device a name
+3. Add it to `.env.json` so all scripts know about it
+4. Print the exact build, install, and launch commands for your device
+
+The first build with `-allowProvisioningUpdates` automatically registers the device with the Apple Developer portal -- no manual portal setup needed.
+
+**Already-registered devices** (in `.env.json`):
+
+| Device | UDID |
+|--------|------|
+| iPhone 14 Pro | `5645DF68-EB3D-5845-9DE9-47305629646A` |
+| iPhone 15 Pro Max | `315E4279-EB38-578C-8375-63AC801B0200` |
+| iPhone 17 Pro Max | `06A0A98A-72FD-5A20-B13C-F8BD32FC55F0` |
+| iPad | `00008101-000A288E2252601E` |
+| iPhone 13 Mini Red | `2DCF8B6B-7136-5339-BC7F-56266D69C2BC` |
+
+---
+
 ## Quick Start (Simulator)
 
 ```bash
@@ -60,12 +88,10 @@ open CBMPCNative/CBMPCNative.xcodeproj
 ## Build for Device
 
 ```bash
-# 1. Connect device via USB-C
+# 1. Connect device via USB-C and register it (if not already done)
+./scripts/add-device.sh
 
-# 2. List connected devices
-xcrun devicectl list devices
-
-# 3. Build for device
+# 2. Build for device
 xcodebuild -project CBMPCNative/CBMPCNative.xcodeproj \
   -scheme CBMPCNative \
   -sdk iphoneos \
@@ -74,32 +100,15 @@ xcodebuild -project CBMPCNative/CBMPCNative.xcodeproj \
   -allowProvisioningUpdates \
   build
 
-# 4. Find the .app
+# 3. Find the .app
 APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData/CBMPCNative-*/Build/Products/Release-iphoneos -name "CBMPCNative.app" -maxdepth 1 | head -1)
 
-# 5. Install to device (replace UDID with your device's)
+# 4. Install to device (replace DEVICE_UDID with yours -- add-device.sh prints this)
 xcrun devicectl device install app --device DEVICE_UDID "$APP_PATH"
 
-# 6. Launch
+# 5. Launch
 xcrun devicectl device process launch --device DEVICE_UDID xyz.atsignhandle.cb-mpc
 ```
-
-**Known device UDIDs** (see `.env.json` for full list):
-
-| Device | UDID |
-|--------|------|
-| iPhone 14 Pro | `5645DF68-EB3D-5845-9DE9-47305629646A` |
-| iPhone 15 Pro Max | `315E4279-EB38-578C-8375-63AC801B0200` |
-| iPhone 17 Pro Max | `06A0A98A-72FD-5A20-B13C-F8BD32FC55F0` |
-| iPad | `00008101-000A288E2252601E` |
-| iPhone 13 Mini Red | `2DCF8B6B-7136-5339-BC7F-56266D69C2BC` |
-
-### Adding a New Device
-
-1. Connect device, run `xcrun devicectl list devices`
-2. Copy the UDID
-3. Add to `.env.json` `devices` array
-4. Build with `-allowProvisioningUpdates` to auto-register in Apple Developer portal
 
 ## Build for TestFlight
 
@@ -181,6 +190,7 @@ src/                        -- C++ MPC library source (shared)
 | `scripts/release.sh` | Full release lifecycle: bump, changelog, archive, upload, status |
 | `scripts/build-changelog.sh` | Generate changelogs, tag builds, push "What to Test" to ASC |
 | `scripts/asc-metadata.sh` | Upload metadata to App Store Connect |
+| `scripts/add-device.sh` | Register a new iOS device: reads UDID, adds to .env.json, prints build commands |
 | `scripts/validate-env.sh` | Verify .env.json is complete and .p8 key file exists |
 | `scripts/env-helper.sh` | Reads .env.json, exports shell vars (sourced by other scripts) |
 | `CBMPCNative/scripts/generate-app-icon.sh` | Generate app icon from layered cat images |
