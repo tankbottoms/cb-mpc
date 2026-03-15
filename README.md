@@ -76,6 +76,8 @@ cb-mpc-ios/
 - **`.env.json`** -- All API keys, team IDs, device UDIDs, and service config. Single source of truth for every build script.
 - **`private_keys/AuthKey_67F836A739.p8`** -- App Store Connect API key for TestFlight uploads and metadata pushes.
 
+**THESE FILES ARE SECRETS.** Do not commit them, upload them, paste them into chat, email them, or let them leave your machine in any form. They grant full access to the Apple Developer account, App Store Connect, and signing infrastructure. The `.gitignore` is configured to prevent accidental commits, but treat them like private keys -- because they are.
+
 After placing both files, verify everything is wired up:
 
 ```bash
