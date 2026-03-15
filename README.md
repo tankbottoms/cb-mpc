@@ -62,6 +62,32 @@ The first build with `-allowProvisioningUpdates` automatically registers the dev
 
 ---
 
+## Offline Files (Delivered Separately)
+
+Two files are **not in the repo** -- you'll receive them via Signal. Place them at the project root before building:
+
+```
+cb-mpc-ios/
+  .env.json                          <-- drop here
+  private_keys/
+    AuthKey_67F836A739.p8            <-- drop here
+```
+
+- **`.env.json`** -- All API keys, team IDs, device UDIDs, and service config. Single source of truth for every build script.
+- **`private_keys/AuthKey_67F836A739.p8`** -- App Store Connect API key for TestFlight uploads and metadata pushes.
+
+After placing both files, verify everything is wired up:
+
+```bash
+./scripts/validate-env.sh
+```
+
+You should see all `OK` checks and "All checks passed." If anything fails, the script tells you exactly what's missing.
+
+A template (`.env.json.example`) is checked into the repo showing the expected structure.
+
+---
+
 ## Quick Start (Simulator)
 
 ```bash
@@ -69,8 +95,7 @@ The first build with `-allowProvisioningUpdates` automatically registers the dev
 git clone git@tankbottoms.github.com:tankbottoms/cb-mpc-ios.git
 cd cb-mpc-ios
 
-# 2. Verify config
-#    .env.json and private_keys/ are included in the repo.
+# 2. Place .env.json and private_keys/ (received offline), then verify
 ./scripts/validate-env.sh
 
 # 3. Build for simulator

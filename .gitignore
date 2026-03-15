@@ -47,10 +47,13 @@ ios-demo-app/
 build-ios-device/
 build-ios-sim/
 
-# Credentials & keys
+# Credentials & keys (delivered offline, not in repo)
 *.p12
+*.p8
 *.mobileprovision
 .env
+.env.json
+private_keys/
 
 # Dependencies
 node_modules/
