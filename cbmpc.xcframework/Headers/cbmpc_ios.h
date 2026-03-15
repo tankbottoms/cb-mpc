@@ -213,6 +213,25 @@ int  cbmpc_hd_ecdsa2p_refresh(cbmpc_job2p_t* job, cbmpc_hd_key_t* key,
 /* Free an HD keyset */
 void cbmpc_hd_key_free(cbmpc_hd_key_t key);
 
+/* Extract public key from HD keyset as 33-byte compressed SEC1 point
+ * key: HD keyset
+ * Returns: compressed public key bytes (caller must free with cbmpc_free)
+ */
+cbmpc_cmem_t cbmpc_hd_key_pubkey(const cbmpc_hd_key_t* key);
+
+/* Serialize HD keyset to bytes (for persistence)
+ * key: HD keyset to serialize
+ * Returns: serialized bytes (caller must free with cbmpc_free)
+ */
+cbmpc_cmem_t cbmpc_hd_key_serialize(const cbmpc_hd_key_t* key);
+
+/* Deserialize HD keyset from bytes
+ * data: serialized HD keyset bytes
+ * out: [output] deserialized HD keyset
+ * Returns: 0 on success, non-zero on error
+ */
+int cbmpc_hd_key_deserialize(cbmpc_cmem_t data, cbmpc_hd_key_t* out);
+
 /* ==================== AgreeRandom (2-Party Shared Randomness) ==================== */
 
 /* Generate shared random bytes using 2-party commit-reveal protocol

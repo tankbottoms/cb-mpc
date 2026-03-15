@@ -246,9 +246,11 @@ struct SignTransactionSheetView: View {
                 }
             }
             .onAppear { fetchLiveData() }
+            #if os(iOS)
             .sheet(isPresented: $showShareSheet) {
                 ShareSheet(items: [transactionJSON])
             }
+            #endif
             .sheet(isPresented: $showGasSheet) {
                 gasTrackerSheet
             }

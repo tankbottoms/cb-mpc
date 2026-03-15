@@ -1,0 +1,30 @@
+{
+  "version": "0.24.0",
+  "build": 76,
+  "date": "2026-03-14",
+  "platform": "ios",
+  "status": "draft",
+  "whatsNew": "Key MGMT wCB-MPC v0.24.0 (build 76)\n\nNEW:\n- HD key derivation (BIP-32 child keys from master)\n- Transaction signing with EIP-155 replay protection\n- Address book for saved recipient addresses\n- Uniswap and CoW Protocol DEX integration\n- Safe multisig transaction support\n- EIP-712 typed data signing\n- Peer-to-peer signing via MultipeerConnectivity\n- Etherscan v2 API with multi-chain support\n\nFIXES:\n- CryptoKit SealedBox slice crash in Release builds\n- QR code binary frame base64 encoding reliability\n- Data subscript safety for Release-mode optimizations\n\nPlease test:\n- Key generation (+ button on Keys tab)\n- Message signing (key detail -> Sign Message)\n- QR export/import (key detail -> Export -> QR Code)\n- Device pairing (Network tab -> Pair Device)\n- Server registration (Network tab -> Register Server)\n- Face ID lock (Settings -> Face ID toggle)\n- HD key derivation (key detail -> Derive Child Key)\n- Multiple Ethereum networks (Settings -> Networks)",
+  "features": [
+    "HD key derivation (BIP-32 child keys from master)",
+    "Transaction signing with EIP-155 replay protection",
+    "Address book for saved recipient addresses",
+    "Uniswap and CoW Protocol DEX integration",
+    "Safe multisig transaction support",
+    "EIP-712 typed data signing",
+    "Peer-to-peer signing via MultipeerConnectivity",
+    "Etherscan v2 API with multi-chain support"
+  ],
+  "fixes": [
+    "CryptoKit SealedBox slice crash in Release builds",
+    "QR code binary frame base64 encoding reliability",
+    "Data subscript safety for Release-mode optimizations"
+  ],
+  "testInstructions": "1. Key generation (+ button)\n2. Message signing\n3. QR export/import\n4. Device pairing\n5. Server registration\n6. Face ID lock\n7. HD key derivation\n8. Multiple Ethereum networks",
+  "commits": [
+    {"hash": "87f5885a", "type": "docs", "message": "Add visual guide documentation to docs/visual-guide/"},
+    {"hash": "091a18aa", "type": "fix", "message": "add shared Xcode schemes and fix JSON round-trip test"},
+    {"hash": "cb0693a9", "type": "fix", "message": "enable testability in Debug config for @testable import support"},
+    {"hash": "f68a7520", "type": "test", "message": "add CBMPCNativeTests target with comprehensive unit tests"}
+  ]
+}

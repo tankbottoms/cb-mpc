@@ -17,8 +17,13 @@ struct QRScannerView: View {
     var body: some View {
         NavigationStack {
             ZStack {
+                #if os(iOS)
                 CameraPreviewView(onQRDetected: handleQRCode)
                     .ignoresSafeArea()
+                #else
+                Text("QR scanning requires a camera (iOS only)")
+                    .foregroundColor(.secondary)
+                #endif
 
                 VStack {
                     Spacer()
@@ -128,6 +133,7 @@ struct QRScannerView: View {
     }
 }
 
+#if os(iOS)
 // MARK: - Camera Preview
 
 struct CameraPreviewView: UIViewControllerRepresentable {
@@ -213,3 +219,4 @@ class CameraViewController: UIViewController, AVCaptureMetadataOutputObjectsDele
         }
     }
 }
+#endif

@@ -1,0 +1,13 @@
+# Auto-generated app icon manifest
+# 2026-03-13T13:53:21-04:00
+  Background: Foodbowl_pink.png
+  Fur: Ginger_black_stripes.png
+  Ears: Grey.png
+  Nipples: Nipples.png
+  Eyes: Grey_left_eyelids.png
+  Brows: Usual.png
+  Nose: Partyblower_yellow.png
+  Collar: Cape_black.png
+  Glasses: Black-01.png
+  Headwear: Party_hat_teal.png
+  Signature: Signature.png

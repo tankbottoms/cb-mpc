@@ -20,6 +20,20 @@
                ReferencedContainer = "container:CBMPCNative.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "TT60000100000000000000A1"
+               BuildableName = "CBMPCNativeTests.xctest"
+               BlueprintName = "CBMPCNativeTests"
+               ReferencedContainer = "container:CBMPCNative.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction

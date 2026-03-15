@@ -205,19 +205,19 @@ struct ServerRegistrationView: View {
             }
             .padding(16)
             .navigationTitle("Add Server")
-            #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
-            #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                 }
+                #if os(iOS)
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
                     Button("Done") {
                         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                     }
                 }
+                #endif
             }
         }
     }

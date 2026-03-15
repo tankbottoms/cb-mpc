@@ -499,3 +499,8 @@ Views/
 Models/
   KeyStore.swift              -- Server-backed operations
 ```
+
+
+Human Notes:
+
+- [ ] https://expo.dev/blog/universal-and-app-links?utm_campaign=13932868-Sign%20up%20Nurture%20Program&utm_medium=email&_hsenc=p2ANqtz-99z7kLGs7WbuO_7IN_3JCckFOS9eG0U4QuRi3WNOoPSdnLSd0qXOOdp14hXC_Mlv4z2P6tlMrcqYV4dfkBn5ZLyOS483KEZC1HugGzA1g78FzPWwc&_hsmi=381783995&utm_content=381783995&utm_source=hs_automation 

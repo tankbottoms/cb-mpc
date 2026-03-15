@@ -131,7 +131,154 @@ async function route(url: URL, request: Request, env: Env): Promise<Response> {
     }
   }
 
+  // === DeFi Proxy Routes (no auth — API keys hidden server-side) ===
+
+  // Contract ABI cache proxy
+  if (path === "/contracts/abi" && method === "GET") {
+    return handleContractABI(url, env);
+  }
+
+  // Uniswap swap proxy
+  if (path === "/swap/quote" && method === "POST") {
+    return handleUniswapQuote(request, env);
+  }
+  if (path === "/swap/order" && method === "POST") {
+    return handleUniswapOrder(request, env);
+  }
+  if (path.startsWith("/swap/status/") && method === "GET") {
+    const orderId = path.split("/").pop();
+    return handleUniswapStatus(orderId!, env);
+  }
+
+  // CoW Protocol proxy
+  if (path === "/cow/quote" && method === "POST") {
+    return handleCowQuote(request);
+  }
+  if (path === "/cow/order" && method === "POST") {
+    return handleCowOrder(request);
+  }
+  if (path.startsWith("/cow/status/") && method === "GET") {
+    const uid = path.split("/").pop();
+    return handleCowStatus(uid!);
+  }
+
   return Response.json({ error: "Not found" }, { status: 404 });
+}
+
+// === Contract ABI ===
+
+async function handleContractABI(url: URL, env: Env): Promise<Response> {
+  const chain = url.searchParams.get("chain") || "1";
+  const address = url.searchParams.get("address");
+  if (!address) {
+    return Response.json({ error: "address required" }, { status: 400 });
+  }
+
+  const cacheKey = `abi:${chain}:${address.toLowerCase()}`;
+
+  // Check KV cache
+  if (env.ABI_CACHE) {
+    const cached = await env.ABI_CACHE.get(cacheKey);
+    if (cached) {
+      return Response.json({ status: "1", message: "OK-cached", result: cached });
+    }
+  }
+
+  // Fetch from Etherscan
+  const apiKey = env.ETHERSCAN_API_KEY || "";
+  const ethUrl = `https://api.etherscan.io/v2/api?chainid=${chain}&module=contract&action=getabi&address=${address}&apikey=${apiKey}`;
+  const resp = await fetch(ethUrl);
+  const data = await resp.json() as { status: string; message: string; result: string };
+
+  // Cache successful results for 7 days
+  if (data.status === "1" && env.ABI_CACHE) {
+    await env.ABI_CACHE.put(cacheKey, data.result, { expirationTtl: 604800 });
+  }
+
+  return Response.json(data);
+}
+
+// === Uniswap Proxy ===
+
+async function handleUniswapQuote(request: Request, env: Env): Promise<Response> {
+  const apiKey = env.UNISWAP_API_KEY;
+  if (!apiKey) {
+    return Response.json({ error: "Uniswap API not configured" }, { status: 503 });
+  }
+
+  const body = await request.text();
+  const resp = await fetch("https://trade-api.gateway.uniswap.org/v1/quote", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+    },
+    body,
+  });
+  const data = await resp.json();
+  return Response.json(data, { status: resp.status });
+}
+
+async function handleUniswapOrder(request: Request, env: Env): Promise<Response> {
+  const apiKey = env.UNISWAP_API_KEY;
+  if (!apiKey) {
+    return Response.json({ error: "Uniswap API not configured" }, { status: 503 });
+  }
+
+  const body = await request.text();
+  const resp = await fetch("https://trade-api.gateway.uniswap.org/v1/order", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+    },
+    body,
+  });
+  const data = await resp.json();
+  return Response.json(data, { status: resp.status });
+}
+
+async function handleUniswapStatus(orderId: string, env: Env): Promise<Response> {
+  const apiKey = env.UNISWAP_API_KEY;
+  if (!apiKey) {
+    return Response.json({ error: "Uniswap API not configured" }, { status: 503 });
+  }
+
+  const resp = await fetch(`https://trade-api.gateway.uniswap.org/v1/order/${orderId}`, {
+    headers: { "x-api-key": apiKey },
+  });
+  const data = await resp.json();
+  return Response.json(data, { status: resp.status });
+}
+
+// === CoW Protocol Proxy ===
+
+async function handleCowQuote(request: Request): Promise<Response> {
+  const body = await request.text();
+  const resp = await fetch("https://api.cow.fi/mainnet/api/v1/quote", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body,
+  });
+  const data = await resp.json();
+  return Response.json(data, { status: resp.status });
+}
+
+async function handleCowOrder(request: Request): Promise<Response> {
+  const body = await request.text();
+  const resp = await fetch("https://api.cow.fi/mainnet/api/v1/orders", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body,
+  });
+  const data = await resp.json();
+  return Response.json(data, { status: resp.status });
+}
+
+async function handleCowStatus(uid: string): Promise<Response> {
+  const resp = await fetch(`https://api.cow.fi/mainnet/api/v1/orders/${uid}`);
+  const data = await resp.json();
+  return Response.json(data, { status: resp.status });
 }
 
 function privacyPolicyJSON() {

@@ -18,40 +18,37 @@ struct SettingsView: View {
     @AppStorage("hdChildNamingUseSelf") private var hdChildNamingUseSelf = false
     @AppStorage("qrTransferSpeed") private var qrTransferSpeed: Double = 1.5
     @AppStorage("etherscanAPIKey") private var etherscanAPIKey = "UWD3H7R1R6SXRUSW9R7SXYX3HUNQYC75W1"
+    @AppStorage("rpcProvider") private var rpcProvider = "buidlguidl"
 
     @State private var showPasswordSheet = false
     @State private var showBackupSheet = false
     @State private var revealInfuraKey = false
     @State private var revealEtherscanKey = false
 
-    private var rpcBaseURL: String {
-        switch ethereumRPC {
-        case "mainnet": return "https://mainnet.infura.io"
-        case "sepolia": return "https://sepolia.infura.io"
-        case "base": return "https://base-mainnet.infura.io"
-        case "arbitrum": return "https://arbitrum-mainnet.infura.io"
-        case "optimism": return "https://optimism-mainnet.infura.io"
-        case "polygon": return "https://polygon-mainnet.infura.io"
-        case "bsc": return "https://bsc-mainnet.infura.io"
-        default: return "https://hoodi.infura.io"
-        }
+    // RPC health check state
+    @State private var rpcTestResult: String?
+    @State private var rpcTestLatency: Int?
+    @State private var rpcTestError: String?
+    @State private var rpcTesting = false
+
+    // Etherscan chain support test state
+    @State private var chainSupportResults: [String: EtherscanService.ChainSupportStatus] = [:]
+    @State private var isTestingChains = false
+    @AppStorage("etherscanChainSupport") private var cachedChainSupport = ""
+
+    private var currentRPCEndpoint: String {
+        RPCService.endpoint(network: ethereumRPC, provider: rpcProvider, infuraKey: infuraAPIKey)
     }
 
-    private var rpcEndpoint: String {
-        "/v3/\(infuraAPIKey)"
+    private var rpcProviderName: String {
+        if ethereumRPC == "mainnet" {
+            return RPCService.freeMainnetProviders.first(where: { $0.key == rpcProvider })?.name ?? rpcProvider
+        }
+        return "Infura"
     }
 
     private var chainId: String {
-        switch ethereumRPC {
-        case "mainnet": return "1"
-        case "sepolia": return "11155111"
-        case "base": return "8453"
-        case "arbitrum": return "42161"
-        case "optimism": return "10"
-        case "polygon": return "137"
-        case "bsc": return "56"
-        default: return "560048"
-        }
+        EtherscanService.chainId(for: ethereumRPC)
     }
 
     private var networkDisplayName: String {
@@ -66,6 +63,8 @@ struct SettingsView: View {
         default: return "Hoodi Testnet"
         }
     }
+
+    private static let allChains = ["mainnet", "sepolia", "base", "arbitrum", "optimism", "polygon", "bsc"]
 
     // MARK: - Storage Usage
 
@@ -158,7 +157,7 @@ struct SettingsView: View {
                     StorageTierRow(
                         icon: "internaldrive",
                         name: "UserDefaults",
-                        detail: "Local app storage for key share data. Protected by iOS app sandbox and data protection. Not encrypted independently -- relies on device-level encryption.",
+                        detail: "Local app storage for key share data. Protected by iOS app sandbox and device-level encryption (NSFileProtectionComplete).",
                         usage: userDefaultsUsage
                     )
 
@@ -175,17 +174,18 @@ struct SettingsView: View {
                     ForEach(pairingManager.pairedDevices) { device in
                         let connState = pairingManager.connectionState(for: device.id)
                         let isConnected = connState == .connected
+                        let deviceColor: Color = isConnected ? .green : (device.isOnline ? .green : .orange)
                         HStack(spacing: 10) {
                             Image(systemName: device.deviceModel.lowercased().contains("ipad") ? "ipad" : "iphone")
                                 .font(.system(size: 14))
-                                .foregroundColor(isConnected ? .green : .orange)
+                                .foregroundColor(deviceColor)
                                 .frame(width: 24)
                             VStack(alignment: .leading, spacing: 2) {
                                 HStack(spacing: 6) {
                                     Text(device.name)
                                         .font(.system(size: 12, weight: .medium, design: .monospaced))
                                     Circle()
-                                        .fill(isConnected ? .green : .orange)
+                                        .fill(deviceColor)
                                         .frame(width: 6, height: 6)
                                 }
                                 Text("\(device.deviceModel) · \(device.shareCount) key\(device.shareCount == 1 ? "" : "s")")
@@ -198,17 +198,18 @@ struct SettingsView: View {
 
                     // Servers
                     ForEach(pairingManager.servers) { server in
+                        let serverColor: Color = server.isOnline ? .green : .orange
                         HStack(spacing: 10) {
                             Image(systemName: "server.rack")
                                 .font(.system(size: 14))
-                                .foregroundColor(server.isOnline ? .green : .gray)
+                                .foregroundColor(server.isRegistered ? serverColor : .gray)
                                 .frame(width: 24)
                             VStack(alignment: .leading, spacing: 2) {
                                 HStack(spacing: 6) {
                                     Text(server.name)
                                         .font(.system(size: 12, weight: .medium, design: .monospaced))
                                     Circle()
-                                        .fill(server.isOnline ? .green : .gray)
+                                        .fill(server.isRegistered ? serverColor : .gray)
                                         .frame(width: 6, height: 6)
                                 }
                                 Text("\(server.isRegistered ? "Registered" : "Unregistered") · \(server.shareCount) key\(server.shareCount == 1 ? "" : "s")")
@@ -220,32 +221,44 @@ struct SettingsView: View {
                     }
                 }
 
-                Section(header: Text("Ethereum RPC"), footer:
-                    Text("Connects to the Ethereum network via Infura RPC for broadcasting transactions and querying on-chain state such as balances, nonces, and gas estimates.")
+                Section(header: Text("RPC Provider"), footer:
+                    Text("Connects to the Ethereum network for broadcasting transactions and querying on-chain state. Mainnet uses free public RPC endpoints. Other networks require an Infura API key.")
                         .font(.system(size: 10, design: .monospaced))
                 ) {
                     Picker("Network", selection: $ethereumRPC) {
-                        Text("Hoodi (Testnet)").tag("hoodi")
-                        Text("Sepolia (Testnet)").tag("sepolia")
                         Text("Ethereum Mainnet").tag("mainnet")
                         Text("Base").tag("base")
                         Text("Arbitrum One").tag("arbitrum")
                         Text("Optimism").tag("optimism")
                         Text("Polygon").tag("polygon")
                         Text("BNB Smart Chain").tag("bsc")
+                        Text("Sepolia (Testnet)").tag("sepolia")
+                        Text("Hoodi (Testnet)").tag("hoodi")
                     }
                     .pickerStyle(.menu)
+
+                    if ethereumRPC == "mainnet" {
+                        Picker("RPC Provider", selection: $rpcProvider) {
+                            ForEach(RPCService.freeMainnetProviders, id: \.key) { provider in
+                                Text(provider.name).tag(provider.key)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                    }
 
                     HStack {
                         Text("RPC URL")
                         Spacer()
-                        Text(rpcBaseURL)
-                            .font(.system(size: 12, design: .monospaced))
+                        Text(currentRPCEndpoint)
+                            .font(.system(size: 11, design: .monospaced))
                             .foregroundColor(.secondary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
                     }
 
-                    apiKeyRow(label: "Infura API Key", key: $infuraAPIKey, revealed: $revealInfuraKey)
-                    apiKeyRow(label: "Etherscan API Key", key: $etherscanAPIKey, revealed: $revealEtherscanKey)
+                    if ethereumRPC != "mainnet" {
+                        apiKeyRow(label: "Infura API Key", key: $infuraAPIKey, revealed: $revealInfuraKey)
+                    }
 
                     HStack {
                         Text("Chain ID")
@@ -253,6 +266,82 @@ struct SettingsView: View {
                         Text(chainId)
                             .font(.system(size: 12, design: .monospaced))
                             .foregroundColor(.secondary)
+                    }
+
+                    // RPC Health Check
+                    Button(action: testRPCConnection) {
+                        HStack(spacing: 8) {
+                            if rpcTesting {
+                                ProgressView()
+                                    .controlSize(.mini)
+                                Text("Testing...")
+                                    .font(.system(size: 12, design: .monospaced))
+                            } else {
+                                Image(systemName: "bolt.fill")
+                                    .font(.system(size: 12))
+                                Text("Test Connection")
+                                    .font(.system(size: 12, design: .monospaced))
+                            }
+                        }
+                    }
+                    .disabled(rpcTesting)
+
+                    if let block = rpcTestResult, let ms = rpcTestLatency {
+                        HStack {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                                .font(.system(size: 12))
+                            Text("Block \(block)")
+                                .font(.system(size: 11, design: .monospaced))
+                            Spacer()
+                            Text("\(ms)ms")
+                                .font(.system(size: 11, design: .monospaced))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+
+                    if let err = rpcTestError {
+                        HStack {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.red)
+                                .font(.system(size: 12))
+                            Text(err)
+                                .font(.system(size: 11, design: .monospaced))
+                                .foregroundColor(.red)
+                        }
+                    }
+                }
+
+                Section(header: Text("Etherscan API"), footer:
+                    Text("Gas oracle, ETH/USD pricing, and contract lookups are provided by the Etherscan v2 API. Free tier works on mainnet and polygon. Other chains may require a paid API key.")
+                        .font(.system(size: 10, design: .monospaced))
+                ) {
+                    apiKeyRow(label: "API Key", key: $etherscanAPIKey, revealed: $revealEtherscanKey)
+
+                    // Chain support badges
+                    Button(action: testEtherscanChains) {
+                        HStack(spacing: 8) {
+                            if isTestingChains {
+                                ProgressView()
+                                    .controlSize(.mini)
+                                Text("Testing chains...")
+                                    .font(.system(size: 12, design: .monospaced))
+                            } else {
+                                Image(systemName: "network")
+                                    .font(.system(size: 12))
+                                Text("Test Chain Support")
+                                    .font(.system(size: 12, design: .monospaced))
+                            }
+                        }
+                    }
+                    .disabled(isTestingChains)
+
+                    if !chainSupportResults.isEmpty {
+                        ForEach(Self.allChains, id: \.self) { chain in
+                            if let status = chainSupportResults[chain] {
+                                chainSupportRow(chain: chain, status: status)
+                            }
+                        }
                     }
                 }
 
@@ -394,8 +483,14 @@ struct SettingsView: View {
 
                 Section(header: Text("App Info"), footer:
                     VStack(alignment: .leading, spacing: 8) {
+                        Text("TESTFLIGHT BETA")
+                            .font(.system(size: 9, weight: .bold, design: .monospaced))
+                        Text("While in beta TestFlight, app icons feature party-themed MeowsDAO cats. These will be replaced with a proper MPC-themed icon once the design is finalized.")
+                            .font(.system(size: 10, design: .monospaced))
+
                         Text("DISCLAIMER")
                             .font(.system(size: 9, weight: .bold, design: .monospaced))
+                            .padding(.top, 4)
                         Text("This application is in active development and is provided as-is for testing and evaluation purposes only. It is not intended for production use or for managing real cryptocurrency assets. Use at your own risk.")
                             .font(.system(size: 10, design: .monospaced))
 
@@ -454,6 +549,7 @@ struct SettingsView: View {
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
+            #if os(iOS)
             .toolbar {
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
@@ -462,6 +558,7 @@ struct SettingsView: View {
                     }
                 }
             }
+            #endif
             .sheet(isPresented: $showPasswordSheet) {
                 PasswordSetupSheetView(
                     keystorePasswordHash: $keystorePasswordHash,
@@ -474,6 +571,106 @@ struct SettingsView: View {
                     .environmentObject(keyStore)
                     .presentationDetents([.medium, .large])
             }
+            .onAppear {
+                loadCachedChainSupport()
+            }
+        }
+    }
+
+    private func testRPCConnection() {
+        rpcTesting = true
+        rpcTestResult = nil
+        rpcTestLatency = nil
+        rpcTestError = nil
+        Task {
+            do {
+                let result = try await RPCService.testConnection(url: currentRPCEndpoint)
+                await MainActor.run {
+                    rpcTestResult = result.blockNumber
+                    rpcTestLatency = result.latencyMs
+                    rpcTesting = false
+                }
+            } catch {
+                await MainActor.run {
+                    rpcTestError = error.localizedDescription
+                    rpcTesting = false
+                }
+            }
+        }
+    }
+
+    private func testEtherscanChains() {
+        isTestingChains = true
+        chainSupportResults = [:]
+        Task {
+            var results: [String: EtherscanService.ChainSupportStatus] = [:]
+            for chain in Self.allChains {
+                let status = await EtherscanService.testChainSupport(apiKey: etherscanAPIKey, chain: chain)
+                results[chain] = status
+                await MainActor.run {
+                    chainSupportResults = results
+                }
+            }
+            // Cache results
+            if let data = try? JSONEncoder().encode(results),
+               let json = String(data: data, encoding: .utf8) {
+                await MainActor.run {
+                    cachedChainSupport = json
+                    isTestingChains = false
+                }
+            } else {
+                await MainActor.run {
+                    isTestingChains = false
+                }
+            }
+        }
+    }
+
+    private func loadCachedChainSupport() {
+        guard !cachedChainSupport.isEmpty,
+              let data = cachedChainSupport.data(using: .utf8),
+              let results = try? JSONDecoder().decode([String: EtherscanService.ChainSupportStatus].self, from: data) else {
+            return
+        }
+        chainSupportResults = results
+    }
+
+    @ViewBuilder
+    private func chainSupportRow(chain: String, status: EtherscanService.ChainSupportStatus) -> some View {
+        let name: String = {
+            switch chain {
+            case "mainnet": return "Ethereum Mainnet"
+            case "sepolia": return "Sepolia"
+            case "base": return "Base"
+            case "arbitrum": return "Arbitrum"
+            case "optimism": return "Optimism"
+            case "polygon": return "Polygon"
+            case "bsc": return "BNB Chain"
+            default: return chain
+            }
+        }()
+
+        HStack(spacing: 8) {
+            switch status {
+            case .free:
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(.green)
+                    .font(.system(size: 12))
+            case .paid:
+                Image(systemName: "lock.fill")
+                    .foregroundColor(.yellow)
+                    .font(.system(size: 12))
+            case .unsupported:
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundColor(.red)
+                    .font(.system(size: 12))
+            }
+            Text(name)
+                .font(.system(size: 11, design: .monospaced))
+            Spacer()
+            Text(status == .free ? "Free" : status == .paid ? "Paid Key Required" : "Not Supported")
+                .font(.system(size: 10, design: .monospaced))
+                .foregroundColor(.secondary)
         }
     }
 

@@ -301,11 +301,38 @@ class KeyStore: NSObject, ObservableObject {
         }
     }
 
-    /// Derive a child key from an HD master key
+    /// Derive a child key from an HD master key using actual BIP-32 HD derivation
     func deriveChildKey(from masterKey: ManagedKey, path: String, name: String) throws -> ManagedKey {
         let curveCode = Int(masterKey.curveCode)
+        let parentOrigin = TransportOrigin.load(for: masterKey.id)
 
-        let (publicKey, serializedKey) = try cryptoEngine.generateKey(curveCode: curveCode)
+        guard let masterKeyData = UserDefaults.standard.data(forKey: "key_\(masterKey.id.uuidString)") else {
+            throw CBMPCError.invalidKeyData
+        }
+
+        // Parse BIP-44 path string (e.g., "m/44'/60'/0'/0/0") into UInt32 array
+        let pathIndices = Self.parseBIP44Path(path)
+
+        let publicKey: Data
+        let serializedKey: Data
+
+        if parentOrigin == .local || isPackedKeyData(for: masterKey.id) {
+            // Both HD master shares on device — derive locally
+            let result = try cryptoEngine.deriveChildFromHD(
+                masterKeyData: masterKeyData,
+                path: pathIndices,
+                curveCode: curveCode
+            )
+            publicKey = result.publicKey
+            serializedKey = result.serializedKey
+        } else {
+            // Fallback: generate independent key (parent is server/peer-backed with single share)
+            print("[KeyStore] WARNING: HD master has single share — generating independent child key")
+            let result = try cryptoEngine.generateKey(curveCode: curveCode)
+            publicKey = result.publicKey
+            serializedKey = result.serializedKey
+        }
+
         let publicKeyHex = publicKey.map { String(format: "%02x", $0) }.joined()
 
         let childKey = ManagedKey(
@@ -326,7 +353,6 @@ class KeyStore: NSObject, ObservableObject {
         UserDefaults.standard.set(serializedKey, forKey: "key_\(childKey.id.uuidString)")
 
         // Propagate transport origin from parent to child (for display badge)
-        let parentOrigin = TransportOrigin.load(for: masterKey.id)
         TransportOrigin.save(parentOrigin, for: childKey.id)
         if let parentCoSigner = TransportOrigin.coSignerRef(for: masterKey.id) {
             TransportOrigin.saveCoSigner(parentCoSigner, for: childKey.id)
@@ -338,10 +364,76 @@ class KeyStore: NSObject, ObservableObject {
         // Mark as locally-derived (both shares on device even though badge shows server/peer)
         UserDefaults.standard.set(true, forKey: "key_\(childKey.id.uuidString)_localDerived")
 
-        print("[KeyStore] Derived HD-child '\(name)' from parent \(masterKey.name), origin=\(parentOrigin.rawValue), localDerived=true")
+        print("[KeyStore] Derived HD-child '\(name)' via HD derivation from parent \(masterKey.name), origin=\(parentOrigin.rawValue)")
 
         addKey(childKey)
         return childKey
+    }
+
+    /// Derive a child key from a server-backed HD master key (async — downloads server share)
+    func deriveChildKeyAsync(from masterKey: ManagedKey, path: String, name: String) async throws -> ManagedKey {
+        let curveCode = Int(masterKey.curveCode)
+
+        guard let masterKeyData = UserDefaults.standard.data(forKey: "key_\(masterKey.id.uuidString)") else {
+            throw CBMPCError.invalidKeyData
+        }
+        guard let serverURLString = UserDefaults.standard.string(forKey: "key_\(masterKey.id.uuidString)_server"),
+              let serverURL = URL(string: serverURLString) else {
+            throw CBMPCError.serverUnreachable
+        }
+
+        let pathIndices = Self.parseBIP44Path(path)
+
+        print("[KeyStore] Deriving child from server-backed HD master via HD derivation...")
+        let (childPubKey, deviceChildShare, _) = try await cryptoEngine.deriveChildFromHDRemote(
+            deviceHDShare: masterKeyData,
+            path: pathIndices,
+            curveCode: curveCode,
+            serverURL: serverURL,
+            masterPublicKey: masterKey.publicKey
+        )
+
+        let publicKeyHex = childPubKey.map { String(format: "%02x", $0) }.joined()
+
+        let childKey = ManagedKey(
+            id: UUID(),
+            name: name,
+            publicKey: publicKeyHex,
+            keyType: .hdChild,
+            curveCode: Int32(curveCode),
+            derivationPath: path,
+            parentKeyId: masterKey.id,
+            storageLocation: .secureEnclave,
+            createdAt: Date(),
+            lastUsedAt: nil,
+            isBackedUp: false,
+            signingRecords: []
+        )
+
+        // Store only device child share (server child share was uploaded by ServerDKGCoordinator)
+        UserDefaults.standard.set(deviceChildShare, forKey: "key_\(childKey.id.uuidString)")
+        TransportOrigin.save(.server, for: childKey.id)
+        TransportOrigin.saveCoSigner(serverURL.absoluteString, for: childKey.id)
+        UserDefaults.standard.set(serverURL.absoluteString, forKey: "key_\(childKey.id.uuidString)_server")
+
+        print("[KeyStore] Derived server-backed HD-child '\(name)' — child share stored, server share uploaded")
+
+        addKey(childKey)
+        return childKey
+    }
+
+    /// Parse a BIP-44 path string into UInt32 indices
+    /// e.g., "m/44'/60'/0'/0/0" → [0x8000002C, 0x8000003C, 0x80000000, 0, 0]
+    private static func parseBIP44Path(_ path: String) -> [UInt32] {
+        let components = path.split(separator: "/")
+        return components.compactMap { component in
+            let str = String(component)
+            if str == "m" { return nil }
+            let hardened = str.hasSuffix("'")
+            let clean = str.replacingOccurrences(of: "'", with: "")
+            guard let index = UInt32(clean) else { return nil }
+            return hardened ? (index | 0x80000000) : index
+        }
     }
 
     // MARK: - iCloud Backup
@@ -393,13 +485,25 @@ class KeyStore: NSObject, ObservableObject {
     // MARK: - Cryptographic Operations
 
     /// Generate a real cryptographic key using DKG (local, both shares on device)
+    /// Uses HD DKG (cbmpc_hd_ecdsa2p_dkg) for hdMaster keys, standard DKG for simple keys
     func generateCryptographicKey(name: String, keyType: KeyType) throws -> ManagedKey {
         let curveCode = 714 // secp256k1
 
         do {
-            let (publicKey, serializedKey) = try cryptoEngine.generateKey(curveCode: curveCode)
-            let publicKeyHex = publicKey.map { String(format: "%02x", $0) }.joined()
+            let publicKey: Data
+            let serializedKey: Data
 
+            if keyType == .hdMaster {
+                let result = try cryptoEngine.generateHDKey(curveCode: curveCode)
+                publicKey = result.publicKey
+                serializedKey = result.serializedKey
+            } else {
+                let result = try cryptoEngine.generateKey(curveCode: curveCode)
+                publicKey = result.publicKey
+                serializedKey = result.serializedKey
+            }
+
+            let publicKeyHex = publicKey.map { String(format: "%02x", $0) }.joined()
             let derivationPath: String? = (keyType == .hdMaster) ? "m" : nil
 
             let managedKey = ManagedKey(
@@ -429,13 +533,26 @@ class KeyStore: NSObject, ObservableObject {
     }
 
     /// Generate a server-backed key (device share local, server share remote)
+    /// Uses HD DKG (cbmpc_hd_ecdsa2p_dkg) for hdMaster keys, standard DKG for simple keys
     func generateServerKey(name: String, keyType: KeyType, serverURL: URL) async throws -> ManagedKey {
         let curveCode = 714
         let startTime = Date()
 
         print("[KeyStore] generateServerKey: START — name='\(name)', type=\(keyType.rawValue), server=\(serverURL.absoluteString)")
 
-        let (publicKey, deviceShare) = try await cryptoEngine.generateKeyRemote(serverURL: serverURL, curveCode: curveCode)
+        let publicKey: Data
+        let deviceShare: Data
+
+        if keyType == .hdMaster {
+            let result = try await cryptoEngine.generateHDKeyRemote(serverURL: serverURL, curveCode: curveCode)
+            publicKey = result.publicKey
+            deviceShare = result.deviceShare
+        } else {
+            let result = try await cryptoEngine.generateKeyRemote(serverURL: serverURL, curveCode: curveCode)
+            publicKey = result.publicKey
+            deviceShare = result.deviceShare
+        }
+
         let publicKeyHex = publicKey.map { String(format: "%02x", $0) }.joined()
         let duration = Date().timeIntervalSince(startTime)
 

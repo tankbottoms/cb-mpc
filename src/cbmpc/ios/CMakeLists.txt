@@ -1,5 +1,5 @@
-if(NOT IS_IOS AND NOT IS_IOS_SIMULATOR)
-  return()  # Skip iOS API layer if not building for iOS
+if(NOT IS_IOS AND NOT IS_IOS_SIMULATOR AND NOT IS_MACOS)
+  return()  # Skip API layer if not building for iOS or macOS
 endif()
 
 add_library(cbmpc_ios OBJECT

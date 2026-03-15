@@ -31,7 +31,7 @@ struct AppNavigation: View {
                 case 2:
                     SigningHistoryView()
                 case 3:
-                    TransactionsPlaceholderView()
+                    TransactionsTabView()
                 case 4:
                     NavigationStack {
                         DemoHubView()
@@ -58,32 +58,96 @@ struct AppNavigation: View {
             .environmentObject(keyStore)
     }
 
+    enum MacSection: String, CaseIterable, Identifiable {
+        case keys = "Keys"
+        case network = "Network"
+        case history = "Signing History"
+        case transactions = "Transactions"
+        case demos = "Demos"
+        case settings = "Settings"
+
+        var id: String { rawValue }
+
+        var icon: String {
+            switch self {
+            case .keys: return "key.fill"
+            case .network: return "antenna.radiowaves.left.and.right"
+            case .history: return "clock.fill"
+            case .transactions: return "arrow.left.arrow.right"
+            case .demos: return "flask.fill"
+            case .settings: return "gearshape.fill"
+            }
+        }
+    }
+
+    @State private var selectedSection: MacSection = .keys
+    @State private var showCreateKeySheet = false
+
     @ViewBuilder
     func macOSNavigationView() -> some View {
         NavigationSplitView {
-            List(selection: $keyStore.selectedKeyId) {
-                ForEach(keyStore.keys) { key in
-                    NavigationLink(value: key.id) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(key.name)
-                                .font(.system(.body, design: .monospaced))
-                            Text(key.publicKeyDisplay)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
+            List(selection: $selectedSection) {
+                ForEach(MacSection.allCases) { section in
+                    Label(section.rawValue, systemImage: section.icon)
+                        .tag(section)
                 }
             }
-            .navigationTitle("Keys")
+            .navigationTitle("CB-MPC")
+            .listStyle(.sidebar)
         } detail: {
-            if let keyId = keyStore.selectedKeyId,
-               let key = keyStore.keys.first(where: { $0.id == keyId }) {
-                KeyDetailView(key: key)
-            } else {
-                Text("Select a key")
-                    .foregroundColor(.secondary)
+            switch selectedSection {
+            case .keys:
+                NavigationSplitView {
+                    List(selection: $keyStore.selectedKeyId) {
+                        ForEach(keyStore.keys) { key in
+                            NavigationLink(value: key.id) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(key.name)
+                                        .font(.system(.body, design: .monospaced))
+                                    Text(key.publicKeyDisplay)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                        }
+                    }
+                    .navigationTitle("Keys")
+                    .toolbar {
+                        ToolbarItem(placement: .automatic) {
+                            Button(action: { showCreateKeySheet = true }) {
+                                Label("Create Key", systemImage: "plus")
+                            }
+                        }
+                    }
+                    .sheet(isPresented: $showCreateKeySheet) {
+                        CreateKeySheetView()
+                            .environmentObject(keyStore)
+                            .frame(minWidth: 500, minHeight: 400)
+                    }
+                } detail: {
+                    if let keyId = keyStore.selectedKeyId,
+                       let key = keyStore.keys.first(where: { $0.id == keyId }) {
+                        KeyDetailView(key: key)
+                    } else {
+                        Text("Select a key")
+                            .foregroundColor(.secondary)
+                    }
+                }
+            case .network:
+                NetworkView()
+            case .history:
+                SigningHistoryView()
+            case .transactions:
+                TransactionsTabView()
+            case .demos:
+                NavigationStack {
+                    DemoHubView()
+                }
+            case .settings:
+                SettingsView()
             }
         }
+        .frame(minWidth: 800, minHeight: 500)
     }
 
     #else // iPadOS

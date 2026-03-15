@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Backup & Recovery Strategies — Visual Guide</title>
+<style>
+  :root {
+    --font-mono: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    --border-w: 3px;
+    --shadow-offset: 5px;
+    --radius: 0;
+    --alice: #6366f1;
+    --bob: #f59e0b;
+    --carol: #10b981;
+    --public: #3b82f6;
+    --private: #ef4444;
+    --mail: #8b5cf6;
+  }
+
+  [data-theme="light"] {
+    --bg: #f5f0e8;
+    --card: #ffffff;
+    --card2: #f0ebe3;
+    --text: #1a1a1a;
+    --muted: #6b7280;
+    --border: #1a1a1a;
+    --shadow-color: #1a1a1a;
+  }
+
+  [data-theme="dark"] {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --card2: #334155;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --border: #475569;
+    --shadow-color: #000000;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font-mono);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, var(--alice), var(--bob), var(--carol));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .subtitle {
+    text-align: center;
+    color: var(--muted);
+    margin-bottom: 3rem;
+    font-size: 0.9rem;
+  }
+
+  /* Strategy card */
+  .strategy-card {
+    margin-bottom: 2.5rem;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    background: var(--card);
+  }
+
+  .strategy-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--card2);
+  }
+
+  .strategy-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 0.3rem;
+  }
+
+  .strategy-subtitle {
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  .strategy-body {
+    padding: 1.5rem;
+  }
+
+  /* Flow diagram */
+  .flow-diagram {
+    background: var(--bg);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin: 1rem 0;
+    border: 1px dashed var(--border);
+    font-size: 0.85rem;
+  }
+
+  .flow-step {
+    display: inline-block;
+    background: var(--card2);
+    border: 1px solid var(--border);
+    padding: 0.8rem 1rem;
+    border-radius: 6px;
+    margin: 0.3rem;
+    font-weight: 600;
+  }
+
+  .flow-arrow {
+    display: inline-block;
+    margin: 0 0.4rem;
+    color: var(--muted);
+    font-size: 1.2rem;
+  }
+
+  /* Procedure list */
+  .procedure {
+    background: var(--card2);
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 1rem 0;
+    border-left: 3px solid var(--alice);
+  }
+
+  .procedure-title {
+    font-weight: 700;
+    color: var(--alice);
+    margin-bottom: 0.5rem;
+  }
+
+  .procedure-steps {
+    list-style: none;
+    font-size: 0.85rem;
+  }
+
+  .procedure-steps li {
+    margin: 0.4rem 0;
+    padding-left: 1.8rem;
+    position: relative;
+  }
+
+  .procedure-steps li::before {
+    content: attr(data-step);
+    position: absolute;
+    left: 0;
+    font-weight: 700;
+    color: var(--alice);
+    width: 1.5rem;
+    text-align: center;
+  }
+
+  /* Risk/Advantage boxes */
+  .advantage-box {
+    background: rgba(16, 185, 129, 0.1);
+    border-left: 3px solid var(--carol);
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 1rem 0;
+  }
+
+  .advantage-title {
+    font-weight: 700;
+    color: var(--carol);
+    margin-bottom: 0.5rem;
+  }
+
+  .advantage-items {
+    list-style: none;
+    font-size: 0.85rem;
+  }
+
+  .advantage-items li {
+    margin: 0.3rem 0;
+    padding-left: 1.2rem;
+    position: relative;
+  }
+
+  .advantage-items li::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    color: var(--carol);
+    font-weight: bold;
+  }
+
+  .risk-box {
+    background: rgba(239, 68, 68, 0.1);
+    border-left: 3px solid var(--private);
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 1rem 0;
+  }
+
+  .risk-title {
+    font-weight: 700;
+    color: var(--private);
+    margin-bottom: 0.5rem;
+  }
+
+  .risk-items {
+    list-style: none;
+    font-size: 0.85rem;
+  }
+
+  .risk-items li {
+    margin: 0.3rem 0;
+    padding-left: 1.2rem;
+    position: relative;
+  }
+
+  .risk-items li::before {
+    content: '⚠';
+    position: absolute;
+    left: 0;
+    color: var(--private);
+  }
+
+  /* Recovery scenario */
+  .scenario-card {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+
+  .scenario-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+
+  .scenario-description {
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+  }
+
+  .scenario-outcome {
+    background: var(--card2);
+    border-left: 3px solid var(--public);
+    border-radius: 6px;
+    padding: 0.8rem;
+    margin: 0.5rem 0;
+    font-size: 0.85rem;
+  }
+
+  .scenario-procedure {
+    background: var(--card2);
+    border-left: 3px solid var(--alice);
+    border-radius: 6px;
+    padding: 0.8rem;
+    margin: 0.5rem 0;
+  }
+
+  .scenario-procedure strong {
+    color: var(--alice);
+  }
+
+  /* Comparison table */
+  .strategy-matrix {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+    margin: 2rem 0;
+  }
+
+  .strategy-matrix th {
+    padding: 0.8rem;
+    text-align: left;
+    border-bottom: 2px solid var(--border);
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .strategy-matrix td {
+    padding: 0.6rem 0.8rem;
+    border-bottom: 1px solid rgba(71, 85, 105, 0.4);
+  }
+
+  .strategy-matrix tr:hover td {
+    background: rgba(99, 102, 241, 0.05);
+  }
+
+  /* Grid layouts */
+  .cols-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+
+  @media (max-width: 800px) {
+    .cols-2 { grid-template-columns: 1fr; }
+  }
+
+  /* Callout */
+  .info-box {
+    background: rgba(59, 130, 246, 0.1);
+    border-left: 3px solid var(--public);
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 1rem 0;
+    font-size: 0.85rem;
+  }
+
+  .info-title {
+    font-weight: 700;
+    color: var(--public);
+    margin-bottom: 0.5rem;
+  }
+
+  .decision-tree {
+    background: rgba(147, 51, 234, 0.1);
+    border-left: 3px solid var(--mail);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin: 2rem 0;
+  }
+
+  .decision-tree ol {
+    margin-left: 1rem;
+  }
+
+  .decision-tree li {
+    margin: 0.5rem 0;
+    font-size: 0.9rem;
+  }
+
+  /* ---- THEME TOGGLE ---- */
+  .theme-toggle {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 999;
+    border: var(--border-w) solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color);
+    transition: all 0.15s;
+  }
+  .theme-toggle:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 7px 7px 0 var(--shadow-color);
+  }
+  .theme-toggle:active {
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0 var(--shadow-color);
+  }
+
+  /* ---- DOC NAV ---- */
+  .doc-nav {
+    display: flex;
+    gap: 0;
+    margin: 0 auto 2rem;
+    width: 100%;
+    border: var(--border-w) solid var(--border);
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color);
+    overflow: hidden;
+    flex-wrap: wrap;
+  }
+  .nav-link {
+    flex: 0 1 calc(100% / 5);
+    text-align: center;
+    padding: 0.5rem 0.4rem;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-decoration: none;
+    color: var(--text);
+    background: var(--card);
+    border-right: var(--border-w) solid var(--border);
+    border-bottom: var(--border-w) solid var(--border);
+    transition: background 0.15s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .nav-link:nth-child(5n) { border-right: none; }
+  .nav-link:nth-last-child(-n+5) { border-bottom: none; }
+  .nav-link:hover { background: var(--card2); }
+  .nav-link.active {
+    background: var(--card2);
+    color: var(--text);
+  }
+
+  /* Print styles */
+  @media print {
+    body { background: white; color: #1e293b; padding: 1rem; }
+    .strategy-card { break-inside: avoid; border-color: #ccc; background: white; }
+    h1 { -webkit-text-fill-color: #1e293b; background: none; }
+    .theme-toggle, .doc-nav { display: none; }
+  }
+</style>
+</head>
+<body data-theme="light">
+
+<button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">[ LIGHT ]</button>
+
+<nav class="doc-nav">
+  <a href="index.html" class="nav-link">Demo Guide</a>
+  <a href="threshold-signing.html" class="nav-link">Threshold Signing</a>
+  <a href="dkg-ceremony.html" class="nav-link">DKG Ceremony</a>
+  <a href="device-to-device.html" class="nav-link">Device-to-Device</a>
+  <a href="server-architecture.html" class="nav-link">Server Architecture</a>
+  <a href="shamir-splitting.html" class="nav-link">Shamir Splitting</a>
+  <a href="ios-encryption-backup-strategy.html" class="nav-link">iOS Encryption</a>
+  <a href="key-management.html" class="nav-link">Key Management</a>
+  <a href="signing-operations.html" class="nav-link">Signing Operations</a>
+  <a href="qr-transfer-workflow.html" class="nav-link">QR Transfer</a>
+  <a href="bluetooth-multipeer-protocol.html" class="nav-link">Bluetooth MultiPeer</a>
+  <a href="custody-models.html" class="nav-link">Custody Models</a>
+  <a href="key-storage-hierarchy.html" class="nav-link">Key Storage</a>
+  <a href="backup-recovery-strategies.html" class="nav-link active">Backup Recovery</a>
+  <a href="#" class="nav-link" style="visibility: hidden;"></a>
+</nav>
+
+<h1>Backup & Recovery Strategies</h1>
+<p class="subtitle">Five strategies for different custody models and recovery scenarios</p>
+
+<!-- STRATEGY 1: NO BACKUP -->
+<div class="strategy-card">
+  <div class="strategy-header">
+    <div class="strategy-title">Strategy 1: No Backup (Risk Acceptance)</div>
+    <div class="strategy-subtitle">For throwaway keys and development-only wallets</div>
+  </div>
+  <div class="strategy-body">
+    <div class="flow-diagram">
+      <span class="flow-step">Generate Key</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-step">Use Immediately</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-step">Delete if Compromised</span>
+    </div>
+
+    <div class="procedure">
+      <div class="procedure-title">Procedure:</div>
+      <ol class="procedure-steps" style="list-style: decimal; margin-left: 1rem;">
+        <li>Generate key on device (Keychain only)</li>
+        <li>Use immediately for signings</li>
+        <li>Do NOT export to file or iCloud</li>
+        <li>If device is compromised: delete key, generate new one</li>
+        <li>Key is permanently lost if device is destroyed</li>
+      </ol>
+    </div>
+
+    <div class="advantage-box">
+      <div class="advantage-title">Advantages:</div>
+      <ul class="advantage-items">
+        <li>No backup infrastructure needed</li>
+        <li>Simplest setup (zero configuration)</li>
+        <li>Fastest key generation</li>
+        <li>No recovery complexity</li>
+      </ul>
+    </div>
+
+    <div class="risk-box">
+      <div class="risk-title">Risks:</div>
+      <ul class="risk-items">
+        <li>Total loss if device damaged/stolen</li>
+        <li>No recovery option available</li>
+        <li>Only suitable for non-custodial use</li>
+        <li>Cannot be used for long-term storage</li>
+      </ul>
+    </div>
+
+    <div class="info-box">
+      <div class="info-title">Best For:</div>
+      Development, testing, throwaway keys, single-use signing operations
+    </div>
+  </div>
+</div>
+
+<!-- STRATEGY 2: iCLOUD BACKUP -->
+<div class="strategy-card">
+  <div class="strategy-header">
+    <div class="strategy-title">Strategy 2: iCloud Backup (Automatic Cloud Sync)</div>
+    <div class="strategy-subtitle">For single-device users with Apple ecosystem</div>
+  </div>
+  <div class="strategy-body">
+    <div class="flow-diagram">
+      <span class="flow-step">Generate Key</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-step">Enable iCloud Backup</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-step">App Data Syncs</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-step">Key Available on New Device</span>
+    </div>
+
+    <div class="procedure">
+      <div class="procedure-title">Procedure:</div>
+      <ol class="procedure-steps" style="list-style: decimal; margin-left: 1rem;">
+        <li>In iOS Settings: Enable iCloud Backup for device</li>
+        <li>App automatically stores encrypted share in iCloud Keychain</li>
+        <li>Key is synced to all user's paired iPhones</li>
+        <li>On new device: Sign in with Apple ID → Restore from iCloud Backup</li>
+        <li>Key automatically available (no manual import)</li>
+      </ol>
+    </div>
+
+    <div class="advantage-box">
+      <div class="advantage-title">Advantages:</div>
+      <ul class="advantage-items">
+        <li>Completely automatic (no user action)</li>
+        <li>Cross-device sync built-in</li>
+        <li>Key available on new device instantly</li>
+        <li>Free (included with iCloud)</li>
+      </ul>
+    </div>
+
+    <div class="risk-box">
+      <div class="risk-title">Risks:</div>
+      <ul class="risk-items">
+        <li>Depends on Apple's infrastructure</li>
+        <li>Apple holds escrow key (can decrypt with legal authority)</li>
+        <li>Requires iCloud account and internet</li>
+        <li>Key is synced (less isolated than device-only)</li>
+      </ul>
+    </div>
+
+    <div class="info-box">
+      <div class="info-title">Best For:</div>
+      Single-device users, consumer wallets, iPhone backup users, convenience-first approach
+    </div>
+  </div>
+</div>
+
+<!-- STRATEGY 3: FILE EXPORT -->
+<div class="strategy-card">
+  <div class="strategy-header">
+    <div class="strategy-title">Strategy 3: Encrypted File Export (Cold Storage)</div>
+    <div class="strategy-subtitle">For users who want manual control over backups</div>
+  </div>
+  <div class="strategy-body">
+    <div class="flow-diagram">
+      <span class="flow-step">Generate Key</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-step">Export to File</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-step">Store Offline/Cloud</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-step">Manual Import + Passphrase</span>
+    </div>
+
+    <div class="procedure">
+      <div class="procedure-title">Procedure:</div>
+      <ol class="procedure-steps" style="list-style: decimal; margin-left: 1rem;">
+        <li>In app: Key Detail → Backup → Export</li>
+        <li>System generates strong passphrase suggestion (or you create one)</li>
+        <li>Choose export format (Keystore V3 JSON recommended)</li>
+        <li>File saved to Files app / AirDrop / Email</li>
+        <li>Move file to encrypted cloud (Tresorit, Sync.com, iCloud Drive)</li>
+        <li>To recover: Import → Select file → Enter passphrase</li>
+      </ol>
+    </div>
+
+    <div class="advantage-box">
+      <div class="advantage-title">Advantages:</div>
+      <ul class="advantage-items">
+        <li>User-controlled encryption (not Apple)</li>
+        <li>Portable (move between devices/platforms)</li>
+        <li>Can store offline or in encrypted cloud</li>
+        <li>Works without iCloud account</li>
+      </ul>
+    </div>
+
+    <div class="risk-box">
+      <div class="risk-title">Risks:</div>
+      <ul class="risk-items">
+        <li>Passphrase must be strong (security depends on it)</li>
+        <li>File can be intercepted during transfer</li>
+        <li>Must remember passphrase (if forgotten, key is lost)</li>
+        <li>Manual recovery process (slower than iCloud)</li>
+      </ul>
+    </div>
+
+    <div class="info-box">
+      <div class="info-title">Best For:</div>
+      Cold storage, paranoid users, multi-platform recovery, offline-first approach
+    </div>
+  </div>
+</div>
+
+<!-- STRATEGY 4: USB-C BACKUP -->
+<div class="strategy-card">
+  <div class="strategy-header">
+    <div class="strategy-title">Strategy 4: USB-C Hardware Backup (Air-Gap Safe)</div>
+    <div class="strategy-subtitle">For long-term custody and generational wealth</div>
+  </div>
+  <div class="strategy-body">
+    <div class="flow-diagram">
+      <span class="flow-step">Generate Key</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-step">Export to USB Device</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-step">Store in Safe (Air-Gap)</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-step">Connect USB + PIN to Restore</span>
+    </div>
+
+    <div class="procedure">
+      <div class="procedure-title">Procedure:</div>
+      <ol class="procedure-steps" style="list-style: decimal; margin-left: 1rem;">
+        <li>Use dedicated USB-C backup device (hardware-encrypted)</li>
+        <li>In app: Export Key → Select USB Device</li>
+        <li>System encrypts share on USB device (device-enforced, no passphrase needed)</li>
+        <li>Store USB in physical safe (completely air-gapped, no network)</li>
+        <li>To recover: Connect USB to device → Enter PIN → Key imported</li>
+        <li>USB device is durable for 10+ years</li>
+      </ol>
+    </div>
+
+    <div class="advantage-box">
+      <div class="advantage-title">Advantages:</div>
+      <ul class="advantage-items">
+        <li>100% air-gap safe (no network access)</li>
+        <li>Hardware-enforced encryption</li>
+        <li>No passphrase to remember</li>
+        <li>Durable for decades</li>
+        <li>Can be passed to heirs (inheritance)</li>
+      </ul>
+    </div>
+
+    <div class="risk-box">
+      <div class="risk-title">Risks:</div>
+      <ul class="risk-items">
+        <li>High cost ($100-$500 for hardware)</li>
+        <li>Physical device can break or be lost</li>
+        <li>Slower recovery than file or iCloud</li>
+        <li>Vendor lock-in (proprietary encryption)</li>
+      </ul>
+    </div>
+
+    <div class="info-box">
+      <div class="info-title">Best For:</div>
+      Long-term custody, inheritance planning, institutional vaults, high-security requirements
+    </div>
+  </div>
+</div>
+
+<!-- STRATEGY 5: 2-OF-3 THRESHOLD BACKUP -->
+<div class="strategy-card">
+  <div class="strategy-header">
+    <div class="strategy-title">Strategy 5: Threshold Backup (2-of-3 Redundancy)</div>
+    <div class="strategy-subtitle">Enterprise-grade recovery with no single point of failure</div>
+  </div>
+  <div class="strategy-body">
+    <div class="flow-diagram">
+      <span class="flow-step">Device A: Share 0</span>
+      <span class="flow-arrow">+</span>
+      <span class="flow-step">Device B: Share 1</span>
+      <span class="flow-arrow">+</span>
+      <span class="flow-step">Server: Share 2</span>
+    </div>
+
+    <div class="procedure">
+      <div class="procedure-title">Procedure:</div>
+      <ol class="procedure-steps" style="list-style: decimal; margin-left: 1rem;">
+        <li>Generate key across 2 devices (BLE or QR)</li>
+        <li>Device A stores Share 0 in Keychain</li>
+        <li>Device B stores Share 1 in Keychain</li>
+        <li>Server automatically stores Share 2 in HSM (non-extractable)</li>
+        <li>All shares sync to iCloud as automatic backup</li>
+        <li>If Device A lost: Use Device B + Server (2-of-3 threshold) to sign</li>
+        <li>If Server down: Use Device A + Device B to refresh Share 2</li>
+        <li>If Device B lost: Device A + Server create new Share 1 for replacement</li>
+      </ol>
+    </div>
+
+    <div class="advantage-box">
+      <div class="advantage-title">Advantages:</div>
+      <ul class="advantage-items">
+        <li>No single point of failure</li>
+        <li>Device loss is fully recoverable</li>
+        <li>Server compromise doesn't break security</li>
+        <li>Threshold refresh allows graceful onboarding</li>
+        <li>Audit trail on all operations</li>
+      </ul>
+    </div>
+
+    <div class="risk-box">
+      <div class="risk-title">Risks:</div>
+      <ul class="risk-items">
+        <li>Requires server infrastructure</li>
+        <li>More complex to set up</li>
+        <li>Coordination between 2-3 parties required</li>
+        <li>Threshold refresh takes time (~2-3 minutes)</li>
+      </ul>
+    </div>
+
+    <div class="info-box">
+      <div class="info-title">Best For:</div>
+      Enterprise custody, institutional treasuries, DAOs, multi-sig organizations
+    </div>
+  </div>
+</div>
+
+<!-- RECOVERY SCENARIOS -->
+<div style="margin-top: 3rem;">
+  <h2 style="font-size: 1.3rem; margin-bottom: 1.5rem;">Recovery Scenarios</h2>
+
+  <div class="scenario-card">
+    <div class="scenario-title">Scenario 1: Single Device Lost (No Backup)</div>
+    <div class="scenario-description">
+      Device is destroyed or stolen, and no backup was configured.
+    </div>
+    <div class="scenario-outcome">
+      <strong>Outcome:</strong> Key is permanently lost. Cannot be recovered.
+    </div>
+    <div class="scenario-procedure">
+      <strong>Action:</strong> Generate a new key on the replacement device.
+    </div>
+  </div>
+
+  <div class="scenario-card">
+    <div class="scenario-title">Scenario 2: Single Device Lost (iCloud Backup)</div>
+    <div class="scenario-description">
+      Device is destroyed, but iCloud backup was enabled.
+    </div>
+    <div class="scenario-outcome">
+      <strong>Outcome:</strong> Restore to new device from iCloud backup (automatic).
+    </div>
+    <div class="scenario-procedure">
+      <strong>Action:</strong><br>
+      1. Install app on new device<br>
+      2. Sign in with Apple ID<br>
+      3. System restores keys from iCloud backup<br>
+      4. Key available immediately (no manual steps)
+    </div>
+  </div>
+
+  <div class="scenario-card">
+    <div class="scenario-title">Scenario 3: Single Device Lost (File Backup)</div>
+    <div class="scenario-description">
+      Device is destroyed, but encrypted backup file was exported to cloud storage.
+    </div>
+    <div class="scenario-outcome">
+      <strong>Outcome:</strong> Recover key by importing backup file from cloud.
+    </div>
+    <div class="scenario-procedure">
+      <strong>Action:</strong><br>
+      1. Install app on new device<br>
+      2. Open: Import Key Share<br>
+      3. Select backup file from cloud storage<br>
+      4. Enter passphrase<br>
+      5. System imports and decrypts key<br>
+      6. Key available for signing
+    </div>
+  </div>
+
+  <div class="scenario-card">
+    <div class="scenario-title">Scenario 4: 2-of-2 Device Lost (File Backup)</div>
+    <div class="scenario-description">
+      Device A is lost, but both Device A and Device B exported encrypted backups.
+    </div>
+    <div class="scenario-outcome">
+      <strong>Outcome:</strong> Device B can import Device A's backup file, now holding both shares.
+    </div>
+    <div class="scenario-procedure">
+      <strong>Action:</strong><br>
+      1. On Device B: "Restore Key Share"<br>
+      2. Select encrypted backup file from Device A<br>
+      3. Enter passphrase<br>
+      4. Device B now has both Share 0 and Share 1<br>
+      5. Can sign alone (threshold reduced to 1-of-2)<br>
+      6. Recommend: Re-generate key with new Device C (return to 2-of-2)
+    </div>
+  </div>
+
+  <div class="scenario-card">
+    <div class="scenario-title">Scenario 5: 2-of-3 Threshold, Device Lost</div>
+    <div class="scenario-description">
+      Device C is lost, but threshold is 2-of-3 (Device A + Device B + Server).
+    </div>
+    <div class="scenario-outcome">
+      <strong>Outcome:</strong> Use remaining 2 parties to authorize threshold refresh (no key loss).
+    </div>
+    <div class="scenario-procedure">
+      <strong>Action:</strong><br>
+      1. Initiate "Threshold Refresh" on Device A or Device B<br>
+      2. System coordinates with Server<br>
+      3. Both parties verify ownership (biometric + passphrase)<br>
+      4. New Share 3 generated for replacement Device D<br>
+      5. Old Share 3 automatically invalidated<br>
+      6. Transfer new share to Device D (QR or BLE)<br>
+      7. New threshold active: Device A + Device B + Device D
+    </div>
+  </div>
+</div>
+
+<!-- STRATEGY COMPARISON MATRIX -->
+<div style="margin-top: 3rem; padding: 2rem; background: var(--card); border-radius: 16px; border: 1px solid var(--border);">
+  <h2 style="margin-bottom: 1rem; font-size: 1.2rem;">Strategy Comparison Matrix</h2>
+  <table class="strategy-matrix">
+    <thead>
+      <tr>
+        <th>Strategy</th>
+        <th>Approach</th>
+        <th>Procedure</th>
+        <th>Recovery</th>
+        <th>Risk</th>
+        <th>Best For</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>1. No Backup</strong></td>
+        <td>Risk acceptance</td>
+        <td>Generate, use, delete</td>
+        <td>Impossible</td>
+        <td>Total loss</td>
+        <td>Dev/throwaway</td>
+      </tr>
+      <tr>
+        <td><strong>2. iCloud</strong></td>
+        <td>Automatic cloud</td>
+        <td>Enable in Settings</td>
+        <td>Auto-restore</td>
+        <td>Apple escrow key</td>
+        <td>Single device</td>
+      </tr>
+      <tr>
+        <td><strong>3. File Export</strong></td>
+        <td>Manual cold storage</td>
+        <td>Export + store file</td>
+        <td>Manual import</td>
+        <td>Passphrase risk</td>
+        <td>Cold storage</td>
+      </tr>
+      <tr>
+        <td><strong>4. USB-C</strong></td>
+        <td>Hardware air-gap</td>
+        <td>Export to USB safe</td>
+        <td>Connect + PIN</td>
+        <td>Device loss</td>
+        <td>Long-term</td>
+      </tr>
+      <tr>
+        <td><strong>5. Threshold</strong></td>
+        <td>Enterprise redundancy</td>
+        <td>2-device DKG + server</td>
+        <td>Threshold refresh</td>
+        <td>None (redundant)</td>
+        <td>Enterprise</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- DECISION GUIDE -->
+<div class="decision-tree">
+  <h2 style="margin-bottom: 1rem; font-size: 1.2rem;">How to Choose Your Strategy</h2>
+  <ol>
+    <li><strong>What is the key for?</strong>
+      <ul style="margin-top: 0.3rem;">
+        <li>→ Development/testing: Strategy 1 (no backup)</li>
+        <li>→ Personal wallet: Strategy 2 or 3</li>
+        <li>→ Business/custody: Strategy 4 or 5</li>
+      </ul>
+    </li>
+
+    <li><strong>How important is automatic recovery?</strong>
+      <ul style="margin-top: 0.3rem;">
+        <li>→ Critical (can't wait): Strategy 2 (iCloud)</li>
+        <li>→ Important (manual OK): Strategy 3 or 4</li>
+        <li>→ Low (enterprise): Strategy 5</li>
+      </ul>
+    </li>
+
+    <li><strong>How long must the key survive?</strong>
+      <ul style="margin-top: 0.3rem;">
+        <li>→ Days/months: Strategy 2 (iCloud)</li>
+        <li>→ Years: Strategy 3 (file) or 4 (USB)</li>
+        <li>→ Decades/inheritance: Strategy 4 (USB-C)</li>
+      </ul>
+    </li>
+
+    <li><strong>Do you need redundancy/quorum?</strong>
+      <ul style="margin-top: 0.3rem;">
+        <li>→ No: Strategy 1-4</li>
+        <li>→ Yes: Strategy 5 (2-of-3 threshold)</li>
+      </ul>
+    </li>
+  </ol>
+</div>
+
+<script>
+function toggleTheme() {
+  const body = document.body;
+  const btn = document.getElementById('themeBtn');
+  if (body.getAttribute('data-theme') === 'dark') {
+    body.setAttribute('data-theme', 'light');
+    localStorage.setItem('cb-mpc-theme', 'light');
+    btn.textContent = '[ DARK ]';
+  } else {
+    body.setAttribute('data-theme', 'dark');
+    localStorage.setItem('cb-mpc-theme', 'dark');
+    btn.textContent = '[ LIGHT ]';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('cb-mpc-theme') || 'light';
+  document.body.setAttribute('data-theme', saved);
+  const btn = document.getElementById('themeBtn');
+  btn.textContent = saved === 'dark' ? '[ LIGHT ]' : '[ DARK ]';
+  
+  const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+  document.querySelectorAll('.nav-link').forEach(link => {
+    if (link.getAttribute('href') === currentPage) {
+      link.classList.add('active');
+    }
+  });
+});
+</script>
+
+</body>
+</html>

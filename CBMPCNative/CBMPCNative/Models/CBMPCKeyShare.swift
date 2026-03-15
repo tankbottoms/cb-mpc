@@ -70,6 +70,38 @@ class CBMPCHDKeyShare {
         self.curveCode = curveCode
     }
 
+    /// Extract the public key as compressed SEC1 format (33 bytes)
+    func getPublicKey() -> Data? {
+        let pubkey = cbmpc_hd_key_pubkey(&keyPtr)
+        guard pubkey.data != nil && pubkey.size > 0 else { return nil }
+        defer { cbmpc_free(pubkey.data) }
+        return Data(bytes: pubkey.data!, count: Int(pubkey.size))
+    }
+
+    /// Serialize the HD key share
+    func serialize() -> Data? {
+        let serialized = cbmpc_hd_key_serialize(&keyPtr)
+        guard serialized.data != nil && serialized.size > 0 else { return nil }
+        defer { cbmpc_free(serialized.data) }
+        return Data(bytes: serialized.data!, count: Int(serialized.size))
+    }
+
+    /// Deserialize an HD key share from bytes
+    static func deserialize(_ data: Data, curveCode: Int) throws -> CBMPCHDKeyShare {
+        var keyVar = cbmpc_hd_key_t()
+        let result = data.withUnsafeBytes { buffer in
+            var cmem = cbmpc_cmem_t()
+            cmem.data = UnsafeMutableRawPointer(mutating: buffer.baseAddress)
+            cmem.size = Int32(data.count)
+            return cbmpc_hd_key_deserialize(cmem, &keyVar)
+        }
+
+        guard result == 0 else {
+            throw CBMPCError.invalidKeyData
+        }
+        return CBMPCHDKeyShare(keyPtr: keyVar, curveCode: curveCode)
+    }
+
     /// Derive a child key at the given BIP32 path
     func derive(path: [UInt32], job: CBMPCJob) throws -> CBMPCKeyShare {
         guard let cJob = job.cJob else {

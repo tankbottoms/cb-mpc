@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Key Storage Security Hierarchy — Visual Guide</title>
+<style>
+  :root {
+    --font-mono: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    --border-w: 3px;
+    --shadow-offset: 5px;
+    --radius: 0;
+    --alice: #6366f1;
+    --bob: #f59e0b;
+    --carol: #10b981;
+    --public: #3b82f6;
+    --private: #ef4444;
+    --mail: #8b5cf6;
+  }
+
+  [data-theme="light"] {
+    --bg: #f5f0e8;
+    --card: #ffffff;
+    --card2: #f0ebe3;
+    --text: #1a1a1a;
+    --muted: #6b7280;
+    --border: #1a1a1a;
+    --shadow-color: #1a1a1a;
+  }
+
+  [data-theme="dark"] {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --card2: #334155;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --border: #475569;
+    --shadow-color: #000000;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font-mono);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, var(--alice), var(--bob), var(--carol));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .subtitle {
+    text-align: center;
+    color: var(--muted);
+    margin-bottom: 3rem;
+    font-size: 0.9rem;
+  }
+
+  /* Tier card */
+  .tier-card {
+    margin-bottom: 2rem;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    background: var(--card);
+  }
+
+  .tier-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--card2);
+  }
+
+  .tier-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 0.3rem;
+  }
+
+  .tier-subtitle {
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  .tier-body {
+    padding: 1.5rem;
+  }
+
+  /* Feature grid */
+  .feature-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin: 1rem 0;
+  }
+
+  .feature-item {
+    background: var(--card2);
+    border-radius: 8px;
+    padding: 0.8rem;
+    font-size: 0.85rem;
+    border-left: 3px solid;
+  }
+
+  .feature-item.security { border-color: var(--private); }
+  .feature-item.network { border-color: var(--bob); }
+  .feature-item.performance { border-color: var(--alice); }
+  .feature-item.recovery { border-color: var(--carol); }
+  .feature-item.longevity { border-color: var(--public); }
+  .feature-item.cost { border-color: var(--mail); }
+
+  .feature-label {
+    font-weight: 600;
+    color: var(--muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.3rem;
+  }
+
+  .feature-value {
+    color: var(--text);
+    font-size: 0.95rem;
+  }
+
+  /* Spec table */
+  .spec-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+    margin: 1rem 0;
+    background: var(--card2);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .spec-table th {
+    padding: 0.6rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .spec-table td {
+    padding: 0.5rem 0.6rem;
+    border-bottom: 1px solid rgba(71, 85, 105, 0.4);
+  }
+
+  .spec-table tr:last-child td {
+    border-bottom: none;
+  }
+
+  .spec-label {
+    font-weight: 600;
+    color: var(--muted);
+    width: 35%;
+  }
+
+  .spec-value {
+    color: var(--text);
+  }
+
+  /* Hierarchy visualization */
+  .hierarchy-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin: 2rem 0;
+  }
+
+  .hierarchy-level {
+    display: flex;
+    gap: 0.8rem;
+    align-items: flex-start;
+  }
+
+  .hierarchy-badge {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.5rem 0.8rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    flex-shrink: 0;
+    min-width: 65px;
+    text-align: center;
+  }
+
+  .hierarchy-bar {
+    flex: 1;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    font-size: 0.85rem;
+    border-left: 3px solid;
+  }
+
+  .hierarchy-bar.tier1 { border-color: var(--alice); }
+  .hierarchy-bar.tier2 { border-color: var(--bob); }
+  .hierarchy-bar.tier3 { border-color: var(--carol); }
+  .hierarchy-bar.tier4 { border-color: var(--public); }
+
+  /* Use cases */
+  .use-case-box {
+    background: rgba(99, 102, 241, 0.05);
+    border-left: 3px solid var(--alice);
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 1rem 0;
+  }
+
+  .use-case-title {
+    font-weight: 700;
+    color: var(--alice);
+    margin-bottom: 0.5rem;
+  }
+
+  .use-case-items {
+    list-style: none;
+    font-size: 0.85rem;
+  }
+
+  .use-case-items li {
+    margin: 0.3rem 0;
+    padding-left: 1.2rem;
+    position: relative;
+  }
+
+  .use-case-items li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: var(--alice);
+    font-weight: bold;
+  }
+
+  /* Comparison matrix */
+  .comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+    margin: 2rem 0;
+  }
+
+  .comparison-table th {
+    padding: 0.8rem;
+    text-align: left;
+    border-bottom: 2px solid var(--border);
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .comparison-table td {
+    padding: 0.6rem 0.8rem;
+    border-bottom: 1px solid rgba(71, 85, 105, 0.4);
+  }
+
+  .comparison-table tr:hover td {
+    background: rgba(99, 102, 241, 0.05);
+  }
+
+  /* Grid layouts */
+  .cols-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+
+  .cols-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1rem;
+  }
+
+  @media (max-width: 900px) {
+    .cols-2 { grid-template-columns: 1fr; }
+    .cols-3 { grid-template-columns: 1fr 1fr; }
+    .feature-grid { grid-template-columns: 1fr; }
+  }
+
+  /* Callout boxes */
+  .info-box {
+    background: rgba(59, 130, 246, 0.1);
+    border-left: 3px solid var(--public);
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 1rem 0;
+    font-size: 0.85rem;
+  }
+
+  .info-title {
+    font-weight: 700;
+    color: var(--public);
+    margin-bottom: 0.5rem;
+  }
+
+  .warning-box {
+    background: rgba(239, 68, 68, 0.1);
+    border-left: 3px solid var(--private);
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 1rem 0;
+    font-size: 0.85rem;
+  }
+
+  .warning-title {
+    font-weight: 700;
+    color: var(--private);
+    margin-bottom: 0.5rem;
+  }
+
+  /* ---- THEME TOGGLE ---- */
+  .theme-toggle {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 999;
+    border: var(--border-w) solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color);
+    transition: all 0.15s;
+  }
+  .theme-toggle:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 7px 7px 0 var(--shadow-color);
+  }
+  .theme-toggle:active {
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0 var(--shadow-color);
+  }
+
+  /* ---- DOC NAV ---- */
+  .doc-nav {
+    display: flex;
+    gap: 0;
+    margin: 0 auto 2rem;
+    width: 100%;
+    border: var(--border-w) solid var(--border);
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color);
+    overflow: hidden;
+    flex-wrap: wrap;
+  }
+  .nav-link {
+    flex: 0 1 calc(100% / 5);
+    text-align: center;
+    padding: 0.5rem 0.4rem;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-decoration: none;
+    color: var(--text);
+    background: var(--card);
+    border-right: var(--border-w) solid var(--border);
+    border-bottom: var(--border-w) solid var(--border);
+    transition: background 0.15s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .nav-link:nth-child(5n) { border-right: none; }
+  .nav-link:nth-last-child(-n+5) { border-bottom: none; }
+  .nav-link:hover { background: var(--card2); }
+  .nav-link.active {
+    background: var(--card2);
+    color: var(--text);
+  }
+
+  /* Print styles */
+  @media print {
+    body { background: white; color: #1e293b; padding: 1rem; }
+    .tier-card { break-inside: avoid; border-color: #ccc; background: white; }
+    h1 { -webkit-text-fill-color: #1e293b; background: none; }
+    .theme-toggle, .doc-nav { display: none; }
+  }
+</style>
+</head>
+<body data-theme="light">
+
+<button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">[ LIGHT ]</button>
+
+<nav class="doc-nav">
+  <a href="index.html" class="nav-link">Demo Guide</a>
+  <a href="threshold-signing.html" class="nav-link">Threshold Signing</a>
+  <a href="dkg-ceremony.html" class="nav-link">DKG Ceremony</a>
+  <a href="device-to-device.html" class="nav-link">Device-to-Device</a>
+  <a href="server-architecture.html" class="nav-link">Server Architecture</a>
+  <a href="shamir-splitting.html" class="nav-link">Shamir Splitting</a>
+  <a href="ios-encryption-backup-strategy.html" class="nav-link">iOS Encryption</a>
+  <a href="key-management.html" class="nav-link">Key Management</a>
+  <a href="signing-operations.html" class="nav-link">Signing Operations</a>
+  <a href="qr-transfer-workflow.html" class="nav-link">QR Transfer</a>
+  <a href="bluetooth-multipeer-protocol.html" class="nav-link">Bluetooth MultiPeer</a>
+  <a href="custody-models.html" class="nav-link">Custody Models</a>
+  <a href="key-storage-hierarchy.html" class="nav-link active">Key Storage</a>
+  <a href="backup-recovery-strategies.html" class="nav-link">Backup Recovery</a>
+  <a href="#" class="nav-link" style="visibility: hidden;"></a>
+</nav>
+
+<h1>Key Storage Security Hierarchy</h1>
+<p class="subtitle">Four storage tiers from Keychain to long-term USB-C backup</p>
+
+<!-- HIERARCHY VISUALIZATION -->
+<div class="hierarchy-container">
+  <div class="hierarchy-level">
+    <div class="hierarchy-badge">Tier 1</div>
+    <div class="hierarchy-bar tier1">
+      Keychain (Device-Encrypted) — Most Secure
+    </div>
+  </div>
+  <div class="hierarchy-level">
+    <div class="hierarchy-badge">Tier 2</div>
+    <div class="hierarchy-bar tier2">
+      iCloud Keychain (Synced Encrypted) — Balanced
+    </div>
+  </div>
+  <div class="hierarchy-level">
+    <div class="hierarchy-badge">Tier 3</div>
+    <div class="hierarchy-bar tier3">
+      Encrypted File Export (User Passphrase) — Flexible
+    </div>
+  </div>
+  <div class="hierarchy-level">
+    <div class="hierarchy-badge">Tier 4</div>
+    <div class="hierarchy-bar tier4">
+      USB-C Encrypted Backup — Long-Term Safe
+    </div>
+  </div>
+</div>
+
+<!-- TIER 1: KEYCHAIN -->
+<div class="tier-card">
+  <div class="tier-header">
+    <div class="tier-title">Tier 1: iOS Keychain (Device-Encrypted)</div>
+    <div class="tier-subtitle">Primary storage — fast, secure, device-bound</div>
+  </div>
+  <div class="tier-body">
+    <div class="feature-grid">
+      <div class="feature-item security">
+        <div class="feature-label">Security</div>
+        <div class="feature-value">Very High (TEE)</div>
+      </div>
+      <div class="feature-item network">
+        <div class="feature-label">Network</div>
+        <div class="feature-value">None (local)</div>
+      </div>
+      <div class="feature-item performance">
+        <div class="feature-label">Access Time</div>
+        <div class="feature-value">&lt;1ms</div>
+      </div>
+      <div class="feature-item recovery">
+        <div class="feature-label">Recovery</div>
+        <div class="feature-value">File import + passphrase</div>
+      </div>
+      <div class="feature-item longevity">
+        <div class="feature-label">Longevity</div>
+        <div class="feature-value">Until iOS update</div>
+      </div>
+      <div class="feature-item cost">
+        <div class="feature-label">Cost</div>
+        <div class="feature-value">Free (built-in)</div>
+      </div>
+    </div>
+
+    <table class="spec-table">
+      <tr>
+        <td class="spec-label">Encryption</td>
+        <td class="spec-value">Device-encrypted by Secure Enclave</td>
+      </tr>
+      <tr>
+        <td class="spec-label">Protection</td>
+        <td class="spec-value">Device passcode + biometric (Face/Touch ID)</td>
+      </tr>
+      <tr>
+        <td class="spec-label">Extractable</td>
+        <td class="spec-value">No (keys never leave TEE)</td>
+      </tr>
+      <tr>
+        <td class="spec-label">Cross-Device</td>
+        <td class="spec-value">No (device-specific)</td>
+      </tr>
+      <tr>
+        <td class="spec-label">Offline</td>
+        <td class="spec-value">Yes (no network required)</td>
+      </tr>
+      <tr>
+        <td class="spec-label">Per-App Access</td>
+        <td class="spec-value">Yes (app-specific keychain)</td>
+      </tr>
+    </table>
+
+    <div class="use-case-box">
+      <div class="use-case-title">Use Case: PRIMARY KEY SHARE STORAGE</div>
+      <ul class="use-case-items">
+        <li>Day-to-day signing operations</li>
+        <li>Device is always available</li>
+        <li>Fast access required (&lt;1ms)</li>
+        <li>Default storage for all key shares</li>
+      </ul>
+    </div>
+
+    <div class="info-box">
+      <div class="info-title">How It Works</div>
+      Keychain stores data in the iOS Secure Enclave, a dedicated processor isolated from the main CPU. All cryptographic operations happen inside the Enclave—the plaintext key never reaches the main processor. Even if the iPhone is jailbroken, the key remains protected.
+    </div>
+
+    <div class="cols-2">
+      <div>
+        <strong>Advantages:</strong>
+        <ul style="margin-top: 0.5rem; margin-left: 1rem; list-style: square;">
+          <li>Hardware-backed encryption</li>
+          <li>Fastest access (&lt;1ms)</li>
+          <li>Biometric protection optional</li>
+          <li>Per-app isolation</li>
+        </ul>
+      </div>
+      <div>
+        <strong>Limitations:</strong>
+        <ul style="margin-top: 0.5rem; margin-left: 1rem; list-style: square;">
+          <li>Lost if device is destroyed</li>
+          <li>Not synced across devices</li>
+          <li>No manual export (requires File Tier)</li>
+          <li>Tied to device lifetime</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TIER 2: iCLOUD KEYCHAIN -->
+<div class="tier-card">
+  <div class="tier-header">
+    <div class="tier-title">Tier 2: iCloud Keychain (Synced Encrypted)</div>
+    <div class="tier-subtitle">Backup storage — synced across user's devices</div>
+  </div>
+  <div class="tier-body">
+    <div class="feature-grid">
+      <div class="feature-item security">
+        <div class="feature-label">Security</div>
+        <div class="feature-value">High (E2E)</div>
+      </div>
+      <div class="feature-item network">
+        <div class="feature-label">Network</div>
+        <div class="feature-value">Requires WiFi/cellular</div>
+      </div>
+      <div class="feature-item performance">
+        <div class="feature-label">Access Time</div>
+        <div class="feature-value">100ms+ (network)</div>
+      </div>
+      <div class="feature-item recovery">
+        <div class="feature-label">Recovery</div>
+        <div class="feature-value">Auto-restore on new device</div>
+      </div>
+      <div class="feature-item longevity">
+        <div class="feature-label">Longevity</div>
+        <div class="feature-value">With Apple account</div>
+      </div>
+      <div class="feature-item cost">
+        <div class="feature-label">Cost</div>
+        <div class="feature-value">Free (+ iCloud storage)</div>
+      </div>
+    </div>
+
+    <table class="spec-table">
+      <tr>
+        <td class="spec-label">Encryption</td>
+        <td class="spec-value">End-to-end encrypted (Apple key + user password)</td>
+      </tr>
+      <tr>
+        <td class="spec-label">Protection</td>
+        <td class="spec-label">iCloud password + device biometric</td>
+      </tr>
+      <tr>
+        <td class="spec-label">Extractable</td>
+        <td class="spec-value">No (Apple holds escrow key)</td>
+      </tr>
+      <tr>
+        <td class="spec-label">Cross-Device</td>
+        <td class="spec-value">Yes (syncs to all user's iPhones)</td>
+      </tr>
+      <tr>
+        <td class="spec-label">Offline</td>
+        <td class="spec-value">No (requires iCloud sync)</td>
+      </tr>
+      <tr>
+        <td class="spec-label">Availability</td>
+        <td class="spec-value">After network restore (on new device)</td>
+      </tr>
+    </table>
+
+    <div class="use-case-box">
+      <div class="use-case-title">Use Case: DEVICE LOSS RECOVERY</div>
+      <ul class="use-case-items">
+        <li>Automatic backup during iCloud Backup</li>
+        <li>Restore to new device from backup</li>
+        <li>Cross-device sync for multiple iPhones</li>
+        <li>No manual action required</li>
+      </ul>
+    </div>
+
+    <div class="warning-box">
+      <div class="warning-title">Important Security Note</div>
+      Apple holds an escrow key for iCloud Keychain in case users forget their password. This means Apple could theoretically access your iCloud Keychain with legal authority, but they cannot access it without your cooperation (you must reset your password). For maximum security, combine Tier 2 with Tier 3 or Tier 4.
+    </div>
+
+    <div class="cols-2">
+      <div>
+        <strong>Advantages:</strong>
+        <ul style="margin-top: 0.5rem; margin-left: 1rem; list-style: square;">
+          <li>Automatic backup</li>
+          <li>Cross-device sync</li>
+          <li>Zero setup required</li>
+          <li>Device recovery automated</li>
+        </ul>
+      </div>
+      <div>
+        <strong>Limitations:</strong>
+        <ul style="margin-top: 0.5rem; margin-left: 1rem; list-style: square;">
+          <li>Requires iCloud account</li>
+          <li>Network required for sync</li>
+          <li>Apple has escrow key</li>
+          <li>No offline access</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TIER 3: ENCRYPTED FILE -->
+<div class="tier-card">
+  <div class="tier-header">
+    <div class="tier-title">Tier 3: Encrypted File Export (User Passphrase)</div>
+    <div class="tier-subtitle">Cold storage — portable, offline, user-controlled</div>
+  </div>
+  <div class="tier-body">
+    <div class="feature-grid">
+      <div class="feature-item security">
+        <div class="feature-label">Security</div>
+        <div class="feature-value">Medium (passphrase-dependent)</div>
+      </div>
+      <div class="feature-item network">
+        <div class="feature-label">Network</div>
+        <div class="feature-value">Not required (file-based)</div>
+      </div>
+      <div class="feature-item performance">
+        <div class="feature-label">Access Time</div>
+        <div class="feature-value">File I/O + decryption (~100ms)</div>
+      </div>
+      <div class="feature-item recovery">
+        <div class="feature-label">Recovery</div>
+        <div class="feature-value">Manual import + passphrase</div>
+      </div>
+      <div class="feature-item longevity">
+        <div class="feature-label">Longevity</div>
+        <div class="feature-value">Indefinite (if file preserved)</div>
+      </div>
+      <div class="feature-item cost">
+        <div class="feature-label">Cost</div>
+        <div class="feature-value">Depends on cloud service ($0-$12/mo)</div>
+      </div>
+    </div>
+
+    <table class="spec-table">
+      <tr>
+        <td class="spec-label">Format</td>
+        <td class="spec-value">Keystore V3 JSON (Ethereum standard)</td>
+      </tr>
+      <tr>
+        <td class="spec-label">Encryption</td>
+        <td class="spec-value">AES-256-GCM (user passphrase)</td>
+      </tr>
+      <tr>
+        <td class="spec-label">Protection</td>
+        <td class="spec-value">User passphrase (PBKDF2, 10k iterations)</td>
+      </tr>
+      <tr>
+        <td class="spec-label">Extractable</td>
+        <td class="spec-value">Yes (file is portable)</td>
+      </tr>
+      <tr>
+        <td class="spec-label">Storage</td>
+        <td class="spec-value">Files app, email, cloud (Tresorit, Sync.com, etc)</td>
+      </tr>
+      <tr>
+        <td class="spec-label">Offline</td>
+        <td class="spec-value">Yes (no network needed)</td>
+      </tr>
+    </table>
+
+    <div class="use-case-box">
+      <div class="use-case-title">Use Case: LONG-TERM COLD STORAGE</div>
+      <ul class="use-case-items">
+        <li>Backup to encrypted cloud storage</li>
+        <li>Printed QR code for emergency recovery</li>
+        <li>Share with trusted friend/family</li>
+        <li>Hardware wallet-style backups</li>
+      </ul>
+    </div>
+
+    <div class="info-box">
+      <div class="info-title">How to Use</div>
+      <ol style="margin-top: 0.5rem; margin-left: 1rem; list-style: decimal;">
+        <li>In app: "Key Detail" → "Backup" → "Export"</li>
+        <li>Choose passphrase (12+ chars recommended)</li>
+        <li>System generates encrypted file (Keystore V3 JSON)</li>
+        <li>Save to Files, email, or cloud storage</li>
+        <li>To recover: "Import" → Select file → Enter passphrase</li>
+      </ol>
+    </div>
+
+    <div class="warning-box">
+      <div class="warning-title">Security Considerations</div>
+      <ul style="margin-top: 0.5rem; margin-left: 1rem; list-style: square;">
+        <li>Passphrase strength is critical (use 20+ character passphrase)</li>
+        <li>File can be stolen; security depends on passphrase</li>
+        <li>Store in encrypted cloud (Tresorit, Sync.com) not plain cloud</li>
+        <li>PBKDF2 mitigates offline password guessing (slow)</li>
+      </ul>
+    </div>
+
+    <div class="cols-2">
+      <div>
+        <strong>Advantages:</strong>
+        <ul style="margin-top: 0.5rem; margin-left: 1rem; list-style: square;">
+          <li>Portable (move between devices)</li>
+          <li>No account required</li>
+          <li>User-controlled encryption</li>
+          <li>Offline recovery possible</li>
+        </ul>
+      </div>
+      <div>
+        <strong>Limitations:</strong>
+        <ul style="margin-top: 0.5rem; margin-left: 1rem; list-style: square;">
+          <li>Passphrase guessing risk</li>
+          <li>File can be intercepted</li>
+          <li>Manual recovery process</li>
+          <li>Must remember passphrase</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TIER 4: USB-C BACKUP -->
+<div class="tier-card">
+  <div class="tier-header">
+    <div class="tier-title">Tier 4: USB-C Encrypted Backup (Hardware Encrypted)</div>
+    <div class="tier-subtitle">Ultimate backup — air-gap safe, long-term durable</div>
+  </div>
+  <div class="tier-body">
+    <div class="feature-grid">
+      <div class="feature-item security">
+        <div class="feature-label">Security</div>
+        <div class="feature-value">Highest (device-enforced)</div>
+      </div>
+      <div class="feature-item network">
+        <div class="feature-label">Network</div>
+        <div class="feature-value">None (air-gap safe)</div>
+      </div>
+      <div class="feature-item performance">
+        <div class="feature-label">Access Time</div>
+        <div class="feature-value">USB I/O (~500ms)</div>
+      </div>
+      <div class="feature-item recovery">
+        <div class="feature-label">Recovery</div>
+        <div class="feature-value">Connect USB device + PIN</div>
+      </div>
+      <div class="feature-item longevity">
+        <div class="feature-label">Longevity</div>
+        <div class="feature-value">10+ years (NAND durability)</div>
+      </div>
+      <div class="feature-item cost">
+        <div class="feature-label">Cost</div>
+        <div class="feature-value">$100-$500 (hardware)</div>
+      </div>
+    </div>
+
+    <table class="spec-table">
+      <tr>
+        <td class="spec-label">Format</td>
+        <td class="spec-value">Proprietary encrypted container</td>
+      </tr>
+      <tr>
+        <td class="spec-label">Encryption</td>
+        <td class="spec-value">Device-enforced (no access without device)</td>
+      </tr>
+      <tr>
+        <td class="spec-label">Protection</td>
+        <td class="spec-value">PIN + biometric (device-level)</td>
+      </tr>
+      <tr>
+        <td class="spec-label">Extractable</td>
+        <td class="spec-value">No (device controls access)</td>
+      </tr>
+      <tr>
+        <td class="spec-label">Network</td>
+        <td class="spec-value">None (completely air-gapped)</td>
+      </tr>
+      <tr>
+        <td class="spec-label">Durability</td>
+        <td class="spec-value">NAND flash (10+ years)</td>
+      </tr>
+    </table>
+
+    <div class="use-case-box">
+      <div class="use-case-title">Use Case: LONG-TERM CUSTODY & INHERITANCE</div>
+      <ul class="use-case-items">
+        <li>Generational wealth planning</li>
+        <li>Cold storage for inactive accounts</li>
+        <li>Inheritance planning (pass to heirs)</li>
+        <li>Institutional custody vaults</li>
+      </ul>
+    </div>
+
+    <div class="info-box">
+      <div class="info-title">Why USB-C Over Tier 3?</div>
+      USB-C backup is the most secure long-term option because:
+      <ul style="margin-top: 0.5rem; margin-left: 1rem; list-style: square;">
+        <li>100% air-gap (no network risk)</li>
+        <li>Hardware enforces encryption (can't brute-force)</li>
+        <li>No passphrase to remember</li>
+        <li>Durable for decades</li>
+      </ul>
+    </div>
+
+    <div class="cols-2">
+      <div>
+        <strong>Advantages:</strong>
+        <ul style="margin-top: 0.5rem; margin-left: 1rem; list-style: square;">
+          <li>Maximum durability (10+ years)</li>
+          <li>Hardware-enforced security</li>
+          <li>Complete air-gap safe</li>
+          <li>No passphrase needed</li>
+        </ul>
+      </div>
+      <div>
+        <strong>Limitations:</strong>
+        <ul style="margin-top: 0.5rem; margin-left: 1rem; list-style: square;">
+          <li>High cost ($100-$500)</li>
+          <li>Proprietary (vendor lock-in)</li>
+          <li>Physical device can break/be lost</li>
+          <li>Slower access than Keychain</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- COMPARISON MATRIX -->
+<div style="margin-top: 3rem; padding: 2rem; background: var(--card); border-radius: 16px; border: 1px solid var(--border);">
+  <h2 style="margin-bottom: 1rem; font-size: 1.2rem;">Complete Comparison Matrix</h2>
+  <table class="comparison-table">
+    <thead>
+      <tr>
+        <th>Tier</th>
+        <th>Security</th>
+        <th>Access Time</th>
+        <th>Network</th>
+        <th>Recovery</th>
+        <th>Longevity</th>
+        <th>Cost</th>
+        <th>Use Case</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>1. Keychain</strong></td>
+        <td>Very High (TEE)</td>
+        <td>&lt;1ms</td>
+        <td>No</td>
+        <td>File import</td>
+        <td>Until iOS update</td>
+        <td>Free</td>
+        <td>Primary share</td>
+      </tr>
+      <tr>
+        <td><strong>2. iCloud</strong></td>
+        <td>High (E2E)</td>
+        <td>100ms+</td>
+        <td>Yes</td>
+        <td>Auto-restore</td>
+        <td>With Apple</td>
+        <td>Free</td>
+        <td>Backup</td>
+      </tr>
+      <tr>
+        <td><strong>3. File</strong></td>
+        <td>Medium (passphrase)</td>
+        <td>100ms</td>
+        <td>No</td>
+        <td>Manual import</td>
+        <td>Indefinite</td>
+        <td>$0-12/mo</td>
+        <td>Cold storage</td>
+      </tr>
+      <tr>
+        <td><strong>4. USB-C</strong></td>
+        <td>Highest (device)</td>
+        <td>500ms</td>
+        <td>No</td>
+        <td>USB + PIN</td>
+        <td>10+ years</td>
+        <td>$100-500</td>
+        <td>Long-term</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- RECOMMENDED COMBINATIONS -->
+<div style="margin-top: 3rem; padding: 2rem; background: rgba(16, 185, 129, 0.1); border-left: 3px solid var(--carol); border-radius: 8px;">
+  <h2 style="margin-bottom: 1rem; font-size: 1.2rem;">Recommended Storage Combinations</h2>
+
+  <div style="margin: 1rem 0;">
+    <strong>For Single Device (Model 1):</strong>
+    <div style="margin-left: 2rem; margin-top: 0.5rem; font-size: 0.9rem;">
+      Tier 1 (Keychain) + Tier 3 (File backup) OR Tier 1 + Tier 4 (USB-C)<br>
+      → Primary on device, cold backup offline
+    </div>
+  </div>
+
+  <div style="margin: 1rem 0;">
+    <strong>For 2-of-2 Custody (Model 2a/2b):</strong>
+    <div style="margin-left: 2rem; margin-top: 0.5rem; font-size: 0.9rem;">
+      Each device: Tier 1 (Keychain) + Tier 2 (iCloud) + Tier 3 (File)<br>
+      → Active on device, auto-backup to iCloud, manual file backup
+    </div>
+  </div>
+
+  <div style="margin: 1rem 0;">
+    <strong>For 2-of-3 Threshold (Model 3):</strong>
+    <div style="margin-left: 2rem; margin-top: 0.5rem; font-size: 0.9rem;">
+      Devices: Tier 1 + Tier 2 | Server: HSM (Tier 1 equivalent)<br>
+      → All parties have local + cloud backup
+    </div>
+  </div>
+
+  <div style="margin: 1rem 0;">
+    <strong>For Long-Term Custody:</strong>
+    <div style="margin-left: 2rem; margin-top: 0.5rem; font-size: 0.9rem;">
+      Tier 1 (active device) + Tier 4 (USB-C) for inheritance<br>
+      → USB device stored in safe, inheritors recover with PIN
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleTheme() {
+  const body = document.body;
+  const btn = document.getElementById('themeBtn');
+  if (body.getAttribute('data-theme') === 'dark') {
+    body.setAttribute('data-theme', 'light');
+    localStorage.setItem('cb-mpc-theme', 'light');
+    btn.textContent = '[ DARK ]';
+  } else {
+    body.setAttribute('data-theme', 'dark');
+    localStorage.setItem('cb-mpc-theme', 'dark');
+    btn.textContent = '[ LIGHT ]';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('cb-mpc-theme') || 'light';
+  document.body.setAttribute('data-theme', saved);
+  const btn = document.getElementById('themeBtn');
+  btn.textContent = saved === 'dark' ? '[ LIGHT ]' : '[ DARK ]';
+  
+  const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+  document.querySelectorAll('.nav-link').forEach(link => {
+    if (link.getAttribute('href') === currentPage) {
+      link.classList.add('active');
+    }
+  });
+});
+</script>
+
+</body>
+</html>

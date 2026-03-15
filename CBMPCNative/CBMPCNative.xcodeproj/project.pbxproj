@@ -29,6 +29,30 @@
 		80BD0AC97D6746B38E7136D2 /* KeyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5D94AC4683F4C108F8D95A3 /* KeyStore.swift */; };
 		EE14000100000000000000A1 /* EtherscanService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Models/EtherscanService.swift; sourceTree = SOURCE_ROOT; };
 		EE14000200000000000000A1 /* EtherscanService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE14000100000000000000A1 /* EtherscanService.swift */; };
+		AA20000100000000000000A1 /* TransactionsTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Views/TransactionsTabView.swift; sourceTree = SOURCE_ROOT; };
+		AA20000200000000000000A1 /* TransactionsTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA20000100000000000000A1 /* TransactionsTabView.swift */; };
+		AA20000300000000000000A1 /* TransactionsTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA20000100000000000000A1 /* TransactionsTabView.swift */; };
+		AA21000100000000000000A1 /* AddressBook.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Models/AddressBook.swift; sourceTree = SOURCE_ROOT; };
+		AA21000200000000000000A1 /* AddressBook.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA21000100000000000000A1 /* AddressBook.swift */; };
+		AA21000300000000000000A1 /* AddressBook.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA21000100000000000000A1 /* AddressBook.swift */; };
+		AA22000100000000000000A1 /* ContractService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Models/ContractService.swift; sourceTree = SOURCE_ROOT; };
+		AA22000200000000000000A1 /* ContractService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA22000100000000000000A1 /* ContractService.swift */; };
+		AA22000300000000000000A1 /* ContractService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA22000100000000000000A1 /* ContractService.swift */; };
+		AA24000100000000000000A1 /* EIP712Signer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Models/EIP712Signer.swift; sourceTree = SOURCE_ROOT; };
+		AA24000200000000000000A1 /* EIP712Signer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA24000100000000000000A1 /* EIP712Signer.swift */; };
+		AA24000300000000000000A1 /* EIP712Signer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA24000100000000000000A1 /* EIP712Signer.swift */; };
+		AA25000100000000000000A1 /* UniswapService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Models/UniswapService.swift; sourceTree = SOURCE_ROOT; };
+		AA25000200000000000000A1 /* UniswapService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA25000100000000000000A1 /* UniswapService.swift */; };
+		AA25000300000000000000A1 /* UniswapService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA25000100000000000000A1 /* UniswapService.swift */; };
+		AA26000100000000000000A1 /* SafeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Models/SafeService.swift; sourceTree = SOURCE_ROOT; };
+		AA26000200000000000000A1 /* SafeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA26000100000000000000A1 /* SafeService.swift */; };
+		AA26000300000000000000A1 /* SafeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA26000100000000000000A1 /* SafeService.swift */; };
+		AA27000100000000000000A1 /* CowService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Models/CowService.swift; sourceTree = SOURCE_ROOT; };
+		AA27000200000000000000A1 /* CowService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA27000100000000000000A1 /* CowService.swift */; };
+		AA27000300000000000000A1 /* CowService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA27000100000000000000A1 /* CowService.swift */; };
+		AA23000100000000000000A1 /* PeerSigningCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Models/PeerSigningCoordinator.swift; sourceTree = SOURCE_ROOT; };
+		AA23000200000000000000A1 /* PeerSigningCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA23000100000000000000A1 /* PeerSigningCoordinator.swift */; };
+		AA23000300000000000000A1 /* PeerSigningCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA23000100000000000000A1 /* PeerSigningCoordinator.swift */; };
 		40F0D6C0F8DD422BA52777FF /* ManagedKeyModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Models/ManagedKeyModel.swift; sourceTree = SOURCE_ROOT; };
 		44CC6E0C21A7458488419EC8 /* ManagedKeyModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40F0D6C0F8DD422BA52777FF /* ManagedKeyModel.swift */; };
 		2D24F1C072CB4647A72B392C /* AppNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Navigation/AppNavigation.swift; sourceTree = SOURCE_ROOT; };
@@ -265,9 +289,15 @@
 		AA00000100000000000000C3 /* SigningServerClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507BB6365E6B4D8080293394 /* SigningServerClient.swift */; };
 		AA00000100000000000000C4 /* CBMPCNative.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = A1E5F40B2D5E4A1B00C8F3E2 /* CBMPCNative.xcdatamodeld */; };
 
+/* Platform compatibility */
+		PC00000100000000000000A1 /* PlatformCompat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBMPCNative/Models/PlatformCompat.swift; sourceTree = SOURCE_ROOT; };
+		PC00000200000000000000A1 /* PlatformCompat.swift in Sources */ = {isa = PBXBuildFile; fileRef = PC00000100000000000000A1 /* PlatformCompat.swift */; };
+		PC00000300000000000000A1 /* PlatformCompat.swift in Sources */ = {isa = PBXBuildFile; fileRef = PC00000100000000000000A1 /* PlatformCompat.swift */; };
+
 /* Asset catalog */
 		FF00000100000000000000AC /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = CBMPCNative/Assets.xcassets; sourceTree = SOURCE_ROOT; };
 		FF00000200000000000000AC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = FF00000100000000000000AC /* Assets.xcassets */; };
+		AA00000500000000000000AC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = FF00000100000000000000AC /* Assets.xcassets */; };
 
 /* iOS target */
 		0A1E5F3E2D5E4A1B00C8F3E2 = {
@@ -287,6 +317,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				PC00000200000000000000A1 /* PlatformCompat.swift in Sources */,
 				715F48F2BBEB482FADB5E44B /* App.swift in Sources */,
 				49C0DAE8F1544C3DAEC61F78 /* Models.swift in Sources */,
 				363A379EB61F49B1B7ADE106 /* Persistence.swift in Sources */,
@@ -333,6 +364,14 @@
 				EE13000200000000000000A2 /* MultiQRCodec.swift in Sources */,
 				EE13000200000000000000A3 /* QRScannerView.swift in Sources */,
 				EE14000200000000000000A1 /* EtherscanService.swift in Sources */,
+				AA20000200000000000000A1 /* TransactionsTabView.swift in Sources */,
+				AA21000200000000000000A1 /* AddressBook.swift in Sources */,
+				AA22000200000000000000A1 /* ContractService.swift in Sources */,
+				AA23000200000000000000A1 /* PeerSigningCoordinator.swift in Sources */,
+				AA24000200000000000000A1 /* EIP712Signer.swift in Sources */,
+				AA25000200000000000000A1 /* UniswapService.swift in Sources */,
+				AA26000200000000000000A1 /* SafeService.swift in Sources */,
+				AA27000200000000000000A1 /* CowService.swift in Sources */,
 				EE15000200000000000000A1 /* ExportKeySheetView.swift in Sources */,
 				FF14000200000000000000A1 /* NetworkView.swift in Sources */,
 				FF14000200000000000000B1 /* PairingManager.swift in Sources */,
@@ -368,6 +407,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AA00000600000000000000AC /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA00000500000000000000AC /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 
 /* macOS target */
 		AA00000200000000000000FF = {
@@ -375,6 +422,7 @@
 			buildConfigurationList = AA00000400000000000000FF;
 			buildPhases = (
 				AA00000300000000000000FF /* Sources */,
+				AA00000600000000000000AC /* Resources */,
 			);
 			dependencies = (
 			);
@@ -386,6 +434,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				PC00000300000000000000A1 /* PlatformCompat.swift in Sources */,
 				AA00000100000000000000A1 /* App.swift in Sources */,
 				AA00000100000000000000A2 /* Models.swift in Sources */,
 				AA00000100000000000000A3 /* Persistence.swift in Sources */,
@@ -432,6 +481,14 @@
 				EE13000300000000000000A2 /* MultiQRCodec.swift in Sources */,
 				EE13000300000000000000A3 /* QRScannerView.swift in Sources */,
 				EE14000300000000000000A1 /* EtherscanService.swift in Sources */,
+				AA20000300000000000000A1 /* TransactionsTabView.swift in Sources */,
+				AA21000300000000000000A1 /* AddressBook.swift in Sources */,
+				AA22000300000000000000A1 /* ContractService.swift in Sources */,
+				AA23000300000000000000A1 /* PeerSigningCoordinator.swift in Sources */,
+				AA24000300000000000000A1 /* EIP712Signer.swift in Sources */,
+				AA25000300000000000000A1 /* UniswapService.swift in Sources */,
+				AA26000300000000000000A1 /* SafeService.swift in Sources */,
+				AA27000300000000000000A1 /* CowService.swift in Sources */,
 				EE15000300000000000000A1 /* ExportKeySheetView.swift in Sources */,
 				FF14000300000000000000A1 /* NetworkView.swift in Sources */,
 				FF14000300000000000000B1 /* PairingManager.swift in Sources */,
@@ -567,7 +624,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = CBMPCNative/CBMPCNative.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 68;
+				CURRENT_PROJECT_VERSION = 76;
 				DEVELOPMENT_TEAM = YT6VJY3L35;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -580,7 +637,7 @@
 				);
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				SDKROOT = iphoneos;
-				MARKETING_VERSION = 0.18.0;
+				MARKETING_VERSION = 0.24.0;
 				"OTHER_LDFLAGS[sdk=iphonesimulator*]" = (
 					"$(SRCROOT)/../cbmpc.xcframework/ios-arm64-simulator/libcbmpc.a",
 					"$(SRCROOT)/../openssl-ios/iossimulator-arm64/lib/libssl.a",
@@ -607,7 +664,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = CBMPCNative/CBMPCNative.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 68;
+				CURRENT_PROJECT_VERSION = 76;
 				DEVELOPMENT_TEAM = YT6VJY3L35;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -620,7 +677,7 @@
 				);
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				SDKROOT = iphoneos;
-				MARKETING_VERSION = 0.18.0;
+				MARKETING_VERSION = 0.24.0;
 				"OTHER_LDFLAGS[sdk=iphonesimulator*]" = (
 					"$(SRCROOT)/../cbmpc.xcframework/ios-arm64-simulator/libcbmpc.a",
 					"$(SRCROOT)/../openssl-ios/iossimulator-arm64/lib/libssl.a",
@@ -657,8 +714,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = arm64;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = CBMPCNative/CBMPCNative_macOS.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 68;
+				CURRENT_PROJECT_VERSION = 76;
 				DEVELOPMENT_TEAM = YT6VJY3L35;
 				INFOPLIST_FILE = CBMPCNative/Info.plist;
 				HEADER_SEARCH_PATHS = (
@@ -667,14 +726,14 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				SDKROOT = macosx;
-				MARKETING_VERSION = 0.18.0;
+				MARKETING_VERSION = 0.24.0;
 				OTHER_LDFLAGS = (
 					"$(SRCROOT)/../cbmpc.xcframework/macos-arm64/libcbmpc.a",
 					"/usr/local/opt/openssl@3.2.0/lib/libssl.a",
 					"/usr/local/opt/openssl@3.2.0/lib/libcrypto.a",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "xyz.atsignhandle.cb-mpc-macos";
+				PRODUCT_BUNDLE_IDENTIFIER = "xyz.atsignhandle.cb-mpc";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "CBMPCNative-Bridging-Header.h";
 				SWIFT_VERSION = 5.9;
@@ -685,8 +744,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = arm64;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = CBMPCNative/CBMPCNative_macOS.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 68;
+				CURRENT_PROJECT_VERSION = 76;
 				DEVELOPMENT_TEAM = YT6VJY3L35;
 				INFOPLIST_FILE = CBMPCNative/Info.plist;
 				HEADER_SEARCH_PATHS = (
@@ -695,14 +756,14 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				SDKROOT = macosx;
-				MARKETING_VERSION = 0.18.0;
+				MARKETING_VERSION = 0.24.0;
 				OTHER_LDFLAGS = (
 					"$(SRCROOT)/../cbmpc.xcframework/macos-arm64/libcbmpc.a",
 					"/usr/local/opt/openssl@3.2.0/lib/libssl.a",
 					"/usr/local/opt/openssl@3.2.0/lib/libcrypto.a",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "xyz.atsignhandle.cb-mpc-macos";
+				PRODUCT_BUNDLE_IDENTIFIER = "xyz.atsignhandle.cb-mpc";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "CBMPCNative-Bridging-Header.h";
 				SWIFT_VERSION = 5.9;

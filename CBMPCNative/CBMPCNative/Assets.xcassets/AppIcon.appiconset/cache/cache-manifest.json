@@ -1,0 +1,15 @@
+{
+  "description": "Fallback app icons for builds on machines without MeowsDAO source images. Select icon via: build_number % 10 + 1",
+  "icons": [
+    {"file": "icon-build-01.png", "label": "Party Cat Build 70a"},
+    {"file": "icon-build-02.png", "label": "Party Cat Build 70b"},
+    {"file": "icon-build-03.png", "label": "Party Cat Build 70c"},
+    {"file": "icon-build-04.png", "label": "Party Cat Build 71a"},
+    {"file": "icon-build-05.png", "label": "Party Cat Build 71b"},
+    {"file": "icon-build-06.png", "label": "Party Cat Build 72a"},
+    {"file": "icon-build-07.png", "label": "Party Cat Build 72b"},
+    {"file": "icon-build-08.png", "label": "Party Cat Build 72c"},
+    {"file": "icon-build-09.png", "label": "Party Cat Build 73a"},
+    {"file": "icon-build-10.png", "label": "Party Cat Build 73b"}
+  ]
+}

@@ -114,7 +114,7 @@
     flex-wrap: wrap;
   }
   .nav-link {
-    flex: 0 1 calc(100% / 3);
+    flex: 0 1 calc(100% / 5);
     text-align: center;
     padding: 0.5rem 0.4rem;
     font-family: var(--font-mono);
@@ -133,11 +133,11 @@
     align-items: center;
     justify-content: center;
   }
-  .nav-link:nth-child(3n) { border-right: none; }
-  .nav-link:nth-last-child(-n+3) { border-bottom: none; }
+  .nav-link:nth-child(5n) { border-right: none; }
+  .nav-link:nth-last-child(-n+5) { border-bottom: none; }
   .nav-link:hover { background: var(--card2); }
   .nav-link.active {
-    background: var(--border);
+    background: var(--card2);
     color: var(--text);
   }
 
@@ -493,15 +493,21 @@
 <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">[ LIGHT ]</button>
 
 <nav class="doc-nav">
-  <a href="/index.html" class="nav-link">Demo Guide</a>
-  <a href="/threshold-signing.html" class="nav-link">Threshold Signing</a>
-  <a href="/dkg-ceremony.html" class="nav-link">DKG Ceremony</a>
-  <a href="/device-to-device.html" class="nav-link">Device-to-Device</a>
-  <a href="/server-architecture.html" class="nav-link active">Server Architecture</a>
-  <a href="/shamir-splitting.html" class="nav-link">Shamir Splitting</a>
-  <a href="/ios-encryption-backup-strategy.html" class="nav-link">iOS Encryption</a>
-  <a href="/key-management.html" class="nav-link">Key Management</a>
-  <a href="/signing-operations.html" class="nav-link">Signing Ops</a>
+  <a href="index.html" class="nav-link">Demo Guide</a>
+  <a href="threshold-signing.html" class="nav-link">Threshold Signing</a>
+  <a href="dkg-ceremony.html" class="nav-link">DKG Ceremony</a>
+  <a href="device-to-device.html" class="nav-link">Device-to-Device</a>
+  <a href="server-architecture.html" class="nav-link active" class="nav-link">Server Architecture</a>
+  <a href="shamir-splitting.html" class="nav-link">Shamir Splitting</a>
+  <a href="ios-encryption-backup-strategy.html" class="nav-link">iOS Encryption</a>
+  <a href="key-management.html" class="nav-link">Key Management</a>
+  <a href="signing-operations.html" class="nav-link">Signing Operations</a>
+  <a href="qr-transfer-workflow.html" class="nav-link">QR Transfer</a>
+  <a href="bluetooth-multipeer-protocol.html" class="nav-link">Bluetooth MultiPeer</a>
+  <a href="custody-models.html" class="nav-link">Custody Models</a>
+  <a href="key-storage-hierarchy.html" class="nav-link">Key Storage</a>
+  <a href="backup-recovery-strategies.html" class="nav-link">Backup Recovery</a>
+  <a href="#" class="nav-link" style="visibility: hidden;"></a>
 </nav>
 
 <div class="container">

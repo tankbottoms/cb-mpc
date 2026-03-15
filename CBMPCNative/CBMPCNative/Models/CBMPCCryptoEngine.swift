@@ -117,12 +117,110 @@ class CBMPCCryptoEngine {
         return data
     }
 
+    // MARK: - HD Key Generation
+
+    /// Generate an HD master key using LocalTwoPartyRunner (cbmpc_hd_ecdsa2p_dkg)
+    /// Stores both party shares in length-prefixed format: [UInt32 k0Size][k0 bytes][k1 bytes]
+    func generateHDKey(curveCode: Int) throws -> (publicKey: Data, serializedKey: Data) {
+        let partyNames = ["local", "remote"]
+
+        let (k0, k1) = try LocalTwoPartyRunner.run(partyNames: partyNames) { job, role in
+            var keyVar = cbmpc_hd_key_t()
+            let result = cbmpc_hd_ecdsa2p_dkg(job.cJob, Int32(curveCode), &keyVar)
+            guard result == 0 else { throw CBMPCError.keyGenerationFailed }
+            return CBMPCHDKeyShare(keyPtr: keyVar, curveCode: curveCode)
+        }
+
+        guard let pubKey = k0.getPublicKey() else {
+            throw CBMPCError.invalidKeyData
+        }
+        guard let ser0 = k0.serialize(), let ser1 = k1.serialize() else {
+            throw CBMPCError.keySerializationFailed
+        }
+
+        // Pack both shares: [4 bytes k0 length][k0 bytes][k1 bytes]
+        var combined = Data()
+        var k0Size = UInt32(ser0.count)
+        combined.append(Data(bytes: &k0Size, count: 4))
+        combined.append(ser0)
+        combined.append(ser1)
+
+        return (pubKey, combined)
+    }
+
+    /// Unpack length-prefixed HD key share data into two HD key shares
+    static func unpackHDKeyShares(_ data: Data, curveCode: Int) throws -> (CBMPCHDKeyShare, CBMPCHDKeyShare) {
+        guard data.count > 4 else { throw CBMPCError.invalidKeyData }
+
+        let k0Size = data.withUnsafeBytes { buf in
+            buf.load(as: UInt32.self)
+        }
+        let k0Start = 4
+        let k0End = k0Start + Int(k0Size)
+        guard k0End <= data.count else { throw CBMPCError.invalidKeyData }
+
+        let ser0 = data[k0Start..<k0End]
+        let ser1 = data[k0End...]
+
+        guard !ser0.isEmpty, !ser1.isEmpty else { throw CBMPCError.invalidKeyData }
+
+        let share0 = try CBMPCHDKeyShare.deserialize(Data(ser0), curveCode: curveCode)
+        let share1 = try CBMPCHDKeyShare.deserialize(Data(ser1), curveCode: curveCode)
+        return (share0, share1)
+    }
+
+    /// Derive a child key from HD master key shares using LocalTwoPartyRunner (cbmpc_hd_ecdsa2p_derive)
+    /// Both HD master shares must be available (packed format)
+    func deriveChildFromHD(masterKeyData: Data, path: [UInt32], curveCode: Int) throws -> (publicKey: Data, serializedKey: Data) {
+        let (hdShare0, hdShare1) = try Self.unpackHDKeyShares(masterKeyData, curveCode: curveCode)
+
+        let partyNames = ["local", "remote"]
+
+        let (child0, child1) = try LocalTwoPartyRunner.run(partyNames: partyNames) { job, role in
+            let hdShare = (role == 0) ? hdShare0 : hdShare1
+            return try hdShare.derive(path: path, job: job)
+        }
+
+        guard let pubKey = child0.getPublicKey() else {
+            throw CBMPCError.invalidKeyData
+        }
+        guard let ser0 = child0.serialize(), let ser1 = child1.serialize() else {
+            throw CBMPCError.keySerializationFailed
+        }
+
+        // Pack child shares in standard format: [4 bytes k0 length][k0 bytes][k1 bytes]
+        var combined = Data()
+        var k0Size = UInt32(ser0.count)
+        combined.append(Data(bytes: &k0Size, count: 4))
+        combined.append(ser0)
+        combined.append(ser1)
+
+        return (pubKey, combined)
+    }
+
     // MARK: - Server-Backed Operations
 
     /// Generate key with server — device keeps Party 0 share only
     func generateKeyRemote(serverURL: URL, curveCode: Int = 714) async throws -> (publicKey: Data, deviceShare: Data) {
         let result = try await ServerDKGCoordinator.generateKey(serverURL: serverURL, curveCode: curveCode)
         return (result.publicKey, result.deviceShare)
+    }
+
+    /// Generate HD master key with server — device keeps Party 0 HD share only
+    func generateHDKeyRemote(serverURL: URL, curveCode: Int = 714) async throws -> (publicKey: Data, deviceShare: Data) {
+        let result = try await ServerDKGCoordinator.generateHDKey(serverURL: serverURL, curveCode: curveCode)
+        return (result.publicKey, result.deviceShare)
+    }
+
+    /// Derive child key from server-backed HD master — downloads server HD share, derives locally
+    func deriveChildFromHDRemote(deviceHDShare: Data, path: [UInt32], curveCode: Int, serverURL: URL, masterPublicKey: String) async throws -> (publicKey: Data, deviceChildShare: Data, serverChildShare: Data) {
+        return try await ServerDKGCoordinator.deriveChild(
+            deviceHDShare: deviceHDShare,
+            path: path,
+            curveCode: curveCode,
+            serverURL: serverURL,
+            masterPublicKey: masterPublicKey
+        )
     }
 
     /// Sign with server-backed key — interim approach: run both parties locally

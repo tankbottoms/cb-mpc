@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Custody Models & Security Permutations — Visual Guide</title>
+<style>
+  :root {
+    --font-mono: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    --border-w: 3px;
+    --shadow-offset: 5px;
+    --radius: 0;
+    --alice: #6366f1;
+    --bob: #f59e0b;
+    --carol: #10b981;
+    --public: #3b82f6;
+    --private: #ef4444;
+    --mail: #8b5cf6;
+  }
+
+  [data-theme="light"] {
+    --bg: #f5f0e8;
+    --card: #ffffff;
+    --card2: #f0ebe3;
+    --text: #1a1a1a;
+    --muted: #6b7280;
+    --border: #1a1a1a;
+    --shadow-color: #1a1a1a;
+  }
+
+  [data-theme="dark"] {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --card2: #334155;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --border: #475569;
+    --shadow-color: #000000;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font-mono);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, var(--alice), var(--bob), var(--carol));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .subtitle {
+    text-align: center;
+    color: var(--muted);
+    margin-bottom: 3rem;
+    font-size: 0.9rem;
+  }
+
+  /* Model card */
+  .model-card {
+    margin-bottom: 2.5rem;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    background: var(--card);
+  }
+
+  .model-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--card2);
+  }
+
+  .model-num {
+    display: inline-block;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-right: 0.8rem;
+    color: white;
+    font-size: 1.2rem;
+  }
+  .model-num.m1 { background: #6366f1; }
+  .model-num.m2 { background: #f59e0b; }
+  .model-num.m3 { background: #10b981; }
+  .model-num.m4 { background: #3b82f6; }
+
+  .model-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    display: inline-block;
+  }
+
+  .model-body {
+    padding: 1.5rem;
+  }
+
+  /* Topology diagram */
+  .topology {
+    background: var(--bg);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin: 1rem 0;
+    border: 1px dashed var(--border);
+  }
+
+  .topology-box {
+    display: inline-block;
+    border: 2px solid;
+    border-radius: 8px;
+    padding: 0.8rem;
+    margin: 0.5rem;
+    min-width: 120px;
+    text-align: center;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+  .topology-box.primary { border-color: var(--alice); }
+  .topology-box.secondary { border-color: var(--bob); }
+  .topology-box.server { border-color: var(--carol); }
+  .topology-box.inactive {
+    opacity: 0.4;
+    border-style: dashed;
+  }
+
+  .topology-label {
+    color: var(--muted);
+    font-size: 0.75rem;
+    margin-top: 0.3rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .topology-arrow {
+    display: inline-block;
+    margin: 0 0.5rem;
+    color: var(--muted);
+    font-size: 1.2rem;
+  }
+
+  /* Metrics grid */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin: 1rem 0;
+  }
+
+  .metric-box {
+    background: var(--card2);
+    border-radius: 8px;
+    padding: 1rem;
+    border-left: 3px solid;
+  }
+  .metric-box.security { border-color: var(--private); }
+  .metric-box.availability { border-color: var(--bob); }
+  .metric-box.cost { border-color: var(--alice); }
+  .metric-box.usability { border-color: var(--carol); }
+
+  .metric-label {
+    font-weight: 600;
+    color: var(--muted);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.3rem;
+  }
+
+  .metric-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .metric-desc {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 0.3rem;
+  }
+
+  /* Spec table */
+  .spec-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+    margin: 1rem 0;
+    background: var(--card2);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .spec-table th {
+    padding: 0.6rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .spec-table td {
+    padding: 0.5rem 0.6rem;
+    border-bottom: 1px solid rgba(71, 85, 105, 0.4);
+  }
+  .spec-table tr:last-child td { border-bottom: none; }
+
+  .spec-label {
+    font-weight: 600;
+    color: var(--muted);
+    width: 40%;
+  }
+
+  .spec-value {
+    color: var(--text);
+  }
+
+  /* Use case sections */
+  .use-cases {
+    margin: 1.5rem 0;
+    padding: 1rem;
+    background: rgba(99, 102, 241, 0.05);
+    border-left: 3px solid var(--alice);
+    border-radius: 8px;
+  }
+
+  .use-case-title {
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: var(--alice);
+  }
+
+  .use-case-items {
+    list-style: none;
+    font-size: 0.85rem;
+  }
+
+  .use-case-items li {
+    margin: 0.3rem 0;
+    padding-left: 1.2rem;
+    position: relative;
+  }
+
+  .use-case-items li::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    color: var(--alice);
+    font-weight: bold;
+  }
+
+  /* Upgrade path */
+  .upgrade-box {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 1rem 0;
+  }
+
+  .upgrade-title {
+    font-weight: 700;
+    color: var(--bob);
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+  }
+
+  .upgrade-path {
+    font-size: 0.8rem;
+    color: var(--text);
+    font-family: monospace;
+  }
+
+  .upgrade-arrow {
+    display: inline-block;
+    margin: 0 0.4rem;
+    color: var(--muted);
+  }
+
+  /* Risk callout */
+  .risk-callout {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid var(--private);
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 1rem 0;
+  }
+
+  .risk-title {
+    font-weight: 700;
+    color: var(--private);
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+  }
+
+  .risk-items {
+    list-style: none;
+    font-size: 0.8rem;
+  }
+
+  .risk-items li {
+    margin: 0.3rem 0;
+    padding-left: 1.2rem;
+    position: relative;
+  }
+
+  .risk-items li::before {
+    content: '⚠';
+    position: absolute;
+    left: 0;
+    color: var(--private);
+  }
+
+  /* Comparison table */
+  .comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+    margin: 2rem 0;
+  }
+
+  .comparison-table th {
+    padding: 0.8rem;
+    text-align: left;
+    border-bottom: 2px solid var(--border);
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .comparison-table td {
+    padding: 0.6rem 0.8rem;
+    border-bottom: 1px solid rgba(71, 85, 105, 0.4);
+  }
+
+  .comparison-table tr:hover td {
+    background: rgba(99, 102, 241, 0.05);
+  }
+
+  /* Grid layout for side-by-side */
+  .cols-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+  @media (max-width: 800px) {
+    .cols-2 { grid-template-columns: 1fr; }
+    .metrics-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ---- THEME TOGGLE ---- */
+  .theme-toggle {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 999;
+    border: var(--border-w) solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color);
+    transition: all 0.15s;
+  }
+  .theme-toggle:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 7px 7px 0 var(--shadow-color);
+  }
+  .theme-toggle:active {
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0 var(--shadow-color);
+  }
+
+  /* ---- DOC NAV ---- */
+  .doc-nav {
+    display: flex;
+    gap: 0;
+    margin: 0 auto 2rem;
+    width: 100%;
+    border: var(--border-w) solid var(--border);
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow-color);
+    overflow: hidden;
+    flex-wrap: wrap;
+  }
+  .nav-link {
+    flex: 0 1 calc(100% / 5);
+    text-align: center;
+    padding: 0.5rem 0.4rem;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-decoration: none;
+    color: var(--text);
+    background: var(--card);
+    border-right: var(--border-w) solid var(--border);
+    border-bottom: var(--border-w) solid var(--border);
+    transition: background 0.15s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .nav-link:nth-child(5n) { border-right: none; }
+  .nav-link:nth-last-child(-n+5) { border-bottom: none; }
+  .nav-link:hover { background: var(--card2); }
+  .nav-link.active {
+    background: var(--card2);
+    color: var(--text);
+  }
+
+  /* Print styles */
+  @media print {
+    body { background: white; color: #1e293b; padding: 1rem; }
+    .model-card { break-inside: avoid; border-color: #ccc; background: white; }
+    h1 { -webkit-text-fill-color: #1e293b; background: none; }
+    .theme-toggle, .doc-nav { display: none; }
+  }
+</style>
+</head>
+<body data-theme="light">
+
+<button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">[ LIGHT ]</button>
+
+<nav class="doc-nav">
+  <a href="index.html" class="nav-link">Demo Guide</a>
+  <a href="threshold-signing.html" class="nav-link">Threshold Signing</a>
+  <a href="dkg-ceremony.html" class="nav-link">DKG Ceremony</a>
+  <a href="device-to-device.html" class="nav-link">Device-to-Device</a>
+  <a href="server-architecture.html" class="nav-link">Server Architecture</a>
+  <a href="shamir-splitting.html" class="nav-link">Shamir Splitting</a>
+  <a href="ios-encryption-backup-strategy.html" class="nav-link">iOS Encryption</a>
+  <a href="key-management.html" class="nav-link">Key Management</a>
+  <a href="signing-operations.html" class="nav-link">Signing Operations</a>
+  <a href="qr-transfer-workflow.html" class="nav-link">QR Transfer</a>
+  <a href="bluetooth-multipeer-protocol.html" class="nav-link">Bluetooth MultiPeer</a>
+  <a href="custody-models.html" class="nav-link active">Custody Models</a>
+  <a href="key-storage-hierarchy.html" class="nav-link">Key Storage</a>
+  <a href="backup-recovery-strategies.html" class="nav-link">Backup Recovery</a>
+  <a href="#" class="nav-link" style="visibility: hidden;"></a>
+</nav>
+
+<h1>Custody Models & Security Permutations</h1>
+<p class="subtitle">Four models from single-device development to n-party governance</p>
+
+<!-- MODEL 1: SINGLE DEVICE -->
+<div class="model-card">
+  <div class="model-header">
+    <span class="model-num m1">1</span>
+    <span class="model-title">Single Device (Development)</span>
+  </div>
+  <div class="model-body">
+    <div class="topology">
+      <div style="text-align: center; padding: 1rem;">
+        <div class="topology-box primary">
+          Device A
+          <div class="topology-label">Share 0</div>
+          <div class="topology-label">Share 1</div>
+        </div>
+        <div style="margin-top: 0.5rem; color: var(--muted); font-size: 0.8rem;">
+          ✓ Can sign alone (1-of-1)<br>
+          ✗ No external coordination needed
+        </div>
+      </div>
+    </div>
+
+    <div class="metrics-grid">
+      <div class="metric-box security">
+        <div class="metric-label">Security</div>
+        <div class="metric-value">Low</div>
+        <div class="metric-desc">Device compromise = total key loss</div>
+      </div>
+      <div class="metric-box availability">
+        <div class="metric-label">Availability</div>
+        <div class="metric-value">High</div>
+        <div class="metric-desc">Offline signing always available</div>
+      </div>
+      <div class="metric-box cost">
+        <div class="metric-label">Cost</div>
+        <div class="metric-value">Free</div>
+        <div class="metric-desc">Single device, no infrastructure</div>
+      </div>
+      <div class="metric-box usability">
+        <div class="metric-label">Usability</div>
+        <div class="metric-value">Simple</div>
+        <div class="metric-desc">No coordination required</div>
+      </div>
+    </div>
+
+    <table class="spec-table">
+      <tr>
+        <td class="spec-label">Storage</td>
+        <td class="spec-value">iOS Keychain (both shares)</td>
+      </tr>
+      <tr>
+        <td class="spec-label">Backup</td>
+        <td class="spec-value">Manual export to encrypted file only</td>
+      </tr>
+      <tr>
+        <td class="spec-label">Recovery</td>
+        <td class="spec-value">Device lost = key permanently lost</td>
+      </tr>
+      <tr>
+        <td class="spec-label">Threshold</td>
+        <td class="spec-value">1-of-1 (single device can sign)</td>
+      </tr>
+    </table>
+
+    <div class="use-cases">
+      <div class="use-case-title">Best For:</div>
+      <ul class="use-case-items">
+        <li>Development and testing</li>
+        <li>Single-user, non-custodial wallets</li>
+        <li>Throwaway or experimental keys</li>
+        <li>High-frequency signing workflows</li>
+      </ul>
+    </div>
+
+    <div class="risk-callout">
+      <div class="risk-title">Risks & Limitations:</div>
+      <ul class="risk-items">
+        <li>No redundancy—one device failure = total loss</li>
+        <li>No offline backup option (unless manually exported)</li>
+        <li>Single point of failure if device compromised</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- MODEL 2A: TWO DEVICES (QR) -->
+<div class="model-card">
+  <div class="model-header">
+    <span class="model-num m2">2a</span>
+    <span class="model-title">Two Devices — QR Bootstrap (2-of-2)</span>
+  </div>
+  <div class="model-body">
+    <div class="topology">
+      <div style="text-align: center; padding: 1rem;">
+        <div class="topology-box primary">
+          Device A
+          <div class="topology-label">Share 0</div>
+        </div>
+        <span class="topology-arrow">↔ QR</span>
+        <div class="topology-box secondary">
+          Device B
+          <div class="topology-label">Share 1</div>
+        </div>
+        <div style="margin-top: 0.5rem; color: var(--muted); font-size: 0.8rem;">
+          ✓ Both devices required to sign<br>
+          ✓ Air-gap capable (offline transfer)<br>
+          ✗ Synchronous coordination required
+        </div>
+      </div>
+    </div>
+
+    <div class="metrics-grid">
+      <div class="metric-box security">
+        <div class="metric-label">Security</div>
+        <div class="metric-value">High</div>
+        <div class="metric-desc">Share never crosses device boundary</div>
+      </div>
+      <div class="metric-box availability">
+        <div class="metric-label">Availability</div>
+        <div class="metric-value">Medium</div>
+        <div class="metric-desc">Both devices must be online to sign</div>
+      </div>
+      <div class="metric-box cost">
+        <div class="metric-label">Cost</div>
+        <div class="metric-value">Free</div>
+        <div class="metric-desc">Both devices user-owned</div>
+      </div>
+      <div class="metric-box usability">
+        <div class="metric-label">Usability</div>
+        <div class="metric-value">Good</div>
+        <div class="metric-desc">One QR scan per setup + file backup</div>
+      </div>
+    </div>
+
+    <table class="spec-table">
+      <tr>
+        <td class="spec-label">Storage</td>
+        <td class="spec-value">Each device: Keychain + iCloud backup</td>
+      </tr>
+      <tr>
+        <td class="spec-label">Transfer</td>
+        <td class="spec-value">QR code (offline, air-gap safe)</td>
+      </tr>
+      <tr>
+        <td class="spec-label">Backup</td>
+        <td class="spec-value">Each device exports encrypted file</td>
+      </tr>
+      <tr>
+        <td class="spec-label">Recovery</td>
+        <td class="spec-value">Device lost? Import from backup file</td>
+      </tr>
+      <tr>
+        <td class="spec-label">Threshold</td>
+        <td class="spec-value">2-of-2 (both shares required)</td>
+      </tr>
+    </table>
+
+    <div class="use-cases">
+      <div class="use-case-title">Best For:</div>
+      <ul class="use-case-items">
+        <li>Co-custody arrangements (married couples)</li>
+        <li>Business partnerships with offline-first requirement</li>
+        <li>Offline key backup and air-gap transfer</li>
+        <li>Users prioritizing security over convenience</li>
+      </ul>
+    </div>
+
+    <div class="upgrade-box">
+      <div class="upgrade-title">Upgrade Path:</div>
+      <div class="upgrade-path">
+        Model 2a <span class="upgrade-arrow">→ Add Server (Model 3)</span><br>
+        Both devices keep existing shares, server joins as 3rd share
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODEL 2B: TWO DEVICES (BLE) -->
+<div class="model-card">
+  <div class="model-header">
+    <span class="model-num m2">2b</span>
+    <span class="model-title">Two Devices — Bluetooth Real-Time (2-of-2)</span>
+  </div>
+  <div class="model-body">
+    <div class="topology">
+      <div style="text-align: center; padding: 1rem;">
+        <div class="topology-box primary">
+          Device A
+          <div class="topology-label">Share 0</div>
+        </div>
+        <span class="topology-arrow">↔ BLE/mTLS</span>
+        <div class="topology-box secondary">
+          Device B
+          <div class="topology-label">Share 1</div>
+        </div>
+        <div style="margin-top: 0.5rem; color: var(--muted); font-size: 0.8rem;">
+          ✓ Real-time protocol execution<br>
+          ✓ Live confirmation feedback<br>
+          ✗ Devices must be in BLE range
+        </div>
+      </div>
+    </div>
+
+    <div class="metrics-grid">
+      <div class="metric-box security">
+        <div class="metric-label">Security</div>
+        <div class="metric-value">High</div>
+        <div class="metric-desc">Same as 2a + mTLS encryption</div>
+      </div>
+      <div class="metric-box availability">
+        <div class="metric-label">Availability</div>
+        <div class="metric-value">Medium</div>
+        <div class="metric-desc">Requires both devices in range</div>
+      </div>
+      <div class="metric-box cost">
+        <div class="metric-label">Cost</div>
+        <div class="metric-value">Free</div>
+        <div class="metric-desc">BLE built into all iOS devices</div>
+      </div>
+      <div class="metric-box usability">
+        <div class="metric-label">Usability</div>
+        <div class="metric-value">Excellent</div>
+        <div class="metric-desc">6-8 seconds per key generation</div>
+      </div>
+    </div>
+
+    <table class="spec-table">
+      <tr>
+        <td class="spec-label">Storage</td>
+        <td class="spec-value">Each device: Keychain + iCloud backup</td>
+      </tr>
+      <tr>
+        <td class="spec-label">Transfer</td>
+        <td class="spec-value">BLE with mTLS + QR certificate exchange</td>
+      </tr>
+      <tr>
+        <td class="spec-label">Backup</td>
+        <td class="spec-value">Each device exports encrypted file</td>
+      </tr>
+      <tr>
+        <td class="spec-label">Recovery</td>
+        <td class="spec-value">Same as 2a (file import)</td>
+      </tr>
+      <tr>
+        <td class="spec-label">Threshold</td>
+        <td class="spec-value">2-of-2 (both shares required)</td>
+      </tr>
+    </table>
+
+    <div class="use-cases">
+      <div class="use-case-title">Best For:</div>
+      <ul class="use-case-items">
+        <li>Same scenarios as 2a, but with better UX</li>
+        <li>High-frequency signing without internet</li>
+        <li>Live confirmation workflows (approvals)</li>
+        <li>Devices in physical proximity (home, office)</li>
+      </ul>
+    </div>
+
+    <div class="upgrade-box">
+      <div class="upgrade-title">Comparison with 2a:</div>
+      <div style="font-size: 0.8rem;">
+        <strong>2a (QR):</strong> Slower (1-2 min) but offline-safe<br>
+        <strong>2b (BLE):</strong> Faster (6-8s) but requires proximity<br>
+        <strong>Both:</strong> Use 2a for backup, 2b for active signing
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODEL 3: 2-OF-3 THRESHOLD -->
+<div class="model-card">
+  <div class="model-header">
+    <span class="model-num m3">3</span>
+    <span class="model-title">2-of-3 Threshold (Device + Device + Server)</span>
+  </div>
+  <div class="model-body">
+    <div class="topology">
+      <div style="text-align: center; padding: 1.2rem;">
+        <div class="topology-box primary">
+          Device A
+          <div class="topology-label">Share 0</div>
+        </div>
+        <span class="topology-arrow">↔</span>
+        <div class="topology-box secondary">
+          Device B
+          <div class="topology-label">Share 1</div>
+        </div>
+        <span class="topology-arrow">↔</span>
+        <div class="topology-box server">
+          Server
+          <div class="topology-label">Share 2 (HSM)</div>
+        </div>
+        <div style="margin-top: 0.8rem; color: var(--muted); font-size: 0.8rem;">
+          ✓ Any 2 of 3 parties can sign<br>
+          ✓ No single point of failure<br>
+          ✓ Device loss is recoverable
+        </div>
+      </div>
+    </div>
+
+    <div class="metrics-grid">
+      <div class="metric-box security">
+        <div class="metric-label">Security</div>
+        <div class="metric-value">Very High</div>
+        <div class="metric-desc">Threshold redundancy + HSM</div>
+      </div>
+      <div class="metric-box availability">
+        <div class="metric-label">Availability</div>
+        <div class="metric-value">High</div>
+        <div class="metric-desc">One device or server can be offline</div>
+      </div>
+      <div class="metric-box cost">
+        <div class="metric-label">Cost</div>
+        <div class="metric-value">Moderate</div>
+        <div class="metric-desc">Server + HSM (optional)</div>
+      </div>
+      <div class="metric-box usability">
+        <div class="metric-label">Usability</div>
+        <div class="metric-value">Good</div>
+        <div class="metric-desc">Threshold refresh + audit logging</div>
+      </div>
+    </div>
+
+    <table class="spec-table">
+      <tr>
+        <td class="spec-label">Storage</td>
+        <td class="spec-value">Devices: Keychain | Server: HSM (non-extractable)</td>
+      </tr>
+      <tr>
+        <td class="spec-label">Transfer</td>
+        <td class="spec-value">Network + mTLS (requires internet)</td>
+      </tr>
+      <tr>
+        <td class="spec-label">Backup</td>
+        <td class="spec-value">Server provides redundancy; threshold refresh for new device</td>
+      </tr>
+      <tr>
+        <td class="spec-label">Recovery</td>
+        <td class="spec-value">Lost Device A? Use Device B + Server to refresh</td>
+      </tr>
+      <tr>
+        <td class="spec-label">Threshold</td>
+        <td class="spec-value">2-of-3 (any 2 parties can sign)</td>
+      </tr>
+    </table>
+
+    <div class="use-cases">
+      <div class="use-case-title">Best For:</div>
+      <ul class="use-case-items">
+        <li>Enterprise custody with policy enforcement</li>
+        <li>Institutional cold storage + hot access</li>
+        <li>Audit trail and transaction logging</li>
+        <li>Compliance-heavy organizations</li>
+      </ul>
+    </div>
+
+    <div class="risk-callout">
+      <div class="risk-title">Mitigated Risks:</div>
+      <ul class="risk-items">
+        <li>✓ Server compromise doesn't break key (still have 2 devices)</li>
+        <li>✓ Device loss is recoverable (other device + server)</li>
+        <li>✓ Audit trail on all server operations</li>
+      </ul>
+    </div>
+
+    <div class="upgrade-box">
+      <div class="upgrade-title">Upgrade Path:</div>
+      <div class="upgrade-path">
+        Model 2a/2b <span class="upgrade-arrow">→ Add Server (Model 3)</span><br>
+        Existing 2 devices keep shares, server joins threshold
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODEL 4: N-PARTY GOVERNANCE -->
+<div class="model-card">
+  <div class="model-header">
+    <span class="model-num m4">4</span>
+    <span class="model-title">N-Party Organization (e.g., 3-of-5 Governance)</span>
+  </div>
+  <div class="model-body">
+    <div class="topology">
+      <div style="text-align: center; padding: 1.2rem; font-size: 0.9rem;">
+        <div style="display: flex; justify-content: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem;">
+          <div class="topology-box primary" style="min-width: 90px;">Admin 1<div class="topology-label">Share 0</div></div>
+          <div class="topology-box secondary" style="min-width: 90px;">Admin 2<div class="topology-label">Share 1</div></div>
+          <div class="topology-box server" style="min-width: 90px;">Admin 3<div class="topology-label">Share 2</div></div>
+          <div class="topology-box primary" style="min-width: 90px; opacity: 0.6;">Admin 4<div class="topology-label">Share 3</div></div>
+          <div class="topology-box secondary" style="min-width: 90px; opacity: 0.6;">Admin 5<div class="topology-label">Share 4</div></div>
+        </div>
+        <div style="color: var(--muted); font-size: 0.8rem;">
+          ✓ Any 3 of 5 parties can authorize transaction<br>
+          ✓ Quorum-based governance<br>
+          ✓ Full n-party capability
+        </div>
+      </div>
+    </div>
+
+    <div class="metrics-grid">
+      <div class="metric-box security">
+        <div class="metric-label">Security</div>
+        <div class="metric-value">Very High</div>
+        <div class="metric-desc">Quorum consensus required</div>
+      </div>
+      <div class="metric-box availability">
+        <div class="metric-label">Availability</div>
+        <div class="metric-value">Medium</div>
+        <div class="metric-desc">Quorum (3-of-5) must be online</div>
+      </div>
+      <div class="metric-box cost">
+        <div class="metric-label">Cost</div>
+        <div class="metric-value">Moderate</div>
+        <div class="metric-desc">Each participant's device</div>
+      </div>
+      <div class="metric-box usability">
+        <div class="metric-label">Usability</div>
+        <div class="metric-value">Complex</div>
+        <div class="metric-desc">Multi-party coordination protocol</div>
+      </div>
+    </div>
+
+    <table class="spec-table">
+      <tr>
+        <td class="spec-label">Storage</td>
+        <td class="spec-value">Each admin's device: Keychain</td>
+      </tr>
+      <tr>
+        <td class="spec-label">Transfer</td>
+        <td class="spec-value">Network + mTLS (all parties coordinate)</td>
+      </tr>
+      <tr>
+        <td class="spec-label">Backup</td>
+        <td class="spec-value">Threshold refresh for lost party</td>
+      </tr>
+      <tr>
+        <td class="spec-label">Recovery</td>
+        <td class="spec-value">Quorum (3 of 5) authorizes new share</td>
+      </tr>
+      <tr>
+        <td class="spec-label">Threshold</td>
+        <td class="spec-value">3-of-5 (quorum voting)</td>
+      </tr>
+    </table>
+
+    <div class="use-cases">
+      <div class="use-case-title">Best For:</div>
+      <ul class="use-case-items">
+        <li>DAO and decentralized treasuries</li>
+        <li>Multi-signature organization (board approval)</li>
+        <li>Corporate governance with multiple signatories</li>
+        <li>Family governance (parents + trustees)</li>
+      </ul>
+    </div>
+
+    <div class="risk-callout">
+      <div class="risk-title">Governance Considerations:</div>
+      <ul class="risk-items">
+        <li>⚠ Coordination complexity with many parties</li>
+        <li>⚠ Need to handle party dropout gracefully</li>
+        <li>⚠ Quorum requirement may slow down approvals</li>
+        <li>✓ No single point of failure (consensus required)</li>
+      </ul>
+    </div>
+
+    <div class="upgrade-box">
+      <div class="upgrade-title">Onboarding New Admin:</div>
+      <div class="upgrade-path">
+        Existing quorum (3 of 5) <span class="upgrade-arrow">→ Runs threshold refresh</span><br>
+        <span class="upgrade-arrow">→</span> New admin gets share via BLE/QR
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- COMPARATIVE TABLE -->
+<div style="margin-top: 4rem; padding: 2rem; background: var(--card); border-radius: 16px; border: 1px solid var(--border);">
+  <h2 style="margin-bottom: 1rem; font-size: 1.2rem;">Model Comparison Matrix</h2>
+  <table class="comparison-table">
+    <thead>
+      <tr>
+        <th>Model</th>
+        <th>Security</th>
+        <th>Availability</th>
+        <th>Cost</th>
+        <th>Use Case</th>
+        <th>Recovery</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>1. Single Device</strong></td>
+        <td>Low</td>
+        <td>High</td>
+        <td>Free</td>
+        <td>Development</td>
+        <td>Lost forever</td>
+      </tr>
+      <tr>
+        <td><strong>2a. 2 Devices (QR)</strong></td>
+        <td>High</td>
+        <td>Medium</td>
+        <td>Free</td>
+        <td>Co-custody, offline-first</td>
+        <td>File backup import</td>
+      </tr>
+      <tr>
+        <td><strong>2b. 2 Devices (BLE)</strong></td>
+        <td>High</td>
+        <td>Medium</td>
+        <td>Free</td>
+        <td>Co-custody, real-time</td>
+        <td>File backup import</td>
+      </tr>
+      <tr>
+        <td><strong>3. 2-of-3 Threshold</strong></td>
+        <td>Very High</td>
+        <td>High</td>
+        <td>Moderate</td>
+        <td>Enterprise custody</td>
+        <td>Threshold refresh</td>
+      </tr>
+      <tr>
+        <td><strong>4. 3-of-5 N-Party</strong></td>
+        <td>Very High</td>
+        <td>Medium</td>
+        <td>Moderate</td>
+        <td>DAO/Governance</td>
+        <td>Quorum refresh</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- DECISION TREE -->
+<div style="margin-top: 3rem; padding: 2rem; background: rgba(99, 102, 241, 0.05); border-left: 3px solid var(--alice); border-radius: 8px;">
+  <h2 style="margin-bottom: 1rem; font-size: 1.2rem;">How to Choose Your Model</h2>
+  <ol style="font-size: 0.9rem; line-height: 1.8;">
+    <li><strong>Is this for development or production?</strong>
+      <ul style="margin-top: 0.3rem;">
+        <li>→ Development: Model 1 (single device)</li>
+        <li>→ Production: Model 2a/2b/3/4</li>
+      </ul>
+    </li>
+    <li><strong>Do you need redundancy?</strong>
+      <ul style="margin-top: 0.3rem;">
+        <li>→ No: Model 1 or Model 2a/2b (2-of-2, both required)</li>
+        <li>→ Yes: Model 3 (2-of-3, threshold redundancy)</li>
+      </ul>
+    </li>
+    <li><strong>Is internet always available?</strong>
+      <ul style="margin-top: 0.3rem;">
+        <li>→ No (offline-first): Model 2a (QR transfer)</li>
+        <li>→ Yes (online): Model 2b (BLE) or Model 3 (network)</li>
+      </ul>
+    </li>
+    <li><strong>Do you need quorum governance?</strong>
+      <ul style="margin-top: 0.3rem;">
+        <li>→ No: Model 2a/2b/3</li>
+        <li>→ Yes: Model 4 (n-party, 3-of-5 voting)</li>
+      </ul>
+    </li>
+  </ol>
+</div>
+
+<script>
+function toggleTheme() {
+  const body = document.body;
+  const btn = document.getElementById('themeBtn');
+  if (body.getAttribute('data-theme') === 'dark') {
+    body.setAttribute('data-theme', 'light');
+    localStorage.setItem('cb-mpc-theme', 'light');
+    btn.textContent = '[ DARK ]';
+  } else {
+    body.setAttribute('data-theme', 'dark');
+    localStorage.setItem('cb-mpc-theme', 'dark');
+    btn.textContent = '[ LIGHT ]';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('cb-mpc-theme') || 'light';
+  document.body.setAttribute('data-theme', saved);
+  const btn = document.getElementById('themeBtn');
+  btn.textContent = saved === 'dark' ? '[ LIGHT ]' : '[ DARK ]';
+  
+  const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+  document.querySelectorAll('.nav-link').forEach(link => {
+    if (link.getAttribute('href') === currentPage) {
+      link.classList.add('active');
+    }
+  });
+});
+</script>
+
+</body>
+</html>

@@ -13,6 +13,7 @@ struct CeremonyView: View {
                 completedCeremonyView(last)
             } else {
                 Text("No ceremony in progress")
+                    .font(.system(.body, design: .monospaced))
                     .foregroundColor(.secondary)
             }
 
@@ -30,12 +31,12 @@ struct CeremonyView: View {
                 .frame(width: 12, height: 12)
 
             Text(statusLabel(for: ceremony.state))
-                .font(.headline)
+                .font(.system(.headline, design: .monospaced))
 
             Spacer()
         }
         .padding()
-        .background(Color(.systemGray6))
+        .background(Color(white: 0.95))
         .cornerRadius(8)
 
         // Ceremony details
@@ -45,8 +46,9 @@ struct CeremonyView: View {
             DetailRow(label: "Party", value: "Party \(ceremony.localPartyId)")
             DetailRow(label: "Started", value: ceremony.startedAt.formatted(date: .omitted, time: .standard))
         }
+        .font(.system(.body, design: .monospaced))
         .padding()
-        .background(Color(.systemGray6))
+        .background(Color(white: 0.95))
         .cornerRadius(8)
 
         if ceremony.state == .initialized || ceremony.state == .committed {
@@ -64,18 +66,18 @@ struct CeremonyView: View {
                 .frame(width: 12, height: 12)
 
             Text(statusLabel(for: ceremony.state))
-                .font(.headline)
+                .font(.system(.headline, design: .monospaced))
 
             Spacer()
         }
         .padding()
-        .background(Color(.systemGray6))
+        .background(Color(white: 0.95))
         .cornerRadius(8)
 
         if let pubkey = ceremony.publicKey {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Public Key")
-                    .font(.caption)
+                    .font(.system(.caption, design: .monospaced))
                     .foregroundColor(.secondary)
 
                 Text(pubkey)
@@ -83,14 +85,14 @@ struct CeremonyView: View {
                     .lineLimit(3)
             }
             .padding()
-            .background(Color(.systemGray6))
+            .background(Color(white: 0.95))
             .cornerRadius(8)
         }
 
         if case .failed(let msg) = ceremony.state {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Error")
-                    .font(.caption)
+                    .font(.system(.caption, design: .monospaced))
                     .foregroundColor(.secondary)
 
                 Text(msg)
@@ -98,7 +100,7 @@ struct CeremonyView: View {
                     .foregroundColor(.red)
             }
             .padding()
-            .background(Color(.systemGray6))
+            .background(Color(white: 0.95))
             .cornerRadius(8)
         }
     }

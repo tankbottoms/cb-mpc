@@ -117,7 +117,119 @@ class ServerDKGCoordinator {
         }
     }
 
-    /// Generate both key shares locally and return them separately
+    // MARK: - HD Key Generation (BIP-32 Hierarchical Deterministic)
+
+    /// Generate a server-backed HD master key using the interim approach:
+    /// 1. Run both parties locally with cbmpc_hd_ecdsa2p_dkg
+    /// 2. Store device HD share locally, upload server HD share to KeyVault
+    static func generateHDKey(
+        serverURL: URL,
+        curveCode: Int = 714
+    ) async throws -> DKGResult {
+        let client = ServerAPIClient(baseURL: serverURL)
+
+        print("[ServerDKG-HD] Checking server auth at \(serverURL.absoluteString)...")
+        guard await client.isAuthenticated else {
+            print("[ServerDKG-HD] ERROR: Not authenticated with server")
+            throw CBMPCError.authFailed
+        }
+        print("[ServerDKG-HD] Authenticated. Creating HD DKG session...")
+
+        let dkgSession = try await client.createDKGSession(curveCode: curveCode)
+        print("[ServerDKG-HD] DKG session created: \(dkgSession.session_id)")
+
+        print("[ServerDKG-HD] Generating 2-party HD key shares locally (curve=\(curveCode))...")
+        let (publicKey, k0Data, k1Data) = try generateBothHDSharesLocally(curveCode: curveCode)
+        let publicKeyHex = publicKey.map { String(format: "%02x", $0) }.joined()
+        print("[ServerDKG-HD] HD shares generated — Party0=\(k0Data.count) bytes, Party1=\(k1Data.count) bytes, pubKey=\(String(publicKeyHex.prefix(16)))...")
+
+        guard let deviceId = await client.currentDeviceId else {
+            print("[ServerDKG-HD] ERROR: No device ID available")
+            throw CBMPCError.authFailed
+        }
+
+        print("[ServerDKG-HD] Uploading Party1 HD share to KeyVault...")
+        try await client.storeKeyShare(
+            publicKey: publicKeyHex,
+            curveCode: curveCode,
+            serverShare: k1Data,
+            participantDevices: [deviceId, "server"]
+        )
+        print("[ServerDKG-HD] Party1 HD share uploaded successfully")
+
+        return DKGResult(
+            publicKey: publicKey,
+            deviceShare: k0Data,
+            serverShare: k1Data,
+            sessionId: dkgSession.session_id
+        )
+    }
+
+    /// Derive a child key from a server-backed HD master.
+    /// Downloads server's HD master share, runs derivation locally with both shares,
+    /// uploads child Party 1 share to server, returns child Party 0 share.
+    static func deriveChild(
+        deviceHDShare: Data,
+        path: [UInt32],
+        curveCode: Int,
+        serverURL: URL,
+        masterPublicKey: String
+    ) async throws -> (publicKey: Data, deviceChildShare: Data, serverChildShare: Data) {
+        let client = ServerAPIClient(baseURL: serverURL)
+
+        guard await client.isAuthenticated else {
+            throw CBMPCError.authFailed
+        }
+
+        // Download server's HD master share
+        print("[ServerDKG-HD] Downloading server HD master share for derivation...")
+        let keyInfo = try await client.getKey(publicKey: masterPublicKey)
+        guard let serverShareB64 = keyInfo.server_share,
+              let serverHDShare = Data(base64Encoded: serverShareB64) else {
+            throw CBMPCError.transportError("Server did not return HD master share")
+        }
+
+        // Deserialize both HD shares
+        let hdShare0 = try CBMPCHDKeyShare.deserialize(deviceHDShare, curveCode: curveCode)
+        let hdShare1 = try CBMPCHDKeyShare.deserialize(serverHDShare, curveCode: curveCode)
+
+        let partyNames = ["device", "server"]
+
+        // Run HD derivation with both parties
+        print("[ServerDKG-HD] Deriving child key at path \(path)...")
+        let (child0, child1) = try LocalTwoPartyRunner.run(partyNames: partyNames) { job, role in
+            let hdShare = (role == 0) ? hdShare0 : hdShare1
+            return try hdShare.derive(path: path, job: job)
+        }
+
+        guard let childPubKey = child0.getPublicKey() else {
+            throw CBMPCError.invalidKeyData
+        }
+        guard let childSer0 = child0.serialize(), let childSer1 = child1.serialize() else {
+            throw CBMPCError.keySerializationFailed
+        }
+
+        // Upload child Party 1 share to server
+        let childPubKeyHex = childPubKey.map { String(format: "%02x", $0) }.joined()
+        guard let deviceId = await client.currentDeviceId else {
+            throw CBMPCError.authFailed
+        }
+
+        print("[ServerDKG-HD] Uploading child Party1 share to KeyVault...")
+        try await client.storeKeyShare(
+            publicKey: childPubKeyHex,
+            curveCode: curveCode,
+            serverShare: childSer1,
+            participantDevices: [deviceId, "server"]
+        )
+        print("[ServerDKG-HD] Child key derived and stored — pubKey=\(String(childPubKeyHex.prefix(16)))...")
+
+        return (childPubKey, childSer0, childSer1)
+    }
+
+    // MARK: - Private
+
+    /// Generate both standard key shares locally and return them separately
     private static func generateBothSharesLocally(curveCode: Int) throws -> (publicKey: Data, share0: Data, share1: Data) {
         let partyNames = ["device", "server"]
 
@@ -126,6 +238,27 @@ class ServerDKGCoordinator {
             let result = cbmpc_ecdsa2p_dkg(job.cJob, Int32(curveCode), &keyVar)
             guard result == 0 else { throw CBMPCError.keyGenerationFailed }
             return CBMPCKeyShare(keyPtr: keyVar, curveCode: curveCode)
+        }
+
+        guard let pubKey = k0.getPublicKey() else {
+            throw CBMPCError.invalidKeyData
+        }
+        guard let ser0 = k0.serialize(), let ser1 = k1.serialize() else {
+            throw CBMPCError.keySerializationFailed
+        }
+
+        return (pubKey, ser0, ser1)
+    }
+
+    /// Generate both HD key shares locally and return them separately
+    private static func generateBothHDSharesLocally(curveCode: Int) throws -> (publicKey: Data, share0: Data, share1: Data) {
+        let partyNames = ["device", "server"]
+
+        let (k0, k1) = try LocalTwoPartyRunner.run(partyNames: partyNames) { job, role in
+            var keyVar = cbmpc_hd_key_t()
+            let result = cbmpc_hd_ecdsa2p_dkg(job.cJob, Int32(curveCode), &keyVar)
+            guard result == 0 else { throw CBMPCError.keyGenerationFailed }
+            return CBMPCHDKeyShare(keyPtr: keyVar, curveCode: curveCode)
         }
 
         guard let pubKey = k0.getPublicKey() else {

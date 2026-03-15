@@ -1,7 +1,9 @@
 import SwiftUI
+import UniformTypeIdentifiers
 #if os(iOS)
 import UIKit
-import UniformTypeIdentifiers
+#else
+import AppKit
 #endif
 
 enum KeyCreationMode: String, CaseIterable {
@@ -100,6 +102,7 @@ struct CreateKeySheetView: View {
     @State private var selectedCustody: CustodyMode = .deviceKeychain
     @State private var selectedServerURL: URL?
     @State private var selectedPeerDeviceId: UUID?
+    @StateObject private var ceremonyCoordinator = CeremonyCoordinator()
 
     enum CustodyMode: String, CaseIterable {
         case deviceKeychain = "Device Keychain"
@@ -892,11 +895,27 @@ struct CreateKeySheetView: View {
                                 .cornerRadius(4)
                             }
 
+                            #if os(iOS)
                             Button(action: { showDocumentPicker = true }) {
                                 Label(importedKeystoreJSON != nil ? "Choose Different File" : "Browse Files", systemImage: "folder")
                                     .frame(maxWidth: .infinity)
                             }
                             .buttonStyle(.bordered)
+                            #else
+                            Button(action: {
+                                let panel = NSOpenPanel()
+                                panel.allowedContentTypes = [.json, .data]
+                                panel.allowsMultipleSelection = false
+                                panel.canChooseDirectories = false
+                                if panel.runModal() == .OK, let url = panel.url {
+                                    loadKeystoreFromURL(url)
+                                }
+                            }) {
+                                Label(importedKeystoreJSON != nil ? "Choose Different File" : "Browse Files", systemImage: "folder")
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.bordered)
+                            #endif
 
                             HStack(alignment: .top, spacing: 8) {
                                 Image(systemName: "shield.lefthalf.filled")
@@ -910,11 +929,13 @@ struct CreateKeySheetView: View {
                             .background(.orange.opacity(0.05))
                             .cornerRadius(6)
                         }
+                        #if os(iOS)
                         .sheet(isPresented: $showDocumentPicker) {
                             DocumentPickerView { url in
                                 loadKeystoreFromURL(url)
                             }
                         }
+                        #endif
                     }
 
                     // Import: QR Code
@@ -1131,6 +1152,21 @@ struct CreateKeySheetView: View {
             }
             .onChange(of: keyType) { _ in
                 if keyName.isEmpty { return }
+            }
+            .overlay {
+                if ceremonyCoordinator.activeCeremony != nil {
+                    ZStack {
+                        Color.black.opacity(0.4)
+                            .ignoresSafeArea()
+                        CeremonyView(coordinator: ceremonyCoordinator)
+                            .background(.ultraThinMaterial)
+                            .cornerRadius(16)
+                            .padding(24)
+                            .shadow(radius: 12)
+                    }
+                    .transition(.opacity)
+                    .animation(.easeInOut(duration: 0.3), value: ceremonyCoordinator.activeCeremony != nil)
+                }
             }
         }
     }
@@ -1559,28 +1595,46 @@ struct CreateKeySheetView: View {
             currentSearchAddress = ""
         }
 
-        // Server-backed key generation path
+        // Server-backed key generation path with ceremony tracking
         if selectedCustody == .server, let serverURL = selectedServerURL, creationMode == .generate {
-            Task {
+            Task { @MainActor in
                 do {
+                    let ceremony = try ceremonyCoordinator.createDKGCeremony(
+                        participantMode: .server,
+                        localPartyId: 0
+                    )
+                    try ceremonyCoordinator.updateState(ceremonyId: ceremony.id, newState: .committed)
+
                     let managedKey = try await keyStore.generateServerKey(
                         name: userProvidedName ?? "Server Key \(AppDateFormat.string(from: Date()))",
                         keyType: effectiveKeyType,
                         serverURL: serverURL
                     )
-                    await MainActor.run {
-                        #if os(iOS)
-                        let feedback = UINotificationFeedbackGenerator()
-                        feedback.notificationOccurred(.success)
-                        #endif
-                        isCreating = false
-                        dismiss()
-                    }
+
+                    try ceremonyCoordinator.completeCeremony(
+                        ceremonyId: ceremony.id,
+                        publicKey: managedKey.publicKey,
+                        shareId: ""
+                    )
+
+                    #if os(iOS)
+                    let feedback = UINotificationFeedbackGenerator()
+                    feedback.notificationOccurred(.success)
+                    #endif
+                    isCreating = false
+
+                    // Brief delay to show completion state
+                    try? await Task.sleep(nanoseconds: 500_000_000)
+                    dismiss()
                 } catch {
-                    await MainActor.run {
-                        errorMessage = "Server key generation failed: \(error.localizedDescription)"
-                        isCreating = false
+                    if let ceremony = ceremonyCoordinator.activeCeremony {
+                        try? ceremonyCoordinator.failCeremony(
+                            ceremonyId: ceremony.id,
+                            error: error.localizedDescription
+                        )
                     }
+                    errorMessage = "Server key generation failed: \(error.localizedDescription)"
+                    isCreating = false
                 }
             }
             return
@@ -1649,6 +1703,37 @@ struct CreateKeySheetView: View {
 
                         let a = attempts
                         DispatchQueue.main.async { self.vanityAttempts = a }
+                    } else if effectiveKeyType == .hdMaster {
+                        // Use HD DKG (cbmpc_hd_ecdsa2p_dkg) for HD master keys
+                        let (pk, sk) = try engine.generateHDKey(curveCode: curveCode)
+                        publicKeyData = pk
+                        serializedKey = sk
+                        publicKeyHex = publicKeyData.map { String(format: "%02x", $0) }.joined()
+                    } else if effectiveKeyType == .hdChild, let parentId = selectedParentKeyId,
+                              let masterKeyData = UserDefaults.standard.data(forKey: "key_\(parentId.uuidString)") {
+                        // Derive child from HD master using cbmpc_hd_ecdsa2p_derive
+                        let childPath: String
+                        if keysToCreate > 1 {
+                            let components = derivationPath.split(separator: "/")
+                            if let lastStr = components.last, let lastIdx = Int(lastStr.replacingOccurrences(of: "'", with: "")) {
+                                let basePath = components.dropLast().joined(separator: "/")
+                                let hardened = lastStr.hasSuffix("'")
+                                childPath = "\(basePath)/\(lastIdx + i)\(hardened ? "'" : "")"
+                            } else {
+                                childPath = derivationPath
+                            }
+                        } else {
+                            childPath = derivationPath
+                        }
+                        let pathIndices = Self.parseBIP44PathForDerivation(childPath)
+                        let (pk, sk) = try engine.deriveChildFromHD(
+                            masterKeyData: masterKeyData,
+                            path: pathIndices,
+                            curveCode: curveCode
+                        )
+                        publicKeyData = pk
+                        serializedKey = sk
+                        publicKeyHex = publicKeyData.map { String(format: "%02x", $0) }.joined()
                     } else {
                         let (pk, sk) = try engine.generateKey(curveCode: curveCode)
                         publicKeyData = pk
@@ -1770,6 +1855,20 @@ struct CreateKeySheetView: View {
     }
 
     // MARK: - Helpers
+
+    /// Parse a BIP-44 path string into UInt32 indices for HD derivation
+    /// e.g., "m/44'/60'/0'/0/0" → [0x8000002C, 0x8000003C, 0x80000000, 0, 0]
+    private static func parseBIP44PathForDerivation(_ path: String) -> [UInt32] {
+        let components = path.split(separator: "/")
+        return components.compactMap { component in
+            let str = String(component)
+            if str == "m" { return nil }
+            let hardened = str.hasSuffix("'")
+            let clean = str.replacingOccurrences(of: "'", with: "")
+            guard let index = UInt32(clean) else { return nil }
+            return hardened ? (index | 0x80000000) : index
+        }
+    }
 
     private func generatePlaceholderMnemonic(wordCount: Int) -> String {
         let words = [

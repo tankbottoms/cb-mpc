@@ -1412,6 +1412,7 @@ struct CoSignerDetailSheetView: View {
 
 // MARK: - Share Sheet
 
+#if os(iOS)
 struct ShareSheet: UIViewControllerRepresentable {
     let items: [Any]
 
@@ -1421,6 +1422,7 @@ struct ShareSheet: UIViewControllerRepresentable {
 
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
+#endif
 
 #Preview {
     let mockKey = ManagedKey(

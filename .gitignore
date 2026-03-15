@@ -48,10 +48,9 @@ build-ios-device/
 build-ios-sim/
 
 # Credentials & keys
-private_keys/
-*.p8
 *.p12
 *.mobileprovision
+.env
 
 # Dependencies
 node_modules/

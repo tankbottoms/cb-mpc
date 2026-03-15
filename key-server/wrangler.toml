@@ -29,3 +29,9 @@ new_sqlite_classes = ["DeviceRegistry", "DKGSession", "KeyVault"]
 [[migrations]]
 tag = "v2"
 new_sqlite_classes = ["SignSession"]
+
+[[kv_namespaces]]
+binding = "ABI_CACHE"
+id = "PLACEHOLDER_KV_ID"
+# After creating: wrangler kv namespace create ABI_CACHE
+# Then replace PLACEHOLDER_KV_ID with the returned ID

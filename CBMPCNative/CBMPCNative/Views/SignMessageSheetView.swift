@@ -23,6 +23,7 @@ struct SignMessageSheetView: View {
     @State private var signStartTime: Date?
     @State private var signDuration: TimeInterval?
     @State private var transportInfo: String?
+    @StateObject private var ceremonyCoordinator = CeremonyCoordinator()
 
     var messageHash: String {
         let data = message.data(using: .utf8) ?? Data()
@@ -239,6 +240,7 @@ struct SignMessageSheetView: View {
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .interactiveDismissDisabled(false)
+            #if os(iOS)
             .onTapGesture {
                 UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
             }
@@ -250,10 +252,26 @@ struct SignMessageSheetView: View {
                     }
                 }
             }
+            #endif
             .alert("Error", isPresented: Binding(get: { signError != nil }, set: { if !$0 { signError = nil } })) {
                 Button("OK") { signError = nil }
             } message: {
                 Text(signError ?? "")
+            }
+            .overlay {
+                if ceremonyCoordinator.activeCeremony != nil {
+                    ZStack {
+                        Color.black.opacity(0.4)
+                            .ignoresSafeArea()
+                        CeremonyView(coordinator: ceremonyCoordinator)
+                            .background(.ultraThinMaterial)
+                            .cornerRadius(16)
+                            .padding(24)
+                            .shadow(radius: 12)
+                    }
+                    .transition(.opacity)
+                    .animation(.easeInOut(duration: 0.3), value: ceremonyCoordinator.activeCeremony != nil)
+                }
             }
         }
         .sheet(isPresented: $showServerSubmitSheet) {
@@ -369,20 +387,38 @@ struct SignMessageSheetView: View {
     }
 
     private func signAsync(messageWithNonce: String) {
-        Task {
+        let origin = TransportOrigin.load(for: key.id)
+        Task { @MainActor in
             do {
+                let ceremony = try ceremonyCoordinator.createSigningCeremony(
+                    participantMode: origin == .server ? .server : .device,
+                    localPartyId: 0,
+                    messageHash: messageWithNonce.data(using: .utf8) ?? Data()
+                )
+                try ceremonyCoordinator.updateState(ceremonyId: ceremony.id, newState: .committed)
+
                 let sigHex = try await keyStore.signMessageAsync(messageWithNonce, with: key)
                 let messageData = messageWithNonce.data(using: .utf8) ?? Data()
                 let messageHash = sha256(messageData)
                 let hashHex = messageHash.map { String(format: "%02X", $0) }.joined()
-                await MainActor.run {
-                    self.handleSigningSuccess(sigHex: sigHex, hashHex: hashHex)
-                }
+
+                try ceremonyCoordinator.updateState(ceremonyId: ceremony.id, newState: .signed)
+                try ceremonyCoordinator.completeCeremony(
+                    ceremonyId: ceremony.id,
+                    publicKey: key.publicKey,
+                    shareId: ""
+                )
+
+                self.handleSigningSuccess(sigHex: sigHex, hashHex: hashHex)
             } catch {
-                await MainActor.run {
-                    self.signError = "Signing failed: \(error.localizedDescription)"
-                    self.isSigning = false
+                if let ceremony = ceremonyCoordinator.activeCeremony {
+                    try? ceremonyCoordinator.failCeremony(
+                        ceremonyId: ceremony.id,
+                        error: error.localizedDescription
+                    )
                 }
+                self.signError = "Signing failed: \(error.localizedDescription)"
+                self.isSigning = false
             }
         }
     }

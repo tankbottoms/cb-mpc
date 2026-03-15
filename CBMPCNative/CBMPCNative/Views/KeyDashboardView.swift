@@ -23,7 +23,9 @@ struct KeyDashboardView: View {
                                 .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
                         }
                     }
+                    #if os(iOS)
                     .listSectionSpacing(.compact)
+                    #endif
                 }
 
                 if keyStore.keys.isEmpty {

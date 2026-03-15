@@ -72,6 +72,8 @@
 	<string>Automatic</string>
 	<key>UILaunchScreen</key>
 	<dict/>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.utilities</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>UIFileSharingEnabled</key>

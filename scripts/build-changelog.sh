@@ -9,19 +9,19 @@ set -euo pipefail
 #
 # Usage:
 #   ./scripts/build-changelog.sh              # Show changes since last build
+#   ./scripts/build-changelog.sh prepare      # Generate draft JSON manifest + approval doc
+#   ./scripts/build-changelog.sh approve      # Mark draft as approved for submission
 #   ./scripts/build-changelog.sh record       # Tag current build and save changelog
 #   ./scripts/build-changelog.sh push         # Push "What to Test" to ASC (after build upload)
-#   ./scripts/build-changelog.sh history       # Show all build changelogs
+#   ./scripts/build-changelog.sh history      # Show all build changelogs
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 CHANGELOG_DIR="$PROJECT_DIR/docs/iOS-AppStore/changelogs"
 PBXPROJ="$PROJECT_DIR/CBMPCNative/CBMPCNative.xcodeproj/project.pbxproj"
 
-# Source .env
-if [ -f "$PROJECT_DIR/.env" ]; then
-  set -a; source "$PROJECT_DIR/.env"; set +a
-fi
+# Source secrets from .env.json
+source "$SCRIPT_DIR/env-helper.sh"
 
 mkdir -p "$CHANGELOG_DIR"
 
@@ -113,7 +113,209 @@ Please test:
 EOF
 }
 
+# --- Parse conventional commits ---
+
+parse_commits() {
+  local commits="$1"
+  local features="" fixes="" other=""
+
+  while IFS= read -r line; do
+    [ -z "$line" ] && continue
+    local hash="${line%% *}"
+    local msg="${line#* }"
+    local type="other"
+    local clean_msg="$msg"
+
+    if echo "$msg" | grep -qiE "^feat(\(|:)"; then
+      type="feat"
+      clean_msg=$(echo "$msg" | sed -E 's/^feat(\([^)]*\))?:? *//')
+    elif echo "$msg" | grep -qiE "^fix(\(|:)"; then
+      type="fix"
+      clean_msg=$(echo "$msg" | sed -E 's/^fix(\([^)]*\))?:? *//')
+    elif echo "$msg" | grep -qiE "^(chore|docs|ci|test|refactor|build)(\(|:)"; then
+      type=$(echo "$msg" | sed -E 's/^([a-z]+).*/\1/')
+      clean_msg=$(echo "$msg" | sed -E 's/^[a-z]+(\([^)]*\))?:? *//')
+    fi
+
+    case "$type" in
+      feat) features="${features}{\"hash\":\"${hash}\",\"type\":\"feat\",\"message\":\"${clean_msg}\"},";;
+      fix)  fixes="${fixes}{\"hash\":\"${hash}\",\"type\":\"fix\",\"message\":\"${clean_msg}\"},";;
+      *)    other="${other}{\"hash\":\"${hash}\",\"type\":\"${type}\",\"message\":\"${clean_msg}\"},";;
+    esac
+  done <<< "$commits"
+
+  # Strip trailing commas
+  features="${features%,}"
+  fixes="${fixes%,}"
+  other="${other%,}"
+
+  echo "${features}|||${fixes}|||${other}"
+}
+
+# --- Generate JSON manifest ---
+
+generate_manifest() {
+  local ver=$(current_version)
+  local bld=$(current_build)
+  local last=$(last_build_tag)
+  local status="${1:-draft}"
+  local commits
+  commits=$(changes_since "$last")
+
+  local parsed
+  parsed=$(parse_commits "$commits")
+  local feat_json="${parsed%%|||*}"
+  local rest="${parsed#*|||}"
+  local fix_json="${rest%%|||*}"
+  local other_json="${rest#*|||}"
+
+  # Build feature/fix summary lists
+  local feat_list="" fix_list=""
+  if [ -n "$feat_json" ]; then
+    feat_list=$(echo "[$feat_json]" | python3 -c "
+import sys, json
+items = json.load(sys.stdin)
+print(json.dumps([i['message'] for i in items]))
+" 2>/dev/null || echo "[]")
+  else
+    feat_list="[]"
+  fi
+
+  if [ -n "$fix_json" ]; then
+    fix_list=$(echo "[$fix_json]" | python3 -c "
+import sys, json
+items = json.load(sys.stdin)
+print(json.dumps([i['message'] for i in items]))
+" 2>/dev/null || echo "[]")
+  else
+    fix_list="[]"
+  fi
+
+  # Build commits array
+  local all_commits="[${feat_json}${feat_json:+,}${fix_json}${fix_json:+,}${other_json}]"
+  # Clean up double commas from empty sections
+  all_commits=$(echo "$all_commits" | sed 's/,\]/]/g; s/\[,/[/g; s/,,/,/g')
+
+  local what_to_test
+  what_to_test=$(generate_what_to_test | python3 -c "import sys,json; print(json.dumps(sys.stdin.read().strip()))" 2>/dev/null)
+
+  cat << MANIFEST
+{
+  "version": "${ver}",
+  "build": ${bld},
+  "date": "$(date '+%Y-%m-%d')",
+  "platform": "ios",
+  "status": "${status}",
+  "whatsNew": ${what_to_test},
+  "features": ${feat_list},
+  "fixes": ${fix_list},
+  "testInstructions": "1. Key generation (+ button)\\n2. Message signing\\n3. QR export/import\\n4. Device pairing\\n5. Server registration\\n6. Face ID lock\\n7. HD key derivation\\n8. Multiple Ethereum networks",
+  "commits": ${all_commits}
+}
+MANIFEST
+}
+
 # --- Commands ---
+
+cmd_prepare() {
+  local ver=$(current_version)
+  local bld=$(current_build)
+  local manifest_file="$CHANGELOG_DIR/v${ver}-build${bld}.json"
+  local approval_file="$CHANGELOG_DIR/v${ver}-build${bld}-approval.md"
+
+  echo "Preparing release: v${ver} (build ${bld})"
+  echo ""
+
+  # Generate JSON manifest (draft)
+  generate_manifest "draft" > "$manifest_file"
+  echo "JSON manifest: $manifest_file"
+
+  # Generate human-readable approval doc
+  {
+    echo "# Release Approval: v${ver} (build ${bld})"
+    echo ""
+    echo "**Date**: $(date '+%Y-%m-%d %H:%M')"
+    echo "**Status**: DRAFT — awaiting approval"
+    echo ""
+    echo "---"
+    echo ""
+    echo "## What to Test"
+    echo ""
+    generate_what_to_test
+    echo ""
+    echo "---"
+    echo ""
+    echo "## Commits"
+    echo ""
+    local last=$(last_build_tag)
+    changes_since "$last" | sed 's/^/- /'
+    echo ""
+    echo "---"
+    echo ""
+    echo "## Approval"
+    echo ""
+    echo "- [ ] Changes reviewed"
+    echo "- [ ] Build tested on device"
+    echo "- [ ] TestFlight metadata correct"
+    echo ""
+    echo "To approve: \`./scripts/build-changelog.sh approve\`"
+  } > "$approval_file"
+  echo "Approval doc: $approval_file"
+  echo ""
+  echo "--- Approval Draft ---"
+  echo ""
+  cat "$approval_file"
+  echo ""
+  echo "---"
+  echo "Review the above. When ready, run:"
+  echo "  ./scripts/build-changelog.sh approve"
+}
+
+cmd_approve() {
+  local ver=$(current_version)
+  local bld=$(current_build)
+  local manifest_file="$CHANGELOG_DIR/v${ver}-build${bld}.json"
+  local approval_file="$CHANGELOG_DIR/v${ver}-build${bld}-approval.md"
+
+  if [ ! -f "$manifest_file" ]; then
+    echo "ERROR: No draft manifest found. Run 'prepare' first."
+    echo "  ./scripts/build-changelog.sh prepare"
+    exit 1
+  fi
+
+  local current_status
+  current_status=$(python3 -c "import json; print(json.load(open('$manifest_file'))['status'])" 2>/dev/null || echo "unknown")
+
+  if [ "$current_status" = "approved" ]; then
+    echo "Already approved: v${ver} (build ${bld})"
+    return
+  fi
+
+  # Update manifest status to approved
+  python3 -c "
+import json
+with open('$manifest_file', 'r') as f:
+    data = json.load(f)
+data['status'] = 'approved'
+with open('$manifest_file', 'w') as f:
+    json.dump(data, f, indent=2)
+print('OK')
+"
+
+  # Update approval doc
+  if [ -f "$approval_file" ]; then
+    sed -i '' 's/DRAFT — awaiting approval/APPROVED/' "$approval_file"
+    sed -i '' 's/- \[ \]/- [x]/g' "$approval_file"
+  fi
+
+  echo "APPROVED: v${ver} (build ${bld})"
+  echo "Manifest updated: $manifest_file"
+  echo ""
+  echo "Next steps:"
+  echo "  ./scripts/build-changelog.sh record   # Tag build in git"
+  echo "  [Upload build via Xcode]"
+  echo "  ./scripts/build-changelog.sh push      # Push to ASC"
+}
 
 cmd_show() {
   local last=$(last_build_tag)
@@ -268,14 +470,34 @@ PYEOF
 cmd_history() {
   echo "Build Changelogs:"
   echo ""
+
+  # Show JSON manifests
+  local json_files
+  json_files=$(ls -1t "$CHANGELOG_DIR"/*.json 2>/dev/null || true)
+  if [ -n "$json_files" ]; then
+    echo "--- JSON Manifests ---"
+    echo "$json_files" | while read -r f; do
+      local info
+      info=$(python3 -c "
+import json
+d = json.load(open('$f'))
+print(f\"v{d['version']} build {d['build']} [{d['status']}] — {d['date']}\")
+" 2>/dev/null || basename "$f")
+      echo "  $info"
+    done
+    echo ""
+  fi
+
+  # Show markdown changelogs
+  echo "--- Markdown Changelogs ---"
   ls -1t "$CHANGELOG_DIR"/*.md 2>/dev/null | while read -r f; do
     head -1 "$f" | sed 's/^# //'
     echo "  $(head -3 "$f" | tail -1)"
     echo ""
   done
 
-  if [ -z "$(ls "$CHANGELOG_DIR"/*.md 2>/dev/null)" ]; then
-    echo "No changelogs recorded yet. Run: $0 record"
+  if [ -z "$(ls "$CHANGELOG_DIR"/*.md 2>/dev/null)" ] && [ -z "$json_files" ]; then
+    echo "No changelogs recorded yet. Run: $0 prepare"
   fi
 
   echo ""
@@ -287,13 +509,17 @@ cmd_history() {
 
 case "${1:-show}" in
   show)     cmd_show ;;
+  prepare)  cmd_prepare ;;
+  approve)  cmd_approve ;;
   record)   cmd_record ;;
   push)     cmd_push ;;
   history)  cmd_history ;;
   *)
-    echo "Usage: $0 {show|record|push|history}"
+    echo "Usage: $0 {show|prepare|approve|record|push|history}"
     echo ""
     echo "  show     - Preview changes since last build (default)"
+    echo "  prepare  - Generate draft JSON manifest + approval doc for review"
+    echo "  approve  - Mark draft as approved, ready for submission"
     echo "  record   - Tag build, save changelog, update release_notes.txt"
     echo "  push     - Push 'What to Test' to ASC (after build upload)"
     echo "  history  - List all recorded changelogs"

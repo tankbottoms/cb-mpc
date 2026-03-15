@@ -5,6 +5,11 @@ export interface Env {
   SIGN_SESSION: DurableObjectNamespace;
   SERVER_SECRET: string;
   VERSION: string;
+  // DeFi proxy secrets (optional — endpoints disabled if not set)
+  UNISWAP_API_KEY?: string;
+  ETHERSCAN_API_KEY?: string;
+  // KV namespace for ABI cache
+  ABI_CACHE?: KVNamespace;
 }
 
 export interface DeviceRecord {

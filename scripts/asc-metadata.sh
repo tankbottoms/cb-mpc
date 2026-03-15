@@ -4,12 +4,9 @@ set -euo pipefail
 # App Store Connect API — Programmatic Metadata Upload
 #
 # Prerequisites:
-#   1. Create an API key at https://appstoreconnect.apple.com/access/integrations/api
-#   2. Download the .p8 key file
-#   3. Export the following env vars:
-#        export ASC_KEY_ID="your-key-id"
-#        export ASC_ISSUER_ID="your-issuer-id"
-#        export ASC_KEY_FILE="$HOME/.appstoreconnect/private_keys/AuthKey_XXXXX.p8"
+#   1. Create .env.json from .env.json.example and fill in values
+#   2. Place your AuthKey .p8 file in private_keys/
+#   3. Run ./scripts/validate-env.sh to verify
 #
 # Usage:
 #   ./scripts/asc-metadata.sh [command]
@@ -26,15 +23,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 METADATA_DIR="$PROJECT_DIR/fastlane/metadata"
 
-# Source .env if present
-if [ -f "$PROJECT_DIR/.env" ]; then
-  set -a
-  source "$PROJECT_DIR/.env"
-  set +a
-fi
-
-APP_ID="${APP_ID:-6760239004}"
-BUNDLE_ID="${BUNDLE_ID:-xyz.atsignhandle.cb-mpc}"
+# Source secrets from .env.json
+source "$SCRIPT_DIR/env-helper.sh"
 BASE_URL="https://api.appstoreconnect.apple.com/v1"
 
 # --- JWT Token Generation ---
