@@ -408,7 +408,7 @@ struct KeyDetailView: View {
 
                 // Operations
                 VStack(alignment: .leading, spacing: 8) {
-                    if hasKeyData {
+                    if hasKeyData && key.keyType != .hdMaster {
                         HStack(spacing: 6) {
                             Button(action: { activeSheet = .signing }) {
                                 Label("Sign", systemImage: "checkmark.circle.fill")
@@ -423,6 +423,14 @@ struct KeyDetailView: View {
                             .buttonStyle(.borderedProminent)
                             .tint(.orange)
                         }
+                    } else if key.keyType == .hdMaster {
+                        Text("HD master keys cannot sign directly -- derive a child key first")
+                            .font(.system(size: 9, design: .monospaced))
+                            .foregroundColor(.blue)
+                            .padding(6)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(.blue.opacity(0.1))
+                            .cornerRadius(4)
                     } else {
                         Text("No key data -- regenerate this key to enable signing")
                             .font(.system(size: 9, design: .monospaced))

@@ -311,6 +311,12 @@ struct SignMessageSheetView: View {
     }
 
     private func signMessage() {
+        // HD master keys can't sign directly — must derive a child key first
+        if key.keyType == .hdMaster {
+            signError = "HD master keys cannot sign directly. Derive a child key first (e.g., m/44'/60'/0'/0/0) and sign with that."
+            return
+        }
+
         isSigning = true
         signError = nil
         signStartTime = Date()

@@ -54,6 +54,7 @@ build-ios-sim/
 .env
 .env.json
 private_keys/
+private-keys.zip
 
 # Dependencies
 node_modules/

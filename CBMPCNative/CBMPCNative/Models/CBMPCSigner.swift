@@ -66,6 +66,7 @@ class CBMPCSigner {
         }
 
         guard result == 0 else {
+            print("[CBMPCSigner] cbmpc_ecdsa2p_sign returned error code: \(result)")
             throw CBMPCError.signingFailed
         }
 
