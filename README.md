@@ -143,8 +143,8 @@ xcrun devicectl device process launch --device DEVICE_UDID xyz.atsignhandle.cb-m
 # 1. Bump version (patch/minor/major)
 ./scripts/release.sh prepare minor
 
-# 2. Review the generated changelog
-./scripts/release.sh approve
+# 2. Review the generated changelog (auto-extracts git features into "What to Test")
+./scripts/build-changelog.sh approve
 
 # 3. Archive for distribution
 ./scripts/release.sh build
@@ -155,6 +155,26 @@ xcrun devicectl device process launch --device DEVICE_UDID xyz.atsignhandle.cb-m
 # 5. Check processing status
 ./scripts/release.sh status
 ```
+
+To submit with pregenerated JSON metadata instead of auto-extraction:
+
+```bash
+# Create a manifest with custom features/fixes/test instructions
+cat > build-manifest.json << 'EOF'
+{
+  "version": "0.19.0",
+  "build": 70,
+  "features": ["HD key derivation", "Peer-to-peer signing"],
+  "fixes": ["QR scanner crash on iOS 18"],
+  "testInstructions": "1. Generate a key\n2. Export via QR\n3. Import on second device\n4. Sign a message with both devices"
+}
+EOF
+
+# Push directly to ASC
+./scripts/build-changelog.sh submit-json build-manifest.json
+```
+
+The `submit-json` command reads features and fixes from the JSON, builds the "What to Test" text, saves the manifest to `docs/iOS-AppStore/changelogs/`, and pushes to App Store Connect.
 
 See [`docs/BUILD_AND_RELEASE.md`](docs/BUILD_AND_RELEASE.md) for the full workflow.
 
@@ -226,16 +246,58 @@ src/                        -- C++ MPC library source (shared)
 
 Icons are auto-generated from layered cat images by `CBMPCNative/scripts/generate-app-icon.sh` using ImageMagick. If the source image directory isn't available on your machine, the current icon (`AppIcon-1024.png`) is checked in and works as-is. Pre-cached fallback icons are in the `cache/` directory.
 
-## Working with Claude Code
+## Developing with Claude Code
 
-This repo includes [`CLAUDE.md`](CLAUDE.md) and [`AGENTS.md`](AGENTS.md) for AI-assisted development:
+This repo is set up for AI-assisted development. Claude reads `CLAUDE.md` (build conventions, known issues) and `AGENTS.md` (architecture, gotchas) automatically when you launch it.
+
+### Getting Started
 
 ```bash
 cd cb-mpc-ios
 claude
 ```
 
-Claude reads `CLAUDE.md` automatically for build conventions, known issues, and common tasks. `AGENTS.md` provides architectural context and gotchas.
+On first launch, tell Claude:
+
+> Review this repo. Read CLAUDE.md and AGENTS.md. Run ./scripts/validate-env.sh to verify keys are in place. Build for simulator to confirm everything compiles.
+
+### Common Workflows
+
+**Add your device and push a build to it:**
+
+> Connect my iPhone via USB. Run ./scripts/add-device.sh to register it. Build for device, install, and launch.
+
+**Add a feature and push to device:**
+
+> Increment the version (minor bump), add [describe feature], rebuild, and push to my device.
+
+**Full TestFlight release:**
+
+> Bump the version to minor, add features [X, Y, Z] to the changelog, build, archive, and submit to TestFlight. Push the git tag.
+
+**Deploy the key server to Cloudflare:**
+
+> Read key-server/src/index.ts and key-server/wrangler.toml. Deploy the key server to Cloudflare Workers with wrangler deploy.
+
+**Add to the visual guide:**
+
+> Read docs/visual-guide/index.html to see the pattern. Create a new visual guide for [topic] following the same HTML structure. Add it to the index.
+
+**Run tests:**
+
+> Run the unit tests on simulator. If any fail, fix them.
+
+### What Claude Knows
+
+- **CLAUDE.md** -- Build targets, versioning rules, architecture, conventions, known bugs (CryptoKit SealedBox crash, bn_t::from_bin, Data subscript safety)
+- **AGENTS.md** -- Full architecture diagram, key directories, common agent tasks (add views, add C API functions, bump versions, run tests), gotchas
+- **TODO.md** -- Completed features and prioritized roadmap with file references
+- **docs/visual-guide/** -- Interactive protocol visualizations that explain the crypto
+- **docs/FEATURE_PLAN.md** -- Detailed UI/UX implementation plan
+
+### Git Workflow
+
+Claude will commit changes, push to the `ios` branch, and tag builds. All commits use the `tankbottoms` no-reply identity. The `master` branch contains the upstream coinbase/cb-mpc C++ library and should not be modified.
 
 ## Feature Roadmap
 

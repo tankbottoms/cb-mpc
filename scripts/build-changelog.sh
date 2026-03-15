@@ -467,6 +467,166 @@ PYEOF
   echo "Done."
 }
 
+cmd_submit_json() {
+  local json_file="${1:-}"
+
+  if [ -z "$json_file" ]; then
+    echo "Usage: $0 submit-json <manifest.json>"
+    echo ""
+    echo "Submit a pregenerated JSON manifest to App Store Connect."
+    echo "The manifest must have these fields:"
+    echo '  {"version": "0.19.0", "build": 70, "whatsNew": "...", "features": [...], "fixes": [...]}'
+    echo ""
+    echo "You can also pipe JSON: echo '{...}' | $0 submit-json -"
+    exit 1
+  fi
+
+  local manifest
+  if [ "$json_file" = "-" ]; then
+    manifest=$(cat)
+  elif [ ! -f "$json_file" ]; then
+    echo "ERROR: File not found: $json_file"
+    exit 1
+  else
+    manifest=$(cat "$json_file")
+  fi
+
+  # Validate required fields
+  /usr/bin/python3 -c "
+import json, sys
+try:
+    d = json.loads('''$manifest''')
+except:
+    d = json.load(open('$json_file')) if '$json_file' != '-' else {}
+required = ['version', 'build']
+missing = [k for k in required if k not in d]
+if missing:
+    print(f'ERROR: Missing required fields: {missing}')
+    sys.exit(1)
+print(f\"Manifest: v{d['version']} build {d['build']}\")
+print(f\"Features: {len(d.get('features', []))}\")
+print(f\"Fixes: {len(d.get('fixes', []))}\")
+" || exit 1
+
+  echo ""
+
+  # Extract whatsNew or build it from features/fixes
+  local what_to_test
+  what_to_test=$(/usr/bin/python3 -c "
+import json, sys
+try:
+    d = json.loads('''$manifest''')
+except:
+    d = json.load(open('$json_file')) if '$json_file' != '-' else {}
+
+# Use whatsNew if provided, otherwise build from features+fixes
+if 'whatsNew' in d and d['whatsNew']:
+    print(d['whatsNew'])
+else:
+    ver = d.get('version', '?')
+    bld = d.get('build', '?')
+    lines = [f'Key MGMT wCB-MPC v{ver} (build {bld})', '']
+    feats = d.get('features', [])
+    fixes = d.get('fixes', [])
+    if feats:
+        lines.append('NEW:')
+        for f in feats:
+            lines.append(f'- {f}')
+        lines.append('')
+    if fixes:
+        lines.append('FIXES:')
+        for f in fixes:
+            lines.append(f'- {f}')
+        lines.append('')
+    lines.append('Please test:')
+    for item in d.get('testInstructions', '').split('\\\\n'):
+        if item.strip():
+            lines.append(item.strip() if item.strip().startswith('-') or item.strip()[0].isdigit() else f'- {item.strip()}')
+    print('\\n'.join(lines))
+")
+
+  echo "--- What to Test ---"
+  echo "$what_to_test"
+  echo ""
+
+  # Save manifest to changelogs
+  local ver bld
+  ver=$(/usr/bin/python3 -c "import json; d=json.loads('''$manifest'''); print(d['version'])")
+  bld=$(/usr/bin/python3 -c "import json; d=json.loads('''$manifest'''); print(d['build'])")
+
+  local save_path="$CHANGELOG_DIR/v${ver}-build${bld}.json"
+  echo "$manifest" | /usr/bin/python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+d['status'] = 'submitted'
+d['date'] = d.get('date', '$(date '+%Y-%m-%d')')
+with open('$save_path', 'w') as f:
+    json.dump(d, f, indent=2)
+"
+  echo "Saved: $save_path"
+  echo ""
+
+  # Push to ASC
+  echo "Pushing to App Store Connect..."
+  /usr/bin/python3 << PYEOF
+import json, subprocess, jwt, time, os
+
+key = open(os.environ['ASC_KEY_FILE']).read()
+token = jwt.encode(
+    {'iss': os.environ['ASC_ISSUER_ID'], 'iat': int(time.time()), 'exp': int(time.time()) + 1200, 'aud': 'appstoreconnect-v1'},
+    key, algorithm='ES256', headers={'kid': os.environ['ASC_KEY_ID']}
+)
+
+BASE = 'https://api.appstoreconnect.apple.com/v1'
+HDRS = ['-H', f'Authorization: Bearer {token}', '-H', 'Content-Type: application/json']
+APP_ID = os.environ.get('APP_ID', '6760239004')
+
+def api(method, path, data=None):
+    cmd = ['curl', '-s', '--connect-timeout', '15', '-X', method, f'{BASE}{path}'] + HDRS
+    if data:
+        cmd += ['-d', json.dumps(data)]
+    r = subprocess.run(cmd, capture_output=True, text=True)
+    return json.loads(r.stdout) if r.stdout.strip() else {}
+
+builds = api('GET', f'/builds?filter[app]={APP_ID}&sort=-uploadedDate&limit=1')
+if not builds.get('data'):
+    print('ERROR: No builds found in ASC. Upload a build via Xcode first.')
+    exit(1)
+
+build_id = builds['data'][0]['id']
+build_ver = builds['data'][0]['attributes'].get('version', '?')
+print(f'Latest ASC build: {build_id} (version {build_ver})')
+
+what_to_test = """$(echo "$what_to_test")"""
+
+locs = api('GET', f'/builds/{build_id}/betaBuildLocalizations')
+loc_id = None
+if locs.get('data'):
+    for loc in locs['data']:
+        if loc['attributes']['locale'] == 'en-US':
+            loc_id = loc['id']
+            break
+
+if loc_id:
+    r = api('PATCH', f'/betaBuildLocalizations/{loc_id}', {
+        'data': {'type': 'betaBuildLocalizations', 'id': loc_id, 'attributes': {'whatsNew': what_to_test}}
+    })
+else:
+    r = api('POST', '/betaBuildLocalizations', {
+        'data': {'type': 'betaBuildLocalizations', 'attributes': {'locale': 'en-US', 'whatsNew': what_to_test},
+                 'relationships': {'build': {'data': {'type': 'builds', 'id': build_id}}}}
+    })
+
+if 'errors' in r:
+    print('ERROR:', json.dumps(r['errors'], indent=2))
+else:
+    print(f'OK - "What to Test" updated for build {build_ver}')
+PYEOF
+
+  echo ""
+  echo "Done."
+}
+
 cmd_history() {
   echo "Build Changelogs:"
   echo ""
@@ -513,16 +673,21 @@ case "${1:-show}" in
   approve)  cmd_approve ;;
   record)   cmd_record ;;
   push)     cmd_push ;;
+  submit-json)
+    shift
+    cmd_submit_json "${1:-}"
+    ;;
   history)  cmd_history ;;
   *)
-    echo "Usage: $0 {show|prepare|approve|record|push|history}"
+    echo "Usage: $0 {show|prepare|approve|record|push|submit-json|history}"
     echo ""
-    echo "  show     - Preview changes since last build (default)"
-    echo "  prepare  - Generate draft JSON manifest + approval doc for review"
-    echo "  approve  - Mark draft as approved, ready for submission"
-    echo "  record   - Tag build, save changelog, update release_notes.txt"
-    echo "  push     - Push 'What to Test' to ASC (after build upload)"
-    echo "  history  - List all recorded changelogs"
+    echo "  show          - Preview changes since last build (default)"
+    echo "  prepare       - Generate draft JSON manifest + approval doc for review"
+    echo "  approve       - Mark draft as approved, ready for submission"
+    echo "  record        - Tag build, save changelog, update release_notes.txt"
+    echo "  push          - Push 'What to Test' to ASC (after build upload)"
+    echo "  submit-json   - Submit pregenerated JSON manifest to ASC"
+    echo "  history       - List all recorded changelogs"
     exit 1
     ;;
 esac
